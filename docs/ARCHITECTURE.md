@@ -30,6 +30,7 @@ Agents run from the cowmoo repo, not from within the project. All git commands m
 git -C "$PROJECT_DIR" status
 git -C "$PROJECT_DIR" add path/to/file
 git -C "$PROJECT_DIR" commit -m "feat: ..."
+git -C "$PROJECT_DIR" push -u origin HEAD
 ```
 
 The `PROJECT_DIR` environment variable is set by the `moo` CLI.
@@ -151,8 +152,8 @@ The previous project-wide `project/.claude/` layer has been removed — there is
 | Builder can't change tech stack | settings.json deny: `Edit(**/cowmoo/stack/**)`, `Write(**/cowmoo/stack/**)` |
 | Agents can't write other agents' files | settings.json deny: `Edit(**/cowmoo/agent-files/{other}/**)`, `Write(**/cowmoo/agent-files/{other}/**)` |
 | PM / UXUI / planner can't write project code | `territory-check` hook (PreToolUse Edit\|Write) — hard-blocks writes outside the agent's scope via `TERRITORY` allow-list in `dev-tools.cjs`. Builder uses `FORBIDDEN` deny-list instead (see `.claude/asymmetries/builder.md`). |
-| Builder commits only its own files | @task-ops scopes: code (outside `cowmoo/`), `cowmoo/agent-files/builder/` (includes `proposals/` and `codebase/`) |
-| UXUI commits only its own files | `@uxui-git-ops` scopes: `cowmoo/design/`, `cowmoo/agent-files/uxui/` (includes `proposals/`). `@uxui-bundle-ops` script scopes: `cowmoo/design/bundles/<ticket>/` |
+| Builder commits and pushes only its own files | @task-ops scopes: code (outside `cowmoo/`), `cowmoo/agent-files/builder/` (includes `proposals/` and `codebase/`). `PUSH` op publishes the commit to the remote (skips cleanly if no `origin`) |
+| UXUI commits and pushes only its own files | `@uxui-git-ops` scopes: `cowmoo/design/`, `cowmoo/agent-files/uxui/` (includes `proposals/`). `@uxui-bundle-ops` script scopes: `cowmoo/design/bundles/<ticket>/`. `PUSH` op publishes commits to the remote (skips cleanly if no `origin`) |
 | Each agent has own skills/tools | Own `.claude/` and `tools/` directories |
 
 ## What We Dropped
