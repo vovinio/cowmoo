@@ -1,6 +1,6 @@
 ---
 name: publish
-description: Commit cowmoo/design/ files to git. Run after /review or anytime to save progress.
+description: Commit cowmoo/design/ files locally and push to the remote. Run after /review or anytime to save progress. If the project has no origin remote, the push step skips cleanly and the commit completes locally.
 user-invocable: true
 disable-model-invocation: true
 allowed-tools: Bash, Read, Glob, Agent, Write, Edit
@@ -81,6 +81,7 @@ Before finishing, confirm:
 - [ ] Working notes updated if needed
 - [ ] Changes reviewed and approved by user
 - [ ] Committed via @uxui-git-ops (verified)
+- [ ] Pushed via @uxui-git-ops PUSH (or `PUSH: skipped` reported when no remote configured)
 - [ ] Report presented with next steps
 
 ---

@@ -1,6 +1,6 @@
 ---
 name: pm-ops
-description: Execute GitHub and git operations — post comments, commit files, change labels, close issues, create messages to planner/UXUI. Always verifies each step. Use for all write operations.
+description: Execute GitHub and git operations — post comments, commit files, push to remote, change labels, close issues, create messages to planner/UXUI. Always verifies each step. Use for all write operations.
 tools: Bash
 model: sonnet
 maxTurns: 20

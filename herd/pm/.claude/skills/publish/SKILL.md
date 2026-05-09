@@ -1,6 +1,6 @@
 ---
 name: publish
-description: Publish PM files to git — specs, working notes, proposals. Run after /review or anytime to save progress.
+description: Publish PM files — commit specs, working notes, and proposals locally, then push to the remote. Run after /review or anytime to save progress. If the project has no origin remote, the push step skips cleanly and the commit completes locally.
 user-invocable: true
 disable-model-invocation: true
 allowed-tools: Bash, Read, Glob, Agent, Write, Edit
@@ -70,6 +70,7 @@ Before finishing, confirm:
 - [ ] Conversation captured via `/draft` (or confirmed already current)
 - [ ] Changes reviewed and approved by user
 - [ ] Code committed via @pm-ops (verified)
+- [ ] Pushed via @pm-ops (or `PUSH: skipped` reported when no remote configured)
 - [ ] Report presented with next steps
 
 ---

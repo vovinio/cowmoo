@@ -1,6 +1,6 @@
 ---
 name: uxui-git-ops
-description: Execute git operations for UXUI — staged commits scoped to UXUI's territory. Three ops: COMMIT (general Phase A commit), COMMIT_ROLES (scoped commit for roles.md only), and ATTACH_DESIGN (specialized commit for bundle attachment — stages both the domain file and VISUAL-JOURNAL.md together). Always verifies.
+description: Execute git operations for UXUI — staged commits scoped to UXUI's territory, plus push to remote. Four ops: COMMIT (general Phase A commit), COMMIT_ROLES (scoped commit for roles.md only), ATTACH_DESIGN (specialized commit for bundle attachment — stages both the domain file and VISUAL-JOURNAL.md together), and PUSH (publish commits to the remote — skips cleanly if no origin is configured). Always verifies.
 tools: Bash
 model: sonnet
 maxTurns: 10

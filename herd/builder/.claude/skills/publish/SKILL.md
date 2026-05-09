@@ -1,6 +1,6 @@
 ---
 name: publish
-description: Preview and publish completed work — commit code, post Record, close task. The single command for persisting build work.
+description: Preview and publish completed work — commit code, push to remote, post Record, close task. The single command for persisting build work.
 user-invocable: true
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Agent, Bash

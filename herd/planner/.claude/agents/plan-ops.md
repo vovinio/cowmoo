@@ -1,6 +1,6 @@
 ---
 name: plan-ops
-description: Execute GitHub and git operations — create stories/tasks, post comments, change labels, close issues, commit planning files. Always verifies each step. Use for all write operations.
+description: Execute GitHub and git operations — create stories/tasks, post comments, change labels, close issues, commit planning files, push to remote. Always verifies each step. Use for all write operations.
 tools: Bash
 model: sonnet
 maxTurns: 20

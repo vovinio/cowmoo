@@ -1,6 +1,6 @@
 ---
 name: task-ops
-description: Execute GitHub and git operations — post comments, commit code, change labels, close issues, return tasks. Always verifies each step. Use for all write operations.
+description: Execute GitHub and git operations — post comments, commit code, push to remote, change labels, close issues, return tasks. Always verifies each step. Use for all write operations.
 tools: Bash
 model: sonnet
 maxTurns: 20
@@ -274,9 +274,11 @@ If the add fails, note it in the report but don't fail the operation.
 The builder often sends multiple operations in one request. Execute them in the order given. If one fails, stop and report which operation failed and why.
 
 **Example — publishing a task:**
-> POST_COMMENT #42 with Record text, then COMMIT scope=code with "feat(auth): login flow", then COMPLETE #42.
+> COMMIT scope=code with "feat(auth): login flow", then PUSH, then POST_COMMENT #42 with Record text, then COMPLETE #42.
 
-Execute: POST_COMMENT → verify → COMMIT → verify → COMPLETE → verify → report all results.
+Execute: COMMIT → verify → PUSH → verify (or report `skipped` if no remote) → POST_COMMENT → verify → COMPLETE → verify → report all results.
+
+PUSH happens after COMMIT and before POST_COMMENT/COMPLETE so the code is on the remote before the Record references it and before the issue closes. PUSH failure is non-fatal — the local commit is correct; surface the error and continue.
 
 **Example — returning a task:**
 > RETURN #42 with return comment text.

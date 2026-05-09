@@ -1,6 +1,6 @@
 ---
 name: publish
-description: Preview and ship all pending changes — commit files to git, create GitHub issues if draft exists. The single command for persisting work.
+description: Preview and ship all pending changes — commit files, push to remote, create GitHub issues if draft exists. The single command for persisting work.
 user-invocable: true
 disable-model-invocation: true
 allowed-tools: Agent, Read, Write, Edit, Glob, Bash
@@ -145,6 +145,7 @@ Do NOT auto-close tracked issues — the user confirms each one. An escalated is
 - [ ] Draft updates applied to knowledge.md (if any)
 - [ ] draft.md deleted (if existed)
 - [ ] Files committed (captures the knowledge.md append; draft.md deletion is disk-only)
+- [ ] Commit pushed via @plan-ops PUSH (or `PUSH: skipped` reported when no remote configured) — pushed BEFORE issue creation so issues reference a pushed state
 - [ ] GitHub issues created and added to project board (if draft existed)
 - [ ] Task dependencies cross-referenced with issue numbers (if any)
 - [ ] Tracked inbox issues resolved per user confirmation (each removed via `inbox remove`)
