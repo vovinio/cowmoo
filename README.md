@@ -33,7 +33,7 @@ A single AI agent that plans, builds, reviews, and iterates in one conversation 
 |---|---|---|---|---|
 | **Terminal** | 1 | 2 | 3 | 4 |
 | **Focus** | Product specs, business logic | UI definitions, design briefs | Strategy, task PRDs | Implementation, testing, code |
-| **Writes to** | `cowmoo/specs/` | `cowmoo/design/` | GitHub stories + task PRDs, `cowmoo/stack/` | `src/`, GitHub Records |
+| **Writes to** | `cowmoo/specs/` | `cowmoo/design/` | GitHub stories + task PRDs, `cowmoo/stack/` | Project tree (code, tests, manifests), GitHub Records |
 | **Core commands** | `/start` `/draft` `/digest` `/review` `/publish` | `/start` `/draft` `/define` `/review` `/publish` | `/start` `/draft` `/review` `/publish` | `/start` `/build` `/review` `/publish` |
 
 ---
