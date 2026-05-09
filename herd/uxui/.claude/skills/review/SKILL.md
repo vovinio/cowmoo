@@ -105,9 +105,9 @@ For each quick fix and structural item: present what the definition says, what's
 
 ## Step 6: Outcome
 
-**All clean:** "Review passed. Run /publish to commit."
+**All clean:** "Review passed. Run /publish to commit and push."
 
-**Fixes applied:** "Fixed N issues. Run /publish to commit."
+**Fixes applied:** "Fixed N issues. Run /publish to commit and push."
 
 **Spec gaps found:** "Found N spec gaps. Run `/ask pm`."
 

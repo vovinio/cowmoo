@@ -89,7 +89,7 @@ If discrepancies found, present them to the user:
 
 ### 4. Present and suggest
 
-Present findings to user for review. Suggest `/publish` to commit the updated map.
+Present findings to user for review. Suggest `/publish` to commit and push the updated map.
 
 ---
 

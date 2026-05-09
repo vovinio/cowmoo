@@ -121,7 +121,7 @@ moo pm
 /draft              # Save conversation to working notes
 /digest             # Turn confirmed notes into spec files
 /review             # Check spec integrity
-/publish            # Commit changes
+/publish            # Commit changes and push to remote
 ```
 
 ### 6. Define UI (Terminal 2 — UXUI)
@@ -133,12 +133,12 @@ moo uxui
 UXUI works in two phases. **Phase A** defines UI structure directly from specs. **Phase B** hands screens off to a human designer working in Claude Design, then reviews the submissions.
 
 ```
-# Phase A — UI definitions (committed to cowmoo/design/)
+# Phase A — UI definitions (committed to cowmoo/design/, pushed to remote)
 /start              # Load specs, assess what needs UI work
 /draft              # Save discussion to working notes
 /define             # Formalize notes into UI definition files
 /review             # Verify definitions cover all specs
-/publish            # Commit changes
+/publish            # Commit changes and push to remote
 
 # Phase B — Hand off design work to a human designer
 /design-start       # Synthesize state, propose 1-3 next design tasks (no writes)
@@ -161,7 +161,7 @@ moo planner
 /start              # Load context, propose next story
 /draft              # Compile conversation into task PRDs
 /review             # Validate PRDs with check agents
-/publish            # Commit files, create GitHub issues
+/publish            # Commit files, push to remote, create GitHub issues
 ```
 
 ### 8. Build (Terminal 4 — Builder)
@@ -174,7 +174,7 @@ moo builder
 /start              # Find task, load context, propose approach
 /build              # Implement the task
 /review             # Verify against PRD acceptance criteria
-/publish            # Commit code, post Record, close task
+/publish            # Commit code, push to remote, post Record, close task
 ```
 
 ---
@@ -229,7 +229,7 @@ Planner /catchup               →  approves (close) or rejects (todo + comment)
 | `/draft` | Save conversation to working notes |
 | `/digest` | Formalize confirmed notes into spec files |
 | `/review` | Run all spec integrity checks |
-| `/publish` | Commit changes |
+| `/publish` | Commit changes and push to remote |
 | `/notify` | Announce spec changes to planner or UXUI |
 | `/catchup` | Process incoming planner or UXUI questions |
 | `/status` | Quick project snapshot |
@@ -251,7 +251,7 @@ Planner /catchup               →  approves (close) or rejects (todo + comment)
 | `/draft` | Save UI discussion to working notes |
 | `/define` | Formalize notes into UI definition files (OVERVIEW, journeys, roles, screen-index, domains) |
 | `/review` | Verify definitions cover all specs |
-| `/publish` | Commit UI definition changes |
+| `/publish` | Commit UI definition changes and push to remote |
 | `/design-start` · `/design-draft` · `/design-publish` | Phase B: synthesize, draft, and publish design tasks for a human designer |
 | `/review-bundle` | Phase B: fetch a designer's submission, evaluate, approve or reject |
 | `/ask [pm\|planner]` | Ask PM about spec gaps, or respond to a planner `for-uxui` finding |
@@ -267,7 +267,7 @@ Planner /catchup               →  approves (close) or rejects (todo + comment)
 | `/start` | Load context, propose next story |
 | `/draft` | Compile conversation into task PRDs |
 | `/review` | Validate PRDs with check agents |
-| `/publish` | Commit files, create GitHub issues |
+| `/publish` | Commit files, push to remote, create GitHub issues |
 | `/ask pm` · `/ask uxui` | Escalate spec questions to PM, or UI definition issues to UXUI |
 | `/catchup` | Process pending builder/PM items |
 | `/tech-stack` | Choose technologies |
@@ -282,7 +282,7 @@ Planner /catchup               →  approves (close) or rejects (todo + comment)
 | `/start` | Find task, load context, propose approach |
 | `/build` | Implement the task |
 | `/review` | Verify against PRD acceptance criteria |
-| `/publish` | Commit code, post Record, close task |
+| `/publish` | Commit code, push to remote, post Record, close task |
 | `/return` | Return task to planner with explanation |
 | `/status` | Show project status |
 | `/map-codebase` | Analyze existing codebase, write to `cowmoo/codebase/codebase.md` |

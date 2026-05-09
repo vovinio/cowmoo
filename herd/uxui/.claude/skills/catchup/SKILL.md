@@ -133,7 +133,7 @@ Clarification about an existing UI definition.
 <If uxui:review items present:>
 **Next:** Run /review-bundle <number> for each dispatched item.
 <If cowmoo/design/ files changed:>
-**Next:** Run /publish to commit changes, then /notify planner to announce and close tracked items.
+**Next:** Run /publish to commit and push changes, then /notify planner to announce and close tracked items.
 <If a ui-gap was diagnosed as task-scope-wrong:>
 **Next:** Run /ask planner to send the response and close the tracked item.
 ```

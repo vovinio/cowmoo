@@ -55,7 +55,7 @@ This is where thinking happens. You describe your product, the agent asks questi
 - It pushes back when things are vague, contradictory, or have UX problems
 - Nothing is written to spec files during discussion — only to working notes via `/draft`
 
-**Run `/draft` regularly** to save decisions to working notes. Before ending a session, run **`/publish`** to commit working notes to git.
+**Run `/draft` regularly** to save decisions to working notes. Before ending a session, run **`/publish`** to commit working notes and push them to the remote.
 
 ### Formalization Phase
 

@@ -57,7 +57,7 @@ UXUI has two distinct phases. Each has its own entry point. Phase A is about def
 3. `/draft` — Capture discussion to working notes
 4. `/define` — Formalize working notes into `cowmoo/design/` files
 5. `/review` — Verify UI definitions cover all specs
-6. `/publish` — Commit changes
+6. `/publish` — Commit changes and push to remote (push skipped cleanly if no `origin` is configured)
 
 ### Phase B — Hand off to designer (Claude Design)
 

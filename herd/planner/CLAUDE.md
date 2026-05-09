@@ -46,7 +46,7 @@ Don't just agree with everything. The user benefits more from honest judgment th
 2. Discuss the story scope and tasks naturally with the user
 3. `/draft` — Compile conversation into draft.md (PRDs + file updates). Run multiple times to iterate.
 4. `/review` — 5 parallel agents validate draft.md against specs, stack, and reality
-5. `/publish` — Preview everything, user confirms, then ship: update files → git commit → create GitHub issues
+5. `/publish` — Preview everything, user confirms, then ship: update files → git commit → push → create GitHub issues (push happens before issue creation so issues reference a pushed state; skipped cleanly if no remote)
 
 ### Messages Flow
 

@@ -113,7 +113,7 @@ When all decisions are made:
 1. Read `references/techstack-template.md`, then write `cowmoo/stack/techstack.md` using its structure — clean, structured, permanent
 2. **Self-verify the write.** Re-read `cowmoo/stack/techstack.md` and confirm every decision from `cowmoo/agent-files/planner/techstack-notes.md` is present. If anything is missing or corrupted, re-write before proceeding — do NOT delete the notes yet.
 3. After verification passes, delete `cowmoo/agent-files/planner/techstack-notes.md` via `node tools/dev-tools.cjs clear-techstack-notes` (allowed through the `Bash(node tools/*)` allow-list; plain `rm` is not permitted). This ensures session detection correctly hits "already decided" next time.
-4. Suggest running `/publish` to commit, then `/start` to begin planning
+4. Suggest running `/publish` to commit and push, then `/start` to begin planning
 
 ## Technology Evaluation Criteria
 

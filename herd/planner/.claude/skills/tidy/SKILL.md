@@ -66,7 +66,7 @@ Present findings, wait for confirmation, self-verify.
 
 ## Step 4: Suggest Commit
 
-If changes were made: "Files updated. Run `/publish` to commit."
+If changes were made: "Files updated. Run `/publish` to commit and push."
 
 ---
 
@@ -77,4 +77,4 @@ If changes were made: "Files updated. Run `/publish` to commit."
 - [ ] knowledge.md verified (product facts)
 - [ ] Changes presented to user and confirmed
 - [ ] Files updated and self-verified
-- [ ] User directed to /publish for commit
+- [ ] User directed to /publish for commit and push

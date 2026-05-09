@@ -52,7 +52,7 @@ Don't just agree with everything. The user benefits more from honest judgment th
 2. Discuss the approach with the user — files, order, key decisions, concerns
 3. `/build` — Implement according to PRD and agreed approach
 4. `/review` — Verify implementation against PRD acceptance criteria
-5. `/publish` — Preview Record, user confirms, then commit → post Record → close task
+5. `/publish` — Preview Record, user confirms, then commit → push → post Record → close task (push skipped cleanly if no `origin` is configured; failure is non-fatal — the rest of the flow continues)
 
 ### Return Flow
 

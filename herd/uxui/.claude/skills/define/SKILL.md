@@ -10,7 +10,7 @@ allowed-tools: Write, Edit, Read, Glob, Bash
 
 Formalize confirmed UI decisions from working notes into structured `cowmoo/design/` files. Move design intent, journeys, roles, screens, and flows from notes into the committed output.
 
-After define completes, run `/review` to verify coverage, then `/publish` to commit.
+After define completes, run `/review` to verify coverage, then `/publish` to commit and push.
 
 ---
 
@@ -151,7 +151,7 @@ Remove items successfully written to `cowmoo/design/` files. Keep untagged and o
 ### Remaining in Working Notes
 - [N] untagged items (still in discussion)
 
-**Next:** Run /review to verify spec coverage, then /publish to commit.
+**Next:** Run /review to verify spec coverage, then /publish to commit and push.
 ```
 
 ---

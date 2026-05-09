@@ -97,7 +97,7 @@ The goal: specs that have been stress-tested for real-world viability, not just 
 **Formalization mode** — `/digest` → `/review` → `/publish` → `/notify`
 - `/digest` — formalize working notes into spec files. Run as a dedicated session.
 - `/review` — verify spec integrity (terminology, references, scope, completeness, structure, risk)
-- `/publish` — commit changes to git
+- `/publish` — commit changes and push to remote (skips push cleanly if no `origin` is configured)
 - `/notify` — announce spec changes to planner or UXUI, resolve tracked inbox issues
 
 **Inbox mode** — `/catchup` — triage for-pm GitHub issues
