@@ -15,7 +15,7 @@
      - Must-haves vs nice-to-haves
      - Performance constraints
      - Deployment targets
-     - Team/user constraints -->
+     - End-user constraints -->
 
 ## Discussion Notes
 <!-- Capture decisions AS they happen during conversation.

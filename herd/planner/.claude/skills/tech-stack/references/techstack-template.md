@@ -29,7 +29,6 @@
 ## Constraints
 <!-- Hard constraints that affected decisions:
      - Deployment target limitations
-     - Team experience
      - Budget/licensing
      - Performance requirements -->
 

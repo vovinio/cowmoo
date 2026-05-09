@@ -10,11 +10,7 @@ allowed-tools: Read, Write, Agent, Glob, Grep, Bash, AskUserQuestion
 
 Guide the user through choosing the right technology stack for their project. This is a high-impact decision — take time to understand the product before proposing anything.
 
-## Avoid Defaults Bias
-
-LLMs over-favor popular stacks (React, Next.js, Postgres, Firebase) because their training data is dominated by them. For each decision in this skill, consider simpler alternatives first and justify complexity against the product summary written in Step 2.
-
-For the frontend choice specifically there is a concrete complexity hierarchy — when you reach Step 3's frontend discussion, Read `references/defaults-bias.md` for the ordered list and the reasoning.
+The skill's job is **leading a structured conversation**: read the specs, ask the right questions in the right order, propose concrete options with product-specific tradeoffs, capture decisions as they happen, and write a clean final file. Don't push defaults. Don't rank stacks by complexity. Pick from the spec.
 
 ## Session Detection
 
@@ -66,30 +62,34 @@ This summary grounds the conversation. Every decision should reference it.
 
 ### 3. Lead the conversation
 
-Ask **one question at a time**, multiple choice when possible. Don't overwhelm with 10 questions upfront.
+Ask **one question at a time**. Lead with concrete options — name real choices, not abstract categories — and explain tradeoffs in terms of the product summary from Step 2. Use the `AskUserQuestion` picker when there are 2-4 genuine alternatives.
 
-**Key areas to cover:**
+**Order matters.** Each upstream choice constrains the next — don't ask "what auth?" before settling "BaaS or DIY?", because BaaS often answers auth automatically. Walk the questions in this sequence:
 
-**Deployment & constraints:**
-- Where will this be deployed? (VPS, serverless, container, PaaS)
-- Budget constraints? (Hosting costs, paid services)
-- Team experience — what technologies does the team know well?
+1. **Runtime shape** — where will this run?
+   Static hosting / edge runtime / serverless functions / long-running container / VPS / self-hosted.
+   This is upstream of everything: edge runtimes constrain ORM and runtime APIs; static-only means no backend; long-running containers unlock things serverless can't do (WebSockets, background jobs, large file processing).
 
-**Architecture decisions:**
-- Backend framework (connect to product requirements, not popularity)
-- Database (relational vs document vs graph — match data model complexity)
-- Auth approach (session-based, JWT, OAuth provider, third-party like Clerk/Auth0)
+2. **Backend approach** — DIY or BaaS?
+   - **DIY**: pick a framework + DB + auth separately and deploy your own service.
+   - **BaaS** (e.g. Supabase, Convex, Firebase): one platform bundles auth + DB + storage + realtime. This often dominates the next 2-3 decisions.
+   - **Headless CMS** for content-heavy products.
+   Match to product needs — BaaS shortens time-to-ship at the cost of vendor coupling; DIY is more work but portable.
 
-**Frontend approach** — before proposing options, Read `references/defaults-bias.md` for the complexity hierarchy and the reasoning behind it. Then discuss:
-- What's the actual interactivity requirement?
-- Does this need a SPA or would server-rendered pages work?
-- If SPA is justified, which framework fits the team and product?
+3. **Database** *(skip if BaaS owns it)*
+   Relational vs document vs graph vs key-value — match the data model from the spec, not popularity.
 
-**Supporting tools:**
-- Testing framework
-- Styling approach (Tailwind, CSS modules, styled-components)
-- ORM / database client
-- Deployment tooling
+4. **Auth** *(skip if BaaS or framework-bundled covers it)*
+   Managed service / framework-bundled / self-managed.
+
+5. **Frontend approach**
+   Static-rendered / SSR or RSC / SPA / server-rendered from the backend.
+   Drive the choice from interactivity requirements and SEO needs in the spec, not from "simpler is better."
+
+6. **Supporting tools**
+   Testing framework, styling, ORM (if DIY backend), validation library, deployment tooling.
+
+For each decision, propose 2-3 specific options with product-specific tradeoffs (not generic pros/cons). Lead with your recommendation grounded in a spec requirement. Don't list options and wait — recommend, then accept or adjust based on the user's reaction.
 
 ### 4. Capture decisions as they happen
 
@@ -121,22 +121,18 @@ Rate each option honestly against these:
 
 | Criteria | Questions |
 |----------|-----------|
-| Simplicity | How much code? How many concepts? |
-| Fit | Does it match actual requirements? Overkill? |
-| LLM Efficiency | Less code = easier to read, understand, and modify correctly |
-| Team Fit | Does the team know it? Can they maintain it? |
-| Ecosystem | Libraries for what we need? |
-| Longevity | Maintained? Active community? |
+| Fit | Does it match the actual requirements from the spec? Overkill or under-spec'd? |
+| Ecosystem | Libraries available for what the product needs? |
+| Longevity | Actively maintained? Community traction? |
+| Coupling | If we pick this, what else does it lock us into? |
 
 ## Conversation Style
 
 - Be direct. If a user's preference doesn't match the product requirements, say so with reasoning.
 - Don't be sycophantic. "That's a great choice" is only appropriate when it genuinely is.
-- If the user wants React for a CRUD admin panel, push back — explain why simpler options might serve them better. Accept their decision if they insist, but make the case.
 - Propose and recommend, don't just list options and wait.
 
 ## References
 
-- `references/defaults-bias.md` — frontend complexity hierarchy (read during Step 3 frontend discussion)
 - `references/techstack-notes-template.md` — working notes structure
 - `references/techstack-template.md` — final output structure

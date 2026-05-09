@@ -97,7 +97,7 @@ Present findings to user for review. Suggest `/publish` to commit the updated ma
 
 - **Existing patterns may be mistakes, not conventions.** Flag workarounds and tech debt as Notes, not as patterns.
 - **Dead code is common.** Check that files/functions are actually imported and used. Don't document dead code as architecture.
-- **Framework version matters.** Next.js 12 (pages/) vs 14 (app/) have completely different patterns.
+- **Framework version matters.** Major versions of the same framework can have completely different patterns (router model, reactivity primitives, syntax). Document which version is in use so future tasks don't mix paradigms.
 - **Include file paths.** Every pattern claim should reference specific files as evidence.
 
 ---
