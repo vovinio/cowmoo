@@ -1,0 +1,94 @@
+{
+  "statusLine": {
+    "type": "command",
+    "command": "bash tools/statusline.sh"
+  },
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Read",
+      "Edit",
+      "Write",
+      "Glob",
+      "Grep",
+      "WebSearch",
+      "WebFetch",
+      "Bash(node *)",
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(bun *)",
+      "Bash(pnpm *)",
+      "Bash(yarn *)",
+      "Bash(python *)",
+      "Bash(python3 *)",
+      "Bash(pip *)",
+      "Bash(pip3 *)",
+      "Bash(cargo *)",
+      "Bash(go *)",
+      "Bash(make *)",
+      "Bash(deno *)",
+      "Bash(git *)",
+      "Bash(gh *)",
+      "Bash(brew *)",
+      "Bash(docker *)",
+      "Bash(curl *)",
+      "Bash(jq *)",
+      "Bash(ls *)",
+      "Bash(cat *)",
+      "Bash(echo *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(wc *)",
+      "Bash(diff *)",
+      "Bash(mkdir *)",
+      "Bash(cp *)",
+      "Bash(mv *)",
+      "Bash(touch *)",
+      "Bash(chmod *)",
+      "Bash(test *)",
+      "Bash(bash *)",
+      "Bash(cd *)",
+      "Bash(pwd)",
+      "Bash(which *)",
+      "Bash(command *)",
+      "Bash(export *)",
+      "Bash(set *)",
+      "Bash(env *)",
+      "Bash(basename *)",
+      "Bash(dirname *)",
+      "Bash(realpath *)",
+      "Bash(grep *)",
+      "Bash(find *)",
+      "Bash(sed *)",
+      "Bash(awk *)",
+      "Bash(sort *)",
+      "Bash(uniq *)",
+      "Bash(xargs *)",
+      "Bash(tee *)",
+      "mcp__github__*"
+    ],
+    "deny": [
+      "Bash(rm -rf /)",
+      "Bash(rm -rf ~)",
+      "Read(.env)",
+      "Read(**/.env)",
+      "Edit(.env)",
+      "Edit(**/.env)",
+      "Write(.env)",
+      "Write(**/.env)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node tools/pattern-check.cjs"
+          }
+        ]
+      }
+    ]
+  }
+}

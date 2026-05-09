@@ -1,0 +1,92 @@
+{
+  "env": {
+    "CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD": "1"
+  },
+  "permissions": {
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "WebSearch",
+      "WebFetch",
+      "Edit(**/cowmoo/specs/**)",
+      "Edit(**/cowmoo/agent-files/pm/**)",
+      "Write(**/cowmoo/specs/**)",
+      "Write(**/cowmoo/agent-files/pm/**)",
+      "Bash(node tools/*)",
+      "Bash(gh *)",
+      "Bash(git *)",
+      "Bash(open *)",
+      "Bash(playwright-cli *)"
+    ],
+    "deny": [
+      "Read(.env*)",
+      "Read(**/.env*)",
+      "Edit(.env*)",
+      "Edit(**/.env*)",
+      "Write(.env*)",
+      "Write(**/.env*)",
+      "Read(**/cowmoo/agent-files/planner/**)",
+      "Read(**/cowmoo/agent-files/uxui/**)",
+      "Read(**/cowmoo/agent-files/builder/**)",
+      "Edit(**/cowmoo/stack/**)",
+      "Write(**/cowmoo/stack/**)",
+      "Edit(**/cowmoo/design/**)",
+      "Write(**/cowmoo/design/**)",
+      "Edit(**/cowmoo/codebase/**)",
+      "Write(**/cowmoo/codebase/**)",
+      "Edit(**/cowmoo/agent-files/planner/**)",
+      "Write(**/cowmoo/agent-files/planner/**)",
+      "Edit(**/cowmoo/agent-files/uxui/**)",
+      "Write(**/cowmoo/agent-files/uxui/**)",
+      "Edit(**/cowmoo/agent-files/builder/**)",
+      "Write(**/cowmoo/agent-files/builder/**)"
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "bash tools/statusline.sh"
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node tools/dev-tools.cjs git-check"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node tools/dev-tools.cjs territory-check"
+          }
+        ]
+      },
+      {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "SKILL=$(printf '%s\\n' \"$TOOL_INPUT\" | jq -r '.skill // empty'); [ -n \"$SKILL\" ] && node tools/dev-tools.cjs workflow-check \"$SKILL\" || true"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -f tools/dev-tools.cjs ] && node tools/dev-tools.cjs hook session-start || echo 'tools/ not found.'"
+          }
+        ]
+      }
+    ]
+  },
+  "outputStyle": "product-specification"
+}

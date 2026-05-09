@@ -1,0 +1,16 @@
+herd/pm/.mcp.json
+herd/uxui/.mcp.json
+herd/builder/.mcp.json
+
+# Playwright CLI local browser config — per-agent-dir runtime cache
+herd/*/.playwright/
+herd/*/.playwright-cli/
+
+# Audit workflow scratch — regenerated on every audit cycle.
+# AUDIT-SKIPPED.md is persistent and stays tracked.
+AUDIT-RESULTS.md
+AUDIT-VERIFY.md
+
+# Per-user project registry — populated by `moo init` on the user's machine.
+# Not shared in the repo because contents are local paths and personal repo names.
+projects.md

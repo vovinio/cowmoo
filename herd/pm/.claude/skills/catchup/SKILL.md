@@ -1,0 +1,129 @@
+---
+name: catchup
+description: Triage pending for-pm issues from GitHub — quick-resolve or transition into a working session.
+user-invocable: true
+disable-model-invocation: true
+allowed-tools: Agent, Read, Glob, Bash, Edit, Write
+---
+
+# Catch Up
+
+Triage pending for-pm GitHub issues. Quick questions get resolved here. Issues that need spec work transition into a discussion session.
+
+---
+
+## Step 1: Load Inbox
+
+Spawn `@inbox-reader` with operation **GET_INBOX**.
+
+If inbox is empty — report "No for-pm issues." and stop.
+
+---
+
+## Step 2: Present All Issues
+
+Show the full inbox with category and origin:
+
+```
+## Inbox — [N] Issues
+
+1. #<number> — <title> → **<quick question | spec change needed>** (from <planner | uxui | unknown>)
+   <one-line summary>
+
+2. #<number> — <title> → **<category>** (from <origin>)
+   <one-line summary>
+```
+
+Ask: "Which issue should we start with?"
+
+---
+
+## Step 3: Process Each Issue
+
+For each issue the user picks, handle by category. The category determines how PM handles the issue; the **origin** (from `@inbox-reader`'s output in Step 1) determines where the answer routes back when resolving — see the routing rule below.
+
+### Routing rule (applies to every inline resolution)
+
+When spawning `@pm-ops RESOLVE_ISSUE`, pick the action and target from origin:
+
+- origin `planner` → action **transfer**, transfer-target **planner** (relabels `for-pm` → `for-planner` so planner's `/catchup` picks up the answer)
+- origin `uxui` → action **transfer**, transfer-target **uxui** (relabels `for-pm` → `for-uxui` so UXUI's `/catchup` picks up the answer)
+- origin `unknown` → action **close** (human-filed; no automated round-trip)
+
+### Quick Question
+1. Read the full issue context from @inbox-reader's response
+2. Present your understanding of the question
+3. Propose an answer — with specifics, not vague responses
+4. Discuss with user until resolved
+5. On confirmation: spawn `@pm-ops` with operation **RESOLVE_ISSUE** — issue number, resolution summary, action and transfer-target per the **Routing rule** above.
+
+### Spec Change Needed
+1. Read the full issue context
+2. Present the problem — what's being flagged, which specs are affected
+3. Assess scope:
+   - **Small fix** (typo in spec, missing edge case, clarification) — resolve inline. Read the relevant spec file, discuss the change with user, apply the fix, self-verify. Then spawn `@pm-ops` with **RESOLVE_ISSUE** — action and transfer-target per the **Routing rule** above.
+   - **Needs discussion** — "This needs a deeper discussion session. I'll load the context so we can work on it." Transition to discussion mode (see below). The eventual answer ships via `/notify`, which closes the original tracked issue with a link to the new announcement.
+
+---
+
+## Step 4: Transition to Discussion (when needed)
+
+When an issue needs real spec work:
+
+1. Tell the user: "Issue #N needs spec work. Transitioning to a discussion session about [topic]."
+2. Track the issue for later resolution:
+   ```bash
+   node tools/dev-tools.cjs inbox add <number> "<title>"
+   ```
+3. Read the relevant spec files and working notes for context
+4. The conversation continues as a normal discussion about that topic
+5. The user will run `/draft` → `/digest` → `/review` → `/publish` → `/notify` as normal
+6. `/notify` will check tracked inbox issues and offer to resolve this one
+
+**Do not close or transfer the issue** — it stays open until `/notify` resolves it after the spec work is committed.
+
+Stop the catchup process here. Remaining inbox issues can be processed in a future `/catchup` run.
+
+---
+
+## Step 5: Report (when all issues resolved in triage)
+
+If all issues were quick-resolved without needing a discussion session:
+
+```
+## Inbox Processed
+
+- [N] issues resolved
+  - #<number>: <resolution summary> — <closed | transferred>
+- Spec files changed: <list, or "none">
+
+<If spec files were changed:>
+**Next:** Run /publish to save changes, then /notify to announce downstream.
+```
+
+---
+
+## Completion Checklist
+
+Before finishing, confirm:
+
+- [ ] All issues presented to user with categories
+- [ ] Each processed issue: discussed, resolved, confirmed by user
+- [ ] Quick resolutions: @pm-ops executed RESOLVE_ISSUE (verified)
+- [ ] Spec changes (if any): self-verified after edit
+- [ ] Issues needing work: transitioned to discussion mode, issue left open
+- [ ] Report presented (or discussion session started)
+
+---
+
+## Rules
+
+- **Triage, don't force** — if an issue needs discussion, transition. Don't try to resolve complex spec problems inline.
+- **User decides** — present your recommendation, let the user confirm or adjust
+- **One at a time** — process each issue fully before moving to the next
+- **Quick resolve = comment + close/transfer** — always through @pm-ops with verification
+- **Needs work = discussion session** — stop catchup, start discussion, let /notify close the loop
+- **Always prefix comments** with `**[PM]**` (handled by @pm-ops)
+- **Conflicting for-pm issues** — if two planner questions touch the same domain, resolve them together before responding separately. Handling them in isolation risks contradictory spec answers.
+- **For-pm issue references a spec you just changed** — check if the question is already answered by the change. If so, respond with the update rather than re-discussing.
+- **Inbox issue requires extended discussion** — the issue number is tracked in `.inbox-context` (see Step 4). Complete the discussion, then use `/notify` to announce the spec update and resolve tracked issues.

@@ -1,0 +1,13 @@
+# Registered Projects
+
+<!--
+  This is the template for `projects.md` — your local registry of cowmoo-initialized projects.
+  `moo init <path>` populates the real `projects.md` automatically. The real file is gitignored
+  because it contains user-specific local paths and personal repo names.
+
+  Format (one project per line):
+    - **<project-name>** — `<absolute-path>` — <github-owner>/<repo>     (with gh remote)
+    - **<project-name>** — `<absolute-path>`                              (without gh remote)
+
+  Used by `moo projects` and `moo proposals` to enumerate projects.
+-->

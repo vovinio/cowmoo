@@ -1,0 +1,152 @@
+---
+name: ask
+description: Send a for-pm (spec gaps) or for-planner (response to a for-uxui message) issue. Closes tracked inbox items when the response ships.
+user-invocable: true
+disable-model-invocation: true
+argument-hint: <pm | planner>
+allowed-tools: Bash, Read, Glob, Agent
+---
+
+# Ask
+
+Request action from another agent whose domain owns something UXUI can't fix:
+
+- **PM** — for spec gaps, clarification questions, or contradictions found during design work (`for-pm` label)
+- **Planner** — when UXUI processes a `for-uxui` message from the planner and the finding requires planner action (e.g., the task scope is wrong, not a real UI gap) (`for-planner` label)
+
+Use when UXUI has a problem that can't be resolved without input from another agent, or when UXUI needs to respond to an incoming `for-uxui` message with a finding the planner must act on.
+
+---
+
+## Step 1: Determine Target
+
+Parse the argument: `pm` or `planner`.
+
+If no argument is provided, scan the session and propose:
+- **Spec gap / spec question / spec issue** (what's missing from specs, business logic unclear) → PM.
+- **Response to a tracked for-uxui inbox item** (planner asked about a ui-gap / ui-question and UXUI's finding requires planner action) → planner.
+
+Check `node tools/dev-tools.cjs inbox list` — if there's an active tracked `for-uxui` item from the planner and the current session diagnosed it as "not a real gap / task scope wrong", `planner` is the natural target.
+
+Ask the user: *"Is this a spec issue (send to PM) or a response to the tracked for-uxui issue (send to planner)?"*
+
+The target determines which label and which `@uxui-gh-ops` operation to use.
+
+---
+
+## Step 2: Check Context
+
+Check `$PROJECT_DIR/cowmoo/agent-files/uxui/.inbox-context` (via `node tools/dev-tools.cjs inbox list`) — we may be responding to an incoming message that led to this escalation. Note which tracked issue(s), if any, this ask will resolve.
+
+---
+
+## Step 3: Compose Message
+
+### `for-pm` message
+
+Your message should include:
+- Which spec domain is affected
+- What's wrong or missing, in product terms — not UI terms
+- Specific questions that need answers
+- What UI work is affected (which screens or flows are blocked)
+
+Preview the message. List questions clearly:
+
+```
+## Message preview
+
+<describe the problem and its context>
+
+**Questions:**
+- <specific question 1>
+- <specific question 2>
+
+Send this? (adjust / approve)
+```
+
+### `for-planner` message
+
+Respond to a `for-uxui` message when your finding requires action from the `for-planner` inbox (most commonly: the task scope was wrong).
+
+Your message should include:
+- The original `for-uxui` issue number being responded to
+- What was observed when diagnosing the original message — fact, not prescription
+- Which task or story is affected
+
+Preview the message:
+
+```
+## Message preview
+
+<describe what was found, referencing the original issue>
+
+Send this? (adjust / approve)
+```
+
+**Wait for user approval** (both targets).
+
+---
+
+## Step 4: Create GitHub Issue
+
+### `for-pm`
+
+Spawn `@uxui-gh-ops` with **CREATE_FOR_PM**:
+- Title: `[UXUI] <summary>`
+- Body: the composed message
+
+### `for-planner`
+
+Spawn `@uxui-gh-ops` with **CREATE_FOR_PLANNER**:
+- Title: `[UXUI] <summary>`
+- Body: the composed message
+
+Wait for confirmation that the issue was created and verified.
+
+---
+
+## Step 5: Resolve Tracked Inbox Items
+
+If the current session is in response to a tracked `for-uxui` issue (check `node tools/dev-tools.cjs inbox list`), present each tracked item to the user:
+
+- "Tracked issue #N: [title]. Did this `/ask` address it?"
+- If yes → spawn `@uxui-gh-ops` with **RESOLVE_ISSUE** — issue number, resolution summary (a short note pointing at the new `for-planner` or `for-pm` issue). RESOLVE_ISSUE always closes the issue.
+- After resolving, remove from tracking: `node tools/dev-tools.cjs inbox remove <number>`.
+- If no → leave tracked for future.
+
+---
+
+## Step 6: Report
+
+```
+## Sent
+
+**Issue:** #NN — [title]
+**Type:** [type]
+**Inbox resolved:** <list of closed tracked items, or "none">
+```
+
+---
+
+## Completion Checklist
+
+- [ ] Target determined (pm or planner)
+- [ ] Inbox context checked (`.inbox-context`)
+- [ ] Message includes necessary content for the target
+- [ ] Observations are factual, not prescriptive
+- [ ] User approved the message
+- [ ] GitHub issue created via `@uxui-gh-ops` (`CREATE_FOR_PM` or `CREATE_FOR_PLANNER`) — verified
+- [ ] Tracked inbox items resolved if applicable — verified
+- [ ] Report presented
+
+---
+
+## Rules
+
+- **Observational, not prescriptive** — PROBLEM and OBSERVED state what was observed, not what the recipient should do.
+- **Product terms, not UI terms** (PM target) — describe what's wrong in specs, not what's hard to design.
+- **Don't diagnose across boundaries** (`for-planner` target) — if your finding is "task scope is wrong", report the observation. Let the planner decide whether to rewrite the PRD, split the task, or something else.
+- **Be specific** — "the payment spec doesn't define refund workflow" not "the spec needs more detail"; "screen Invoice Detail has no loading state but PRD acceptance criteria require one" not "there's a UI gap".
+- **Ask specific questions** — "can partial refunds happen? who initiates them?" not "clarify refunds".
+- **User approves before sending** — the message represents UXUI's understanding; user should validate.
+- **One target per invocation** — if both PM and planner need messages, run `/ask` twice with different targets.
