@@ -58,7 +58,7 @@ Run `moo doctor` after `moo init` to verify everything is wired correctly.
 ### 1. Clone cowmoo
 
 ```bash
-git clone <repo-url> cowmoo
+git clone https://github.com/vovinio/cowmoo.git
 cd cowmoo
 ```
 
