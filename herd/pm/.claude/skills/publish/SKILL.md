@@ -37,11 +37,15 @@ Wait for explicit approval before proceeding.
 
 ---
 
-## Step 3: Commit
+## Step 3: Commit and Push
 
-Spawn `@pm-ops` with operation **COMMIT** and the approved message.
+Spawn `@pm-ops` with operation **COMMIT** and the approved message. Wait for confirmation that the commit was verified.
 
-Wait for confirmation that commit was verified.
+Then spawn `@pm-ops` with operation **PUSH** to publish the commit to the remote. Wait for the PUSH report.
+
+If the project has no `origin` remote, PUSH reports `skipped` and the publish completes locally — that's expected on a fresh project that hasn't been linked to GitHub yet.
+
+If PUSH fails (network, auth, conflict), surface the error to the user. The local commit is intact; the user can run `git push` manually or re-run `/publish` once the issue is resolved.
 
 ---
 
@@ -51,6 +55,7 @@ Wait for confirmation that commit was verified.
 ## Committed
 
 **Commit:** <commit hash> — <message>
+**Push:** <PUSH report from Step 3>
 **Next session:** [what to pick up — domain focus, open questions, next action]
 ```
 

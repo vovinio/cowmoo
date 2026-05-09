@@ -153,7 +153,7 @@ When the user has 2-4 distinct routes (e.g. "approve as-is", "approve and add ne
 
 If the user approves:
 
-1. **If ROLE_ADDITIONS were accepted** — discuss role names with user, then Edit `cowmoo/design/roles.md` to add them. Run `@uxui-git-ops COMMIT_ROLES` with `roles: add <role names>` message. (COMMIT_ROLES stages only `roles.md` — unrelated pending UXUI-territory changes are not swept into the roles commit.)
+1. **If ROLE_ADDITIONS were accepted** — discuss role names with user, then Edit `cowmoo/design/roles.md` to add them. Run `@uxui-git-ops COMMIT_ROLES` with `roles: add <role names>` message. (COMMIT_ROLES stages only `roles.md` — unrelated pending UXUI-territory changes are not swept into the roles commit.) Then run `@uxui-git-ops PUSH` to publish the roles commit. PUSH failure is non-fatal — the local commit is intact; surface the error and continue with the next steps. PUSH skips silently if the project has no `origin` remote.
 
 2. **Check for a prior partial run** — detect whether a previous invocation on this same ticket already attached a bundle line. Only runs on re-invocation; first-time runs fall through the "no prior attachment" branch immediately and proceed to step 3.
 
@@ -244,6 +244,8 @@ If the user approves:
    ATTACH_DESIGN now stages BOTH the domain file (from step 3) and the journal file (from step 5) and commits them together in one message.
 
    **Guard:** if the op reports `ATTACH_DESIGN: Nothing to commit — domain file and journal unchanged` AND step 2 did not detect a pre-existing attachment, neither step 3 nor step 5 took effect. Stop here, investigate (was the screen heading found? did UPDATE_JOURNAL succeed?), and resolve before proceeding. Do NOT run APPROVE_DESIGN with an un-attached bundle — that would close the issue without recording the bundle reference.
+
+   After a successful ATTACH_DESIGN, run `@uxui-git-ops PUSH` so the bundle attachment + journal commit lands on the remote before APPROVE_DESIGN closes the issue. PUSH failure is non-fatal — surface the error and continue. PUSH skips silently if the project has no `origin` remote.
 
 7. **Approve and close** via `@uxui-gh-ops`:
 

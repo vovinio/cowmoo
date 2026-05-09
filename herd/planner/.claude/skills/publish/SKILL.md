@@ -64,11 +64,15 @@ If draft.md exists and has an Updates section:
 
 If draft.md exists — delete it via `node tools/dev-tools.cjs clear-draft` (allowed through the `Bash(node tools/*)` allow-list; plain `rm` is not permitted). draft.md is untracked in git, so this is disk-only cleanup — it removes the "Draft: exists from previous session" indicator from the next session's statusline and hooks. The next step's commit captures only the knowledge.md append.
 
-### 5. Commit
+### 5. Commit and Push
 
 Spawn `@plan-ops` with **COMMIT** operation:
 - Stage: `cowmoo/agent-files/planner/`, `cowmoo/stack/` (captures the knowledge.md append; draft.md was untracked, so its deletion is disk-only and not represented in the commit)
 - Message: describe what changed
+
+Then spawn `@plan-ops` with **PUSH** to publish the commit to the remote before any GitHub issues are created — the issues should reference a pushed state.
+
+If the project has no `origin` remote, PUSH reports `skipped` and the flow continues. If PUSH fails (network, auth, conflict), surface the error and continue with issue creation — the commit is intact locally and the user can re-push manually. Do NOT abort the rest of the publish flow.
 
 ### 6. Create GitHub issues
 

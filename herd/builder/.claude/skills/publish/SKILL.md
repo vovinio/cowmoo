@@ -92,13 +92,15 @@ Wait for user confirmation. User can adjust before confirming.
 In order:
 
 1. **Commit code** — `@task-ops` COMMIT scope=code with the commit message from Step 3
-2. **Post Record** — `@task-ops` POST_COMMENT with Record text
-3. **Complete task** — `@task-ops` COMPLETE
-4. **Update BUILD-NOTES.md** — if this task revealed project-specific rules (patterns to follow, traps to avoid, conventions that differ from defaults), add them as directives. Merge with existing entries on the same topic. Delete entries this task proved wrong.
-5. **Clean up** — `rm -f "$PROJECT_DIR/cowmoo/agent-files/builder/deviations.md" "$PROJECT_DIR/cowmoo/agent-files/builder/active-task.md"`
-6. **Commit working files** — `@task-ops` COMMIT scope=working (if BUILD-NOTES or other working files changed)
+2. **Push code** — `@task-ops` PUSH. The code commit must be on the remote before the Record references it and before the issue closes. If the project has no `origin` remote, PUSH reports `skipped` and the flow continues.
+3. **Post Record** — `@task-ops` POST_COMMENT with Record text
+4. **Complete task** — `@task-ops` COMPLETE
+5. **Update BUILD-NOTES.md** — if this task revealed project-specific rules (patterns to follow, traps to avoid, conventions that differ from defaults), add them as directives. Merge with existing entries on the same topic. Delete entries this task proved wrong.
+6. **Clean up** — `rm -f "$PROJECT_DIR/cowmoo/agent-files/builder/deviations.md" "$PROJECT_DIR/cowmoo/agent-files/builder/active-task.md"`
+7. **Commit working files** — `@task-ops` COMMIT scope=working (if BUILD-NOTES or other working files changed)
+8. **Push working files** — `@task-ops` PUSH (no-op if step 7 produced no commit; otherwise pushes the working-files commit). Same skip/failure semantics as step 2.
 
-**If any step fails:** Report which step failed and list the remaining `@task-ops` operations still needed. Do not skip failed steps or proceed as if they succeeded.
+**If any step fails:** Report which step failed and list the remaining `@task-ops` operations still needed. Do not skip failed steps or proceed as if they succeeded. **PUSH failure is non-fatal** — the local commit is correct; surface the error and continue with the next step.
 
 ---
 

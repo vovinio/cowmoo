@@ -58,6 +58,39 @@ Confirm the commit was created and the staged paths are clean.
 
 ---
 
+### PUSH
+
+Push the current branch to the configured remote. Applies after any of `COMMIT`, `COMMIT_ROLES`, or `ATTACH_DESIGN`.
+
+**Pre-check:**
+```bash
+git -C "$PROJECT_DIR" remote get-url origin >/dev/null 2>&1
+```
+If exit is non-zero (no `origin` remote configured), report `PUSH: skipped — no git remote 'origin' configured.` and stop.
+
+**Execute:**
+```bash
+git -C "$PROJECT_DIR" push -u origin HEAD 2>&1
+```
+The `-u origin HEAD` form is idempotent — sets upstream on the first push, plain push afterwards.
+
+**Verify:**
+```bash
+git -C "$PROJECT_DIR" status -sb
+```
+Confirm the branch line no longer shows `[ahead N]`.
+
+**Report:**
+- Success: `PUSH: ✓ to origin/<branch>`
+- Skipped: `PUSH: skipped — no git remote 'origin' configured.`
+- Failure: `PUSH: ✗ <reason>` — the local commit stands; user can retry with `git push` or re-run the publish skill.
+
+**Rules:**
+- **Push failure does NOT roll back the commit.** The local commit is correct; only the remote sync failed. Surface the error and continue with the rest of the calling skill (e.g., `/review-bundle` still flips the label after `ATTACH_DESIGN`).
+- **Network or auth errors** propagate as the failure reason — don't try to fix them automatically.
+
+---
+
 ### COMMIT_ROLES
 
 Scoped commit for role-vocabulary additions. Used by `/review-bundle` when approving ROLE_ADDITIONS, so unrelated pending UXUI-territory changes (WORKING-NOTES, design-draft, in-progress domain edits) are NOT swept into a "roles: add" commit.

@@ -127,6 +127,39 @@ Confirm the commit was created and the staged paths are clean.
 
 ---
 
+### PUSH
+
+Push the current branch to the configured remote.
+
+**Pre-check:**
+```bash
+git -C "$PROJECT_DIR" remote get-url origin >/dev/null 2>&1
+```
+If exit is non-zero (no `origin` remote configured), report `PUSH: skipped — no git remote 'origin' configured.` and stop.
+
+**Execute:**
+```bash
+git -C "$PROJECT_DIR" push -u origin HEAD 2>&1
+```
+The `-u origin HEAD` form is idempotent — sets upstream on the first push, plain push afterwards.
+
+**Verify:**
+```bash
+git -C "$PROJECT_DIR" status -sb
+```
+Confirm the branch line no longer shows `[ahead N]`.
+
+**Report:**
+- Success: `PUSH: ✓ to origin/<branch>`
+- Skipped: `PUSH: skipped — no git remote 'origin' configured.`
+- Failure: `PUSH: ✗ <reason>` — the local commit stands; user can retry with `git push` or re-run the publish skill.
+
+**Rules:**
+- **Push failure does NOT roll back the commit.** The local commit is correct; only the remote sync failed. Surface the error and continue with the rest of the publish flow (COMPLETE / issue close still runs).
+- **Network or auth errors** propagate as the failure reason — don't try to fix them automatically.
+
+---
+
 ### COMPLETE
 
 Close a task that's been committed and Recorded. Only called when `/publish` has decided the work can ship (deviations-requiring-planner-review route through `/return`, not here).
