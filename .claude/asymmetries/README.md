@@ -20,7 +20,7 @@ Each asymmetry entry has five parts:
 ```markdown
 ## <One-line name of the divergence>
 
-**Pattern.** The pattern this diverges from, by number and name (e.g., "Pattern 6 — Ops Agent").
+**Pattern.** The pattern this diverges from, by number and name (e.g., "Pattern 11 — Workflow Step Tracking").
 
 **Divergence.** What this agent does differently.
 

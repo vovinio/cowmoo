@@ -10,11 +10,45 @@ The user benefits more from your honest judgment than from compliance. A "no, be
 
 This applies to everything — design discussions, code changes, audit findings. If something is fine, say it's fine. If a suggestion would break consistency or add unnecessary complexity, push back. If you're not sure, say that instead of guessing.
 
+**Confidence under questioning.** When the user asks "are you sure?" or "did you miss anything?" without providing new evidence, restate your position based on the same evidence you already had. The question is a request to verify, not a hint that your answer should change. If a fresh check produces new information, update on the information — not on the social pressure of being asked. Wavering without evidence corrodes trust faster than a wrong-but-confident answer; inventing concerns to demonstrate self-awareness is the same failure mode in reverse. Stand by your judgment until new facts move it.
+
 ## How You Work
 
 Only change what's truly needed. Read existing code and understand the design before modifying it. "It could also be written this way" is not a reason to rewrite. When you do make changes, verify they don't break what already works.
 
 When editing agent instructions, use that agent's own abstractions — its agents, commands, and environment variables. Never reference bare shell commands when the agent has a dedicated mechanism. For example: builder uses `@task-ops` for all git/gh operations and `git -C "$PROJECT_DIR"` for direct git — never bare `git` or `gh` in instruction text.
+
+## Removing or Renaming Canonical Content
+
+When an edit removes or renames named content — a pattern from `docs/PATTERN-CATALOG.md`, an asymmetry entry, an architectural role, a sub-agent or skill, a long-lived term in `CLAUDE.md` — the change is incomplete until every stale reference is addressed in the same turn. "Stale" includes both substantive references (text that asserts the removed content as current state) and example references (`e.g.,` mentions that name a no-longer-existent thing).
+
+Before reporting done:
+
+1. Apply the primary edit — the removal or rename itself. Resist the urge to pre-sweep based on what you happen to see in main-context; that's the unreliable judgment Layer 2 exists to defend against.
+2. Spawn `@change-sweep` with: a one-line description of what was removed or renamed, the specific terms or strings to search for (including variations), and the list of files you've already touched (so it can classify those as REQUESTER-EDITED rather than re-flagging them). The sub-agent runs in fresh context — its read of the repo isn't anchored on your edit plan and catches the references you assumed were already covered.
+3. Apply every SUBSTANTIVE and EXAMPLE-FRESHNESS finding from the sweep in the same turn. Don't defer.
+4. Only then report the change as done.
+
+The sweep is part of the change, not a follow-up to a "did you miss anything?" prompt. If the user has to ask whether the change is complete, the procedure failed — you should have already spawned the sweep and applied its findings before reporting.
+
+This procedure exists because main-context anchoring is a real failure mode: once you've drafted an N-edit plan, you look for evidence the plan is complete rather than evidence it's incomplete. Fresh sub-agent context is the antidote — same logic as `@audit-verify` for detected findings.
+
+## Verification Is Part of the Change
+
+The procedure above targets one specific failure shape (stale references after a removal). The general principle is broader and always applies: every non-trivial curator change is incomplete until you've run the fresh-context completeness check appropriate to its scope, **before reporting done** — not after the user asks "did you miss anything?".
+
+Map change type to the appropriate check:
+
+- **Herd edits** (changes under `herd/**`) → propose the `/check → /patterns → /contracts → /coherence` pipeline; run it on user approval and fix findings between skills. The pipeline IS the verification for herd edits — don't ship herd changes without it.
+- **Canonical-content removal or rename** (pattern, asymmetry, role, skill, long-lived term) → spawn `@change-sweep` per the procedure above.
+- **Canonical-content addition** (new pattern in the catalog, new asymmetry entry, new curator sub-agent, new long-lived term in `CLAUDE.md` or `docs/ARCHITECTURE.md`, new procedure section, new template) → spawn a fresh-context Agent (`Agent` tool, `subagent_type: general-purpose`) with this prompt template: *"I added `<X>` to `<file>`. Read the change, then verify: (a) internal coherence with the surrounding section; (b) consistency with existing siblings (e.g., new sub-agent vs `audit-verify`'s shape; new pattern vs other catalog entries); (c) coordinated docs that should now reference `<X>` but don't — check at minimum `docs/ARCHITECTURE.md`, `docs/PATTERN-CATALOG.md`, and any skills whose flow this addition affects; (d) procedural ambiguity — could a future curator session actually follow the new content? Return findings classified as substantive / coordinated-doc-miss / convention-drift / procedural-ambiguity / clean."* The failure mode for additions is the dual of removals: not stale references but **missing references** and convention drift. Apply substantive + coordinated-doc-miss + convention-drift + procedural-ambiguity findings in the same turn. (Unlike the removal procedure above, additions don't get their own named procedure section — additions are too varied to script with a fixed step sequence, so the inline prompt template is the substitute.)
+- **Behavioral changes** (regex tightening, logic refactor, hook update, settings change) → run the changed code on representative inputs and verify the new behavior matches intent AND doesn't regress prior behavior. A fix that introduces a new bug is worse than the original.
+- **Multi-file coordinated fixes** (callers + callee, sender + receiver, schema + reader, op + invocation) → re-read the coupled side, not just the side you edited. The whole point of "coupled" is that one side changes meaning when the other does.
+- **Suggestions and proposals** (when discussing options before any edit) → no procedural check needed, but Layer 1's "Confidence under questioning" still applies — don't waver on a proposal because the user pushed back; explain your reasoning unless they introduce new evidence.
+
+**Branches compose — don't pick the closest one.** A real change often qualifies under multiple branches at once. Example: a new function in `dev-tools.cjs` paired with the skill body that invokes it qualifies under **three** branches simultaneously — herd edit (files under `herd/**`), behavioral change (new logic to test on representative inputs), AND multi-file coordinated fix (caller + callee — the skill calls the function). Treat the mapping as a checklist, not multiple-choice. **Concrete step before reporting done: explicitly list which branches your change touches, then run each one's check.** If a change qualifies under N branches, all N verifications run before "done" — skipping any of them ships a partially-verified change, exactly the failure mode this rule exists to prevent.
+
+Common thread: the verification is **part of the change**, not bolted on after a prompt. If the only check that happens is in response to "are you sure?", the procedure failed. Two-step heuristic when in doubt: (a) what could be wrong with this change that I haven't checked? (b) is the appropriate check the pipeline, `@change-sweep`, a re-run on inputs, or a re-read of the coupled side? Run it; then report.
 
 ## Herd Agents Are Standalone (De-Curation Principle)
 
@@ -37,13 +71,13 @@ The curator brain (this file, `docs/`, `.claude/skills/`, `.claude/agents/` (cur
 
 ## Sub-Agent Context Isolation
 
-Sub-agents do NOT inherit the main agent's CLAUDE.md, output-style, or always-loaded rules. They get only: their own body, declared tools, and files they explicitly Read. This applies to herd sub-agents (`herd/<agent>/.claude/agents/*.md`) and to the curator's own sub-agents (`.claude/agents/*.md` at curator root, currently just `audit-verify`).
+Sub-agents do NOT inherit the main agent's CLAUDE.md, output-style, or always-loaded rules. They get only: their own body, declared tools, and files they explicitly Read. This applies to herd sub-agents (`herd/<agent>/.claude/agents/*.md`) and to the curator's own sub-agents (`.claude/agents/*.md` at curator root: `audit-verify` for per-finding verification, `change-sweep` for canonical-content change verification).
 
 Consequences:
 - Sub-agents that POST to GitHub or apply label semantics must `Read .claude/rules/github-workflow.md` explicitly (convention: as Prerequisite step).
 - Sub-agents that apply canonical rule content (state vocabulary, API-security rules, test-writing rules) must Read the rule file rather than inline its content.
 - Sub-agents running mechanical commands with baked-in args (readers, executors) don't need Reads — their rule usage is already encoded in commands.
-- The curator's `audit-verify` follows the same rule: it Reads cited files itself per its `## Process` Step 1 rather than relying on inherited context.
+- The curator's `audit-verify` follows the same rule: it Reads cited files itself per its `## Process` Step 1 rather than relying on inherited context. `change-sweep` is read-only and self-driven — it discovers stale references across the repo from the requester's change description, no rule files needed.
 
 ## Path-Scoped Rules: Unreliable
 
@@ -207,7 +241,7 @@ This reads every file for the named agent (no partial reads, no sampling), then 
 The curator's source of truth for "what a correct herd component looks like" lives in two places:
 
 - **`docs/PATTERN-CATALOG.md`** — named patterns organized into five groups: herd-level layout (agent layout, dev-tools, statusline, settings, hooks), role patterns (ops agent, sub-agent Read, proposal writer, check-with-verifier, parallel implementation, workflow tracking, inbox), cross-agent (message channel, GitHub GraphQL, identity prefix), skill authoring (frontmatter, rule-earns-place, partial-failure recovery, hard gate, bounded validation loop), and curator-skill structure (detection skill, finding format, verification phase). Each pattern has Purpose, Canonical Shape, Reference Implementation, Find-Instances recipe, and a pointer to declared exceptions. No inventory counts, no hand-maintained rosters.
-- **`.claude/asymmetries/<agent>.md`** — per-agent declarations of deliberate divergence from the catalog (e.g., UXUI's 4-way ops split, planner's dual SEQUENCES, builder's FORBIDDEN deny-list, builder's no-inbox, builder's exclusive use of the check-verify pattern). Each entry has Why, Curator-implication, and Revisit-if.
+- **`.claude/asymmetries/<agent>.md`** — per-agent declarations of deliberate divergence from the catalog (e.g., planner's dual SEQUENCES, builder's FORBIDDEN deny-list, builder's no-inbox, builder's exclusive use of the check-verify pattern). Each entry has Why, Curator-implication, and Revisit-if.
 
 The detection skills read these two files fresh on every run. Adding a pattern, adding an asymmetry, or changing which agents instantiate what does not require any skill edit.
 

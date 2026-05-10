@@ -6,10 +6,12 @@ herd/builder/.mcp.json
 herd/*/.playwright/
 herd/*/.playwright-cli/
 
-# Audit workflow scratch — regenerated on every audit cycle.
-# AUDIT-SKIPPED.md is persistent and stays tracked.
-AUDIT-RESULTS.md
-AUDIT-VERIFY.md
+# Audit workflow scratch — top-level only, regenerated on every audit cycle.
+# AUDIT-SKIPPED.md is persistent and stays tracked. Anchored with leading `/`
+# so they don't accidentally match `.claude/agents/audit-verify.md` (the curator
+# sub-agent file) on case-insensitive filesystems.
+/AUDIT-RESULTS.md
+/AUDIT-VERIFY.md
 
 # Per-user project registry — populated by `moo init` on the user's machine.
 # Not shared in the repo because contents are local paths and personal repo names.

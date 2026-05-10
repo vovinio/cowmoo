@@ -192,7 +192,7 @@ Patterns that constrain how specific sub-agent and skill roles are written.
 
 ### 6. Ops Agent
 
-**Purpose.** Ops agents centralize write operations (git, GitHub, bundle fetch) so the main agent stays read-only over shared state and every write is verified at the point of execution.
+**Purpose.** Ops sub-agents own write operations (git, GitHub, bundle fetch) so the main agent stays read-only over shared state and every write is verified at the point of execution. A herd agent may have one ops sub-agent or several — the count follows the agent's write surface, not a structural rule. What every ops sub-agent shares is the canonical shape below.
 
 **Canonical shape.**
 
@@ -219,7 +219,7 @@ Required conventions:
 
 **Find instances.** `ls herd/*/.claude/agents/*-ops.md`
 
-**Declared exceptions.** UXUI deliberately splits ops into four narrower agents (`@uxui-gh-ops`, `@uxui-git-ops`, `@uxui-bundle-ops`, `@uxui-journal-ops`). See `.claude/asymmetries/uxui.md`.
+**Declared exceptions.** None — count is per-agent. Planner and builder currently have one ops sub-agent each; PM has two (`@pm-ops` for GitHub/git, `@pm-bundle-ops` for transient Claude Designer share-URL fetch); UXUI has four (`@uxui-gh-ops`, `@uxui-git-ops`, `@uxui-bundle-ops`, `@uxui-journal-ops`). Each instance is checked against the canonical shape regardless of its agent's count.
 
 ---
 

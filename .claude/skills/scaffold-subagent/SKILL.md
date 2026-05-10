@@ -18,7 +18,7 @@ Use when adding a new sub-agent to any herd agent. For changes to an existing su
 
 Read `docs/PATTERN-CATALOG.md` — at minimum Pattern 7 (Sub-Agent Read Pattern), Pattern 6 (Ops Agent), Pattern 8 (Proposal Writer), and Pattern 9 (Check Agent with Verifier). The skeleton you generate depends on which role category the user picks.
 
-Read `.claude/asymmetries/<owning-agent>.md` — if the owning agent has declared asymmetries that affect sub-agent conventions (e.g., UXUI's 4-way ops split), the scaffolding must respect them.
+Read `.claude/asymmetries/<owning-agent>.md` — if the owning agent has declared asymmetries that affect sub-agent conventions (e.g., builder's exclusive use of the check-with-verifier pattern requiring a new `@check-*` sub-agent to feed into `@check-verify`), the scaffolding must respect them.
 
 ---
 
@@ -219,6 +219,6 @@ Next steps:
 
 - **Don't invent work-specific content.** The scaffold produces canonical structure only. The parts requiring judgment (which files to read, what logic to apply, what errors to catch) are left as placeholders for the user.
 - **Never overwrite an existing file.** If the target exists, stop and report — don't silently replace.
-- **Respect declared asymmetries.** Read `.claude/asymmetries/<agent>.md` before generating. If the asymmetry changes what's canonical for this agent (e.g., UXUI ops splits by domain), follow the asymmetry.
+- **Respect declared asymmetries.** Read `.claude/asymmetries/<agent>.md` before generating. If the asymmetry changes what's canonical for this agent (e.g., builder's `@check-*` agents must feed into `@check-verify`), follow the asymmetry.
 - **When role is `other`, flag it.** The final Confirm message should say: "Role `other` suggests this sub-agent may not fit an existing pattern. If it becomes a recurring shape across agents, propose adding it to PATTERN-CATALOG.md via `/propose` (at curator level: add directly)."
 - **One sub-agent per invocation.** Don't batch — each sub-agent deserves its own decision pass.

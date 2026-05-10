@@ -68,7 +68,7 @@ The rest of the steps reference this model. If you can't write it confidently, g
 
 For each operation in the agent's ops file(s), each skill, and each rule, ask:
 
-*Note on ops-file enumeration:* PM, planner, and builder have a single ops file (`@pm-ops`, `@plan-ops`, `@task-ops`). UXUI intentionally splits ops into four files (`@uxui-gh-ops`, `@uxui-git-ops`, `@uxui-bundle-ops`, `@uxui-journal-ops`). When auditing UXUI, enumerate operations across all four — the single-file assumption doesn't hold. The split is documented as deliberate in `.claude/asymmetries/uxui.md`.
+*Note on ops-file enumeration:* an agent may have one or several ops files depending on its write surface — count is not constrained by Pattern 6. Enumerate operations across every match for `herd/<agent>/.claude/agents/*-ops.md` rather than assuming a single file.
 
 1. What languages/frameworks/project layouts does this assume?
 2. What project state does it assume (non-empty, has tests, has CI, has a specific directory layout)?
@@ -136,7 +136,7 @@ This overlaps with `/contracts` Section 6 (Sub-agent Liveness) but goes deeper �
 1. **Sub-agents in `CLAUDE.md` "Available Agents"** — is `@<name>` spawned by at least one skill, sub-agent, or main-agent flow? If not, is it clearly labeled user-invokable?
 2. **Skills in `CLAUDE.md` "Available Skills"** — is the skill referenced by any workflow, or purely user-invoked? Either is fine, but the description should match.
 3. **Rules in `.claude/rules/`** — is each rule Read explicitly by at least one sub-agent (for canonical-content rules), or always-loaded for the main agent (for agent-behavior rules)? An always-loaded rule that nothing applies is dead weight.
-4. **Ops operations** — is each `### OP` header invoked by at least one skill? For PM / planner / builder, check `@<agent>-ops`. For UXUI, check all four: `@uxui-gh-ops`, `@uxui-git-ops`, `@uxui-bundle-ops`, `@uxui-journal-ops` (intentional 4-way split — see `.claude/asymmetries/uxui.md`). (Overlaps with `/contracts` Section 1 Check C but repeat it here in the context of the full model.)
+4. **Ops operations** — is each `### OP` header invoked by at least one skill? Enumerate every match for `herd/<agent>/.claude/agents/*-ops.md` — count varies per agent (currently planner/builder one each, PM two, UXUI four). (Overlaps with `/contracts` Section 1 Check C but repeat it here in the context of the full model.)
 5. **dev-tools.cjs subcommands** — each `case '<x>':` invoked by at least one skill, sub-agent, hook, or statusline? (Sub-agent files are a valid caller location — see `/check` Step 6.)
 
 **Liveness pattern to look for:** a sub-agent named in CLAUDE.md "Available Agents" but absent from every skill body, sub-agent body, and Process section. Either fix by wiring it into a workflow or relabel the CLAUDE.md entry as user-invokable. (Historical example: `@auditor` and `@auditor-quick` once fit this shape; they're now auto-invoked from `/review` Step 1b — verified before raising similar findings.)

@@ -339,6 +339,67 @@ function designFetch() {
   console.log(`OK path=${tmpDir} files=${files.length}`);
 }
 
+// --- Downstream engagement check ---
+//
+// Returns whether downstream agents (planner, UXUI) have actually been launched
+// and run on this project — used by /publish to gate the "run /notify"
+// suggestion. On greenfield projects nothing's been handed off yet, so
+// suggesting /notify is noise.
+//
+// Signals (any one is sufficient — both are file artifacts only the downstream
+// agent could have written, since PM's permissions.deny blocks Edit/Write to
+// these paths):
+//   1. cowmoo/stack/techstack.md has content (planner ran /tech-stack)
+//   2. cowmoo/design/domains/ has at least one file (UXUI has written domains)
+//
+// Deliberately NOT used as signals: for-planner / for-uxui GitHub labels.
+// Those labels can be created entirely by PM itself (via /notify planner,
+// /notify uxui, or /catchup relabeling a transferred issue), so their
+// presence is not proof that the downstream agent ever ran. Using them
+// would defeat the purpose — every PM session that has used /notify once
+// would forever after see "engaged" even if the UXUI/planner agent itself
+// has never been launched.
+//
+// Exit codes: 0 = engaged, 1 = greenfield, 2 = environment error.
+//
+function downstreamEngaged() {
+  if (!PROJECT_DIR) {
+    console.error('PROJECT_DIR not set');
+    process.exit(2);
+  }
+
+  const reasons = [];
+
+  // Signal 1: planner artifact (techstack.md is the canonical /tech-stack output)
+  const techstackPath = path.join(PROJECT_DIR, 'cowmoo/stack/techstack.md');
+  if (fs.existsSync(techstackPath)) {
+    try {
+      if (fs.readFileSync(techstackPath, 'utf8').trim().length > 0) {
+        reasons.push('cowmoo/stack/techstack.md has content (planner has run)');
+      }
+    } catch {}
+  }
+
+  // Signal 2: UXUI artifact (domain files are the canonical UXUI output)
+  const designDomainsPath = path.join(PROJECT_DIR, 'cowmoo/design/domains');
+  if (dirExists(designDomainsPath)) {
+    try {
+      const entries = fs.readdirSync(designDomainsPath).filter(f => !f.startsWith('.'));
+      if (entries.length > 0) {
+        reasons.push(`cowmoo/design/domains/ has ${entries.length} file(s) (UXUI has run)`);
+      }
+    } catch {}
+  }
+
+  if (reasons.length > 0) {
+    console.log(`engaged: ${reasons.join('; ')}`);
+    process.exit(0);
+  } else {
+    console.log('greenfield: neither cowmoo/stack/techstack.md nor cowmoo/design/domains/* has been written by a downstream agent');
+    process.exit(1);
+  }
+}
+
 // --- Main ---
 
 const [,, command, subcommand] = process.argv;
@@ -376,6 +437,9 @@ switch (command) {
   case 'design-fetch':
     designFetch();
     break;
+  case 'downstream-engaged':
+    downstreamEngaged();
+    break;
   default:
-    console.log('Usage: node tools/dev-tools.cjs <hook|git-check|territory-check|check-files|inbox|workflow-check|next-step|design-fetch>');
+    console.log('Usage: node tools/dev-tools.cjs <hook|git-check|territory-check|check-files|inbox|workflow-check|next-step|design-fetch|downstream-engaged>');
 }

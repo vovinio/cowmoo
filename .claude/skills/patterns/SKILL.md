@@ -71,7 +71,7 @@ These three discoveries keep the catalog honest over time — the skill surfaces
 
 For each entry in each `.claude/asymmetries/<agent>.md`:
 
-- The entry has a **Revisit if** clause. Briefly check whether the revisit condition has been met (e.g., UXUI's "two of the four surfaces collapse into one" → look at the current UXUI ops sub-agent count and see whether it has dropped from four).
+- The entry has a **Revisit if** clause. Briefly check whether the revisit condition has been met (e.g., builder's "Builder gains a cross-agent channel outside task comments" → check whether any `for-builder` label has appeared in `github-workflow.md`'s label table). Some Revisit-if clauses are explicitly stated as `None — permanent` (the asymmetry was reviewed and kept); skip those — they have no condition to evaluate.
 - If the revisit condition is satisfied, flag as ADVISORY: "Asymmetry `<name>` in `.claude/asymmetries/<agent>.md` may be outdated — its Revisit-if condition appears to hold. Reconsider whether the divergence is still intentional."
 
 This keeps the asymmetry files from becoming permanent exceptions that outlive their justification.

@@ -65,14 +65,17 @@ A broken reference is a broken reference regardless of how it got there — rena
 
 **4a — Disk ↔ CLAUDE.md (bidirectional registration).**
 
-A real slash-command is one preceded by start-of-line, whitespace, or a backtick. Path segments like `cowmoo/specs/`, `.claude/settings.json`, or `$PROJECT_DIR/agent-files/` are NOT slash-commands — they're path fragments. The regex must distinguish the two, otherwise every path floods as a false positive.
+A real slash-command is one preceded by start-of-line, whitespace, or a backtick AND not followed by `/` or another name character (which would make it a path fragment like `/tmp/foo`). Path segments like `cowmoo/specs/`, `.claude/settings.json`, or `$PROJECT_DIR/agent-files/` are NOT slash-commands. The trailing `(?![a-z0-9/-])` lookahead is what distinguishes them — without the full character class, the greedy `*` backtracks one char at a time and produces nonsense partial matches (e.g., `/tmp/foo` would match as `/tm`).
 
 ```bash
 for agent in pm uxui planner builder; do
   # Forward: each /<skill> mentioned in CLAUDE.md must exist on disk.
   # --pcre2 is required for lookbehind; without it rg silently errors out
-  # and the check reports a false PASS.
-  rg -N --pcre2 -o '(?:^|(?<=[\s`]))/[a-z][a-z0-9-]*' "herd/$agent/CLAUDE.md" 2>/dev/null \
+  # and the check reports a false PASS. The trailing (?![a-z0-9/-]) rejects
+  # path fragments like `/tmp/foo`. The full character class is required:
+  # `(?!/)` alone lets the greedy `*` backtrack one char at a time and
+  # match `/tm` instead of failing — needs the name-class chars excluded too.
+  rg -N --pcre2 -o '(?:^|(?<=[\s`]))/[a-z][a-z0-9-]*(?![a-z0-9/-])' "herd/$agent/CLAUDE.md" 2>/dev/null \
     | sed 's|^/||' | sort -u | while read name; do
     [ "$name" = "propose" ] && continue
     [ -d "herd/$agent/.claude/skills/$name" ] \
@@ -152,9 +155,11 @@ Every `/<skill>` mentioned in a skill or sub-agent body must either (a) be a ski
 ```bash
 for agent in pm uxui planner builder; do
   base="herd/$agent"
-  # Same lookbehind-anchored regex as 4a. rg needs --pcre2 for lookbehind
-  # and --hidden to descend into .claude/ (hidden by default).
-  rg -N --pcre2 --hidden -o '(?:^|(?<=[\s`]))/[a-z][a-z0-9-]*' "$base/.claude/skills/" "$base/.claude/agents/" 2>/dev/null \
+  # Same lookbehind-anchored regex as 4a, including the trailing
+  # (?![a-z0-9/-]) lookahead to reject path fragments and prevent the
+  # greedy `*` from producing partial-match noise. rg needs --pcre2 for
+  # lookbehind/lookahead and --hidden to descend into .claude/.
+  rg -N --pcre2 --hidden -o '(?:^|(?<=[\s`]))/[a-z][a-z0-9-]*(?![a-z0-9/-])' "$base/.claude/skills/" "$base/.claude/agents/" 2>/dev/null \
     | sed 's|^.*:||; s|^/||' | sort -u | while read name; do
     [ -z "$name" ] && continue
     [ "$name" = "propose" ] && continue

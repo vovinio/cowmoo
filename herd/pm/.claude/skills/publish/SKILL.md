@@ -59,7 +59,18 @@ If PUSH fails (network, auth, conflict), surface the error to the user. The loca
 **Next session:** [what to pick up — domain focus, open questions, next action]
 ```
 
-If spec files were committed, suggest: "Specs changed — run `/notify` to announce to planner and/or UXUI (inference will propose targets)."
+If spec files were committed, decide whether to suggest `/notify` based on project lifecycle. Run:
+
+```bash
+node tools/dev-tools.cjs downstream-engaged
+```
+
+The helper checks two file-artifact signals — both are paths PM is denied from writing, so any content there is proof the downstream agent itself has run: `cowmoo/stack/techstack.md` has content (planner ran `/tech-stack`) or `cowmoo/design/domains/` has files (UXUI has written domains). Exit 0 = engaged, exit 1 = greenfield.
+
+GitHub labels (`for-planner`, `for-uxui`) are deliberately NOT used as signals — those labels can be created entirely by PM itself via `/notify` or `/catchup`, so their presence is not proof that the downstream agent ever ran.
+
+- **If exit 0 (engaged)** — suggest: `"Specs changed — run /notify to announce to planner and/or UXUI (inference will propose targets)."`
+- **If exit 1 (greenfield)** — skip the suggestion. Downstream agents haven't been launched on this project yet; the user is still in PM-only formalization. The `/notify` prompt would land as noise.
 
 ---
 
@@ -79,7 +90,8 @@ Before finishing, confirm:
 
 - **No changes** — nothing to commit. Don't create an empty commit.
 - **Commit fails** — report the failure to user.
-- **Specs changed** — suggest `/notify` after committing.
+- **Specs changed AND `downstream-engaged` exits 0** — suggest `/notify` after committing.
+- **Specs changed but `downstream-engaged` exits 1 (greenfield project)** — skip the `/notify` suggestion entirely. The user is still in PM-only formalization; downstream agents haven't been engaged yet.
 - **Only working notes changed** — no `/notify` suggestion needed.
 
 ---
