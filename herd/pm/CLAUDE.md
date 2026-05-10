@@ -168,9 +168,9 @@ Confirmed and deferred items in working notes get a tag. Untagged items are impl
 
 ### Recon Tool Selection
 
-Two recon skills use different browser tools for empirical comparison:
-- `/recon-chrome <url>` — uses Claude in Chrome. Best for: quick visual scouts, zero-friction auth, sessions under 50 turns.
-- `/recon-playwright <url>` — uses Playwright CLI. Best for: deep structural extraction, long sessions (150-200 turns), token efficiency.
+Two recon skills run the same 4-phase pipeline against a live web platform — choose by tooling preference, not session length:
+- `/recon-chrome <url>` — uses Claude in Chrome (MCP). Best for: visual GUI exploration, zero-friction auth (reuses your existing logged-in Chrome session).
+- `/recon-playwright <url>` — uses Playwright CLI. Best for: token efficiency (file-based snapshots vs. live DOM reads), CDP-attach auth for headless flows.
 
 Both produce the same output structure. Run both on the same platform to compare.
 

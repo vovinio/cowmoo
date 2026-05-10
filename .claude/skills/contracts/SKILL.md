@@ -92,7 +92,7 @@ For each discovered file, classify each reference:
 
 - **Writer** — `writeFileSync`, `appendFileSync`, `mkdirSync`, shell `>` / `>>`, CLI subcommands that write (`inbox add`), skill instructions to "create" or "write to".
 - **Reader** — `readFileSync`, `existsSync` as a check, `inbox list`, instructions to "read" or "check".
-- **Remover** — `unlinkSync`, `rm`, `inbox remove`, `inbox clear`, instructions to "delete".
+- **Remover** — `unlinkSync`, `rm`, `inbox remove`, instructions to "delete".
 
 ### Checks
 
@@ -110,7 +110,7 @@ Distinguish three file kinds:
 
 Classify each discovered file from two sources: the owning agent's CLAUDE.md "Files You Write" table (lifecycle column describes the intent), and the actual write / read / remove call sites in `dev-tools.cjs` and skill bodies:
 
-- Explicit remove operation in the codebase (`unlinkSync`, `rm`, `inbox remove`, `inbox clear`, `clear-draft`, etc.) → tracking.
+- Explicit remove operation in the codebase (`unlinkSync`, `rm`, `inbox remove`, `clear-draft`, etc.) → tracking.
 - Writer always overwrites the entire file with a single scalar → marker.
 - Writer appends / upserts / merges with no corresponding remove call, and the CLAUDE.md lifecycle says persists-across-sessions → writer-owned lifecycle.
 

@@ -69,8 +69,10 @@ Tell the user: "Log in manually in the browser window. Tell me when you're done.
 
 After user confirms:
 ```bash
-playwright-cli -s=recon state-save "$PROJECT_DIR/cowmoo/agent-files/pm/.auth/[platform-name].json"
+playwright-cli -s=recon state-save "/tmp/pm-recon-auth-[platform-name]-$(date +%s).json"
 ```
+
+Auth state goes to `/tmp/` because the recon session is transient and the file contains session cookies. Saving anywhere under `cowmoo/agent-files/pm/` would let `@pm-ops COMMIT` stage it (the op `git add`s the whole PM tree) and propagate credentials to the remote on the next `/publish`. Same transient pattern `/import-design` uses for design bundles.
 
 **Auth verification:**
 

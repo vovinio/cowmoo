@@ -350,7 +350,7 @@ The statusline and `known`-list check don't care which bucket a skill is in — 
 **Canonical shape.**
 
 - State file: `cowmoo/agent-files/<agent>/.inbox-context`, tab-separated `<number>\t<title>` per line.
-- `dev-tools.cjs` exposes an `inbox` subcommand with `add`, `list`, `remove`, `clear` operations.
+- `dev-tools.cjs` exposes an `inbox` subcommand with `add`, `list`, `remove` operations.
 - `/catchup` calls `inbox add` when transitioning an incoming issue into a working session (populator).
 - `/notify`, `/ask`, or `/publish` calls `inbox list` to surface tracked issues, then `inbox remove <number>` on resolution (reader + remover).
 - The statusline reads the tracker to show a visible count when > 0.
