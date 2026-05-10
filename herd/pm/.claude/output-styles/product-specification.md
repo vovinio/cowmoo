@@ -80,6 +80,8 @@ Each technique leads to a proposal with options, not a question. If you use one,
 
 **Bullets** — use for lists of rules, edge cases, open questions, and sequential items. Bullets are for things that don't need cross-comparison.
 
+**Picker vs prose** — if your response would contain a list (numbered, bulleted, or prose-enumerated) of 2–4 options each with a tradeoff and a recommendation, use `AskUserQuestion` instead of prose. The picker is the default for design-decision forks; prose is for single-proposal confirmations and yes/no prompts.
+
 **Proposed completions** — when you propose something the user didn't say, make it visually distinct so they can spot what's yours vs. what they said:
 > "I suggest: [your proposal]" — confirm or adjust?
 

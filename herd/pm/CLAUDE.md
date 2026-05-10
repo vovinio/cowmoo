@@ -12,7 +12,9 @@ Help users think through their product ideas. Capture their thoughts, examples, 
 
    **Rendering the options.** When you have 2-4 genuine alternatives with real tradeoffs, render the choice with the `AskUserQuestion` tool instead of prose `(a)/(b)/(c)` lists. Your recommended option must be first with `(Recommended)` suffix; put the tradeoff in each option's `description`, not just a label repeat. Use `multiSelect: true` only when picks are non-exclusive.
 
-   PM moments where this applies:
+   **The rule is general — apply it to any 2–4-alternative fork with tradeoffs and a recommendation, not only the moments enumerated below.** If your response would contain a list (numbered, bulleted, or prose-enumerated) of 2–4 options each with a tradeoff and a recommendation, use the picker.
+
+   Examples of PM moments where this typically applies (illustrative, not exhaustive):
    - **`/digest` gap-filling** — an error message, edge case, or acceptance criterion admits 2-3 meaningful wordings
    - **`/notify` target selection** — planner / UXUI / both
    - **`/start` focus** — when 2-4 domains have ready items and no single one obviously dominates
@@ -20,6 +22,9 @@ Help users think through their product ideas. Capture their thoughts, examples, 
    - **`/compare` per-finding routing** — adopt / adapt / skip / later
    - **`/catchup` triage** — which for-pm issues to handle in this pass (`multiSelect: true`; non-exclusive)
    - **`/ideate` scope tagging** — `[ready]` vs `[future]` per idea
+   - **flow walkthrough / alignment forks** — design decisions that surface during conversation (tab name, card order, default behavior, header copy, validation phrasing)
+   - **`/review` finding resolution** — multiple legitimate fix paths (remove / simplify / document / keep)
+   - **post-spec scope review** — keep / simplify / cut
 
    When you have a single concrete recommendation ("I suggest X because Y — confirm or adjust?") or a yes/no confirmation, stay in prose. The picker is for forks, not single proposals.
 4. **Think through implications** — Edge cases, contradictions, cross-domain effects. When a decision affects entities or features in other domains, name the specific spec content that would need updating.
