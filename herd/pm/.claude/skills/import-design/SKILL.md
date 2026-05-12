@@ -34,12 +34,33 @@ Stop.
 
 Check if `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md` exists.
 
-- **If missing** — create the project structure:
-  1. `$PROJECT_DIR/cowmoo/specs/PRODUCT.md` with content: `# Product`
-  2. `$PROJECT_DIR/cowmoo/specs/domains/.gitkeep` (empty)
-  3. `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md` with content: `# Working Notes`
-  4. `$PROJECT_DIR/cowmoo/agent-files/pm/BACKLOG.md` with content: `# Backlog\n\nDeferred items — from rough ideas to fully specified features. Each item notes why it was deferred and where it came from.`
-  5. `$PROJECT_DIR/cowmoo/agent-files/pm/RESEARCH.md` with content: `# Research\n\nAccumulated research findings from @research agent sessions.`
+- **If missing** — create the project structure. Use the Write tool with the exact content shown for each file (newlines as written — no escape shorthand). This content matches what `moo init` produces, so all three creation paths stay byte-identical:
+
+  1. `$PROJECT_DIR/cowmoo/specs/PRODUCT.md`:
+     ```
+     # Product
+
+     Product overview, glossary, roles, target users, and key behaviors. Written via `/digest`.
+     ```
+  2. `$PROJECT_DIR/cowmoo/specs/domains/.gitkeep` — empty file (ensures the directory exists)
+  3. `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md`:
+     ```
+     # Working Notes
+
+     Product discussion capture, decisions, and edge cases discovered during conversation.
+     ```
+  4. `$PROJECT_DIR/cowmoo/agent-files/pm/BACKLOG.md`:
+     ```
+     # Backlog
+
+     Deferred items — from rough ideas to fully specified features. Each item notes why it was deferred and where it came from.
+     ```
+  5. `$PROJECT_DIR/cowmoo/agent-files/pm/RESEARCH.md`:
+     ```
+     # Research
+
+     Accumulated research findings from `@research` agent sessions.
+     ```
 - **If exists** — read `WORKING-NOTES.md` and `cowmoo/specs/PRODUCT.md` to understand current state. The import will append.
 
 ---
@@ -192,12 +213,14 @@ On confirm, spawn `@pm-ops`:
 
     **Suggested next step (UXUI):** if you want a canonical design reference, fetch this URL into `cowmoo/design/bundles/` via your existing bundle-fetch tooling. Note: Claude Design share URLs may expire — if the fetch returns `url-unreachable`, re-share from the original Claude Designer session.
 
-    **Specs PM extracted (high level):**
-    - Entities: [list]
-    - Features: [list]
-    - Roles: [list]
+    **Working-notes extracts (pre-spec — not yet confirmed):**
+    - Entities being captured: [list]
+    - Features being captured: [list]
+    - Roles inferred: [list]
 
-    Once specs are formalized, PM will follow up with the standard /notify uxui announcement for spec changes.
+    These are still in PM's working notes — formalization happens via /digest + /review + /publish. The /notify uxui announcement below is the canonical signal that specs exist.
+
+    Once specs are formalized, PM will follow up with the standard /notify uxui announcement for spec changes — that's the signal to act on confirmed spec content.
 ```
 
 On `CREATE_FOR_UXUI ✓`, note the issue number for the final report. On failure, surface the error — the working-notes content is already saved, so no rollback needed; just report that the hand-off issue couldn't be created and suggest the user retry manually.

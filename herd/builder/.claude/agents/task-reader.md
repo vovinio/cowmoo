@@ -188,4 +188,6 @@ When scanning issue comments, recognize these patterns from other agents:
 - **Include the full PRD body** — never summarize it. The builder needs every word.
 - **Flag blockers prominently** — if a sibling is `for-planner`, put a ⚠ warning.
 - **If a query fails**, report what failed and what you got. Don't silently skip.
+  - **List query failure** (the initial `gh issue list`) — halt and report; nothing else can proceed.
+  - **Per-issue query failure** (a single `gh issue view` or GraphQL sub-call) — annotate that item in the return format with `**Error:** <stderr>` and continue with the remaining items.
 - **Don't read project files** — no stack, specs, code, or BUILD-NOTES. The builder reads those directly.

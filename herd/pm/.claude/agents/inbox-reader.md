@@ -70,3 +70,5 @@ The category drives how PM handles the issue. The origin drives where the answer
 - **Categorize but don't decide** — you classify, the PM triages.
 - **Note relevant spec files** — scan the issue content for entity names, feature names, domain references. Suggest which spec files the PM should read.
 - **If a query fails**, report what failed. Don't silently skip.
+  - **List query failure** (the initial `gh issue list`) — halt and report; nothing else can proceed.
+  - **Per-issue query failure** (a single `gh issue view`) — annotate that issue in the return format with `**Error:** <gh stderr>` and continue with the remaining issues. One bad issue must not block triage of the rest.

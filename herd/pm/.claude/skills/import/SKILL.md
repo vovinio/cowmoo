@@ -19,12 +19,33 @@ Import existing documentation into the project. Everything lands in working note
 
 Check if `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md` exists.
 
-- **If missing** — create the project structure:
-  1. `$PROJECT_DIR/cowmoo/specs/PRODUCT.md` with content: `# Product`
-  2. `$PROJECT_DIR/cowmoo/specs/domains/.gitkeep` (empty, ensures directory exists)
-  3. `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md` with content: `# Working Notes`
-  4. `$PROJECT_DIR/cowmoo/agent-files/pm/BACKLOG.md` with content: `# Backlog\n\nDeferred items — from rough ideas to fully specified features. Each item notes why it was deferred and where it came from.`
-  5. `$PROJECT_DIR/cowmoo/agent-files/pm/RESEARCH.md` with content: `# Research\n\nAccumulated research findings from @research agent sessions.`
+- **If missing** — create the project structure. Use the Write tool with the exact content shown for each file (newlines as written — no escape shorthand). This content matches what `moo init` produces, so all three creation paths stay byte-identical:
+
+  1. `$PROJECT_DIR/cowmoo/specs/PRODUCT.md`:
+     ```
+     # Product
+
+     Product overview, glossary, roles, target users, and key behaviors. Written via `/digest`.
+     ```
+  2. `$PROJECT_DIR/cowmoo/specs/domains/.gitkeep` — empty file (ensures the directory exists)
+  3. `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md`:
+     ```
+     # Working Notes
+
+     Product discussion capture, decisions, and edge cases discovered during conversation.
+     ```
+  4. `$PROJECT_DIR/cowmoo/agent-files/pm/BACKLOG.md`:
+     ```
+     # Backlog
+
+     Deferred items — from rough ideas to fully specified features. Each item notes why it was deferred and where it came from.
+     ```
+  5. `$PROJECT_DIR/cowmoo/agent-files/pm/RESEARCH.md`:
+     ```
+     # Research
+
+     Accumulated research findings from `@research` agent sessions.
+     ```
 - **If exists** — read `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md` and `$PROJECT_DIR/cowmoo/specs/PRODUCT.md` to understand current state. The import will append to existing notes.
 
 ---

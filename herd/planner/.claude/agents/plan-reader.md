@@ -147,3 +147,5 @@ Read for-planner issues, categorize them by content, and return results with ful
 - **Return clean, structured output.** No raw JSON. No GraphQL response wrappers. Parse everything.
 - **Flag blockers prominently** — for-planner items get a warning icon.
 - **If a query fails**, report what failed and what you got. Don't silently skip.
+  - **List query failure** (the initial `gh issue list`) — halt and report; nothing else can proceed.
+  - **Per-issue query failure** (a single `gh issue view` or GraphQL sub-call) — annotate that item in the return format with `**Error:** <stderr>` and continue with the remaining items.

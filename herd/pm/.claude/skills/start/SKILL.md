@@ -65,6 +65,7 @@ Project loaded.
 **Suggested focus:** [the most important open area, with reasoning — drawn from notes + backlog + domains]
 
 [CLOSING — depends on how many candidates the suggested focus surfaces:]
+- **0 candidates** — nothing in notes, backlog, or domain specs is open. Don't ask open-endedly — propose a specific starting point grounded in what you DID read: a glossary term in PRODUCT.md that lacks a domain, a role whose workflows aren't yet captured, or a new domain area implied by the product overview. Prose only — no picker. Example: "Notes are clear and no domains exist yet. PRODUCT.md mentions [X] — want to define it as the first domain? Or describe a different area you'd like to capture."
 - **1 candidate** — prose: "Want to dig into [topic]?" or similar single-recommendation confirmation.
 - **2–4 candidates** — `AskUserQuestion` picker. Recommended candidate first with `(Recommended)` suffix; each option's `description` carries the tradeoff (what each candidate touches, what's affected). Per CLAUDE.md's picker rule and the `/start focus` example called out there.
 - **5+ candidates** — render the lineup as a brief table, then use `AskUserQuestion` to pick the next batch (top 2–4) or ask for an unlisted direction. Never end with bare prose like "walk through in order, or jump to a specific one, or do you have a different topic?" — that's a 3-option fork that the picker is for.

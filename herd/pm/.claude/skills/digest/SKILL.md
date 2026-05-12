@@ -34,6 +34,19 @@ Read all files to understand what exists:
 
 ---
 
+### 1.5. Detect Stale Checkpoint
+
+Scan the top of WORKING-NOTES.md for a `## In-progress: <domain>` block. This block is the transient checkpoint Step 3e writes during a long digest; if it exists at the start of a new run, the prior `/digest` crashed before reaching Step 3e cleanup.
+
+- **If no block found** — proceed to Step 2.
+- **If block found** — read its contents (it names the domain, what was written to spec, what was pending), then surface to the user via `AskUserQuestion` (2-option fork with tradeoffs — per the picker rule in CLAUDE.md):
+  - **Resume from checkpoint** (Recommended if the prior crash was recent) — verify the "written to spec" items are present in `cowmoo/specs/domains/<domain>.md`; if so, clean them from WORKING-NOTES.md (Step 3d for those items only), then proceed to Step 2 with the remaining items.
+  - **Discard checkpoint** (Recommended if the checkpoint looks unfamiliar or out-of-date) — delete the `## In-progress` block from WORKING-NOTES.md, then proceed to Step 2 normally. Any duplicate work is caught by Step 3b's read-target-spec-and-compare safety net.
+
+After the user picks, apply the chosen path before moving to Step 2.
+
+---
+
 ### 2. Identify What's Ready
 
 From working notes, separate items into categories:
@@ -55,6 +68,8 @@ From working notes, separate items into categories:
 If ready items span multiple domains with no clear primary, propose which domain to focus on and let the user confirm or redirect.
 
 **Ordering within the run:** Process PRODUCT.md updates first (if needed), then the primary domain. Within the domain, process entities before features so features can reference entities.
+
+A `[ready]` item is a PRODUCT.md update if it touches any section the `product.md` template owns: Problem Statement, Target Users, Overview, Glossary, Roles, Product Areas, How It Works, Key Behaviors, or Key Constraints. These are the "Product" item type in the Step 3a table below. Cross-domain ripples into PRODUCT.md (e.g., a domain item that adds a glossary term) also count.
 
 For each domain with ready items:
 
@@ -244,6 +259,7 @@ Before finishing, confirm:
 - [ ] Spec files written and self-verified (write → re-read → verify)
 - [ ] `[future]` items moved to BACKLOG.md with full context
 - [ ] Processed items cleaned from working notes (after reasoning gate cleared, not before)
+- [ ] If a stale checkpoint was found at Step 1.5, it was either resumed from or discarded — not silently ignored
 - [ ] Within-run transient checkpoint (if used) deleted before reporting complete — no "Digest progress" / "Digest runs to date" log left in WORKING-NOTES.md
 - [ ] Report presented with next steps (/review → /publish)
 
