@@ -34,20 +34,20 @@ Read all files to understand what exists:
 
 ---
 
-### 1.5. Detect Stale Checkpoint
+### 2. Detect Stale Checkpoint
 
-Scan the top of WORKING-NOTES.md for a `## In-progress: <domain>` block. This block is the transient checkpoint Step 3e writes during a long digest; if it exists at the start of a new run, the prior `/digest` crashed before reaching Step 3e cleanup.
+Scan the top of WORKING-NOTES.md for a `## In-progress: <domain>` block. This block is the transient checkpoint Step 4e writes during a long digest; if it exists at the start of a new run, the prior `/digest` crashed before reaching Step 4e cleanup.
 
-- **If no block found** — proceed to Step 2.
+- **If no block found** — proceed to Step 3.
 - **If block found** — read its contents (it names the domain, what was written to spec, what was pending), then surface to the user via `AskUserQuestion` (2-option fork with tradeoffs — per the picker rule in CLAUDE.md):
-  - **Resume from checkpoint** (Recommended if the prior crash was recent) — verify the "written to spec" items are present in `cowmoo/specs/domains/<domain>.md`; if so, clean them from WORKING-NOTES.md (Step 3d for those items only), then proceed to Step 2 with the remaining items.
-  - **Discard checkpoint** (Recommended if the checkpoint looks unfamiliar or out-of-date) — delete the `## In-progress` block from WORKING-NOTES.md, then proceed to Step 2 normally. Any duplicate work is caught by Step 3b's read-target-spec-and-compare safety net.
+  - **Resume from checkpoint** (Recommended if the prior crash was recent) — verify the "written to spec" items are present in `cowmoo/specs/domains/<domain>.md`; if so, clean them from WORKING-NOTES.md (Step 4d for those items only), then proceed to Step 3 with the remaining items.
+  - **Discard checkpoint** (Recommended if the checkpoint looks unfamiliar or out-of-date) — delete the `## In-progress` block from WORKING-NOTES.md, then proceed to Step 3 normally. Any duplicate work is caught by Step 4b's read-target-spec-and-compare safety net.
 
-After the user picks, apply the chosen path before moving to Step 2.
+After the user picks, apply the chosen path before moving to Step 3.
 
 ---
 
-### 2. Identify What's Ready
+### 3. Identify What's Ready
 
 From working notes, separate items into categories:
 
@@ -61,7 +61,7 @@ From working notes, separate items into categories:
 
 ---
 
-### 3. Process Per Domain
+### 4. Process Per Domain
 
 **One domain at a time.** Pick the domain with the most ready items (or let the user specify). Process that domain fully — transform, write, clean — before starting the next. If changes in that domain require updates to other files (e.g., glossary in PRODUCT.md, ripple to another domain), make those cross-domain changes too. But don't process unrelated ready items from other domains in the same run — they wait for the next digest.
 
@@ -69,11 +69,11 @@ If ready items span multiple domains with no clear primary, propose which domain
 
 **Ordering within the run:** Process PRODUCT.md updates first (if needed), then the primary domain. Within the domain, process entities before features so features can reference entities.
 
-A `[ready]` item is a PRODUCT.md update if it touches any section the `product.md` template owns: Problem Statement, Target Users, Overview, Glossary, Roles, Product Areas, How It Works, Key Behaviors, or Key Constraints. These are the "Product" item type in the Step 3a table below. Cross-domain ripples into PRODUCT.md (e.g., a domain item that adds a glossary term) also count.
+A `[ready]` item is a PRODUCT.md update if it touches any section the `product.md` template owns: Problem Statement, Target Users, Overview, Glossary, Roles, Product Areas, How It Works, Key Behaviors, or Key Constraints. These are the "Product" item type in the Step 4a table below. Cross-domain ripples into PRODUCT.md (e.g., a domain item that adds a glossary term) also count.
 
 For each domain with ready items:
 
-#### 3a. Transform Items to Spec Format
+#### 4a. Transform Items to Spec Format
 
 For each item ready for specs in this domain:
 
@@ -149,7 +149,7 @@ Check:
 
 All checks pass → proceed to write.
 
-#### 3b. Write to Spec File (with self-verification)
+#### 4b. Write to Spec File (with self-verification)
 
 Batch all confirmed items for this domain into a single write:
 
@@ -173,7 +173,7 @@ Target files:
 - Product content → `$PROJECT_DIR/cowmoo/specs/PRODUCT.md`
 - Entity/Feature content → `$PROJECT_DIR/cowmoo/specs/domains/[domain].md`
 
-#### 3c. Move Deferred Items to Backlog
+#### 4c. Move Deferred Items to Backlog
 
 For any `[future]` items encountered in this domain:
 
@@ -187,9 +187,9 @@ For any `[future]` items encountered in this domain:
 
 Preserve everything — deferred items could be blunt ideas or fully detailed features. Move them as-is.
 
-#### 3d. Clean Processed Items from Working Notes
+#### 4d. Clean Processed Items from Working Notes
 
-Before removing anything, **re-verify the reasoning gate:** for each item you're about to delete from WORKING-NOTES.md, confirm that any "we considered X / chose Y because Z," trade-off rationale, or rejected-alternative explanation it contained has landed in the spec per Step 3a's extraction table. If you skipped this for any item, stop and patch the spec — don't delete first and try to remember later.
+Before removing anything, **re-verify the reasoning gate:** for each item you're about to delete from WORKING-NOTES.md, confirm that any "we considered X / chose Y because Z," trade-off rationale, or rejected-alternative explanation it contained has landed in the spec per Step 4a's extraction table. If you skipped this for any item, stop and patch the spec — don't delete first and try to remember later.
 
 Once the reasoning gate is clear:
 
@@ -203,7 +203,7 @@ Keep in working notes:
 
 Remove session headers (`## Session — [topic]`) that have no remaining items beneath them.
 
-#### 3e. Within-Run Checkpoint (transient only)
+#### 4e. Within-Run Checkpoint (transient only)
 
 If you need to remember mid-run state (e.g., partial-failure recovery during a long digest of one domain), write a transient `## In-progress: <domain>` block at the top of WORKING-NOTES.md naming what's been written and what's left.
 
@@ -211,11 +211,11 @@ If you need to remember mid-run state (e.g., partial-failure recovery during a l
 
 Do NOT write a permanent "Digest progress" section into WORKING-NOTES.md. The durable record of what was digested lives in git history — `/publish` commits the spec changes with a conventional message (`spec(<domain>): <description>`), and `git log` is the audit trail. Keeping a digest log inside WORKING-NOTES.md is the failure mode that turns the staging file into a permanent history file; never do it.
 
-**Do not process additional domains in this run — move to Step 4.** One domain per digest run. The user will run `/digest` again for the next domain.
+**Do not process additional domains in this run — move to Step 5.** One domain per digest run. The user will run `/digest` again for the next domain.
 
 ---
 
-### 4. Remaining Deferred Items
+### 5. Remaining Deferred Items
 
 If any `[future]` items remain in working notes that weren't associated with a processed domain:
 
@@ -225,7 +225,7 @@ If any `[future]` items remain in working notes that weren't associated with a p
 
 ---
 
-### 5. Report
+### 6. Report
 
 ```
 ## Digest Complete
@@ -255,11 +255,11 @@ Before finishing, confirm:
 
 - [ ] All `[ready]` items for the target domain transformed to spec format
 - [ ] User confirmed all proposed completions
-- [ ] **Reasoning preservation gate cleared** — every "we considered X / chose Y because Z," trade-off, threshold rationale, and rejected-alternative from the source items has a durable home in the spec (per Step 3a's extraction table)
+- [ ] **Reasoning preservation gate cleared** — every "we considered X / chose Y because Z," trade-off, threshold rationale, and rejected-alternative from the source items has a durable home in the spec (per Step 4a's extraction table)
 - [ ] Spec files written and self-verified (write → re-read → verify)
 - [ ] `[future]` items moved to BACKLOG.md with full context
 - [ ] Processed items cleaned from working notes (after reasoning gate cleared, not before)
-- [ ] If a stale checkpoint was found at Step 1.5, it was either resumed from or discarded — not silently ignored
+- [ ] If a stale checkpoint was found at Step 2, it was either resumed from or discarded — not silently ignored
 - [ ] Within-run transient checkpoint (if used) deleted before reporting complete — no "Digest progress" / "Digest runs to date" log left in WORKING-NOTES.md
 - [ ] Report presented with next steps (/review → /publish)
 
@@ -271,7 +271,7 @@ Before finishing, confirm:
 - **Full context in backlog** — never strip reasoning or detail when moving to backlog. Deferred items may be picked up months later by a different person; without context they become opaque line items that nobody acts on.
 - **Don't digest uncertain items** — if something isn't confirmed, it stays in notes. Putting unconfirmed content into specs creates false confidence — readers assume specs are settled decisions.
 - **One domain at a time** — complete the full cycle (transform → write → clean) for each domain before starting the next. Focused work produces better output. A half-processed domain is recoverable via the transient checkpoint (deleted at completion); two half-processed domains are a mess.
-- **WORKING-NOTES.md is staging, not history.** Every item this skill processes is either written into a spec (Step 3b) or moved to BACKLOG.md (Step 3c) — and then removed from WORKING-NOTES.md (Step 3d). No "kept for traceability," no "Digest progress" log, no exceptions. Git history (committed by `/publish`) is the durable audit trail.
-- **Reasoning travels with the decision.** Deleting a working-notes item is acceptable ONLY after its embedded reasoning (trade-offs, rejected alternatives, threshold rationale, cause-and-effect history) has been preserved in the spec. The spec is the durable record of "what AND why." If reasoning gets dropped during digest, future readers (planner, builder, future-PM) re-litigate settled decisions because the "why" is missing. The Step 3a extraction table is non-negotiable.
+- **WORKING-NOTES.md is staging, not history.** Every item this skill processes is either written into a spec (Step 4b) or moved to BACKLOG.md (Step 4c) — and then removed from WORKING-NOTES.md (Step 4d). No "kept for traceability," no "Digest progress" log, no exceptions. Git history (committed by `/publish`) is the durable audit trail.
+- **Reasoning travels with the decision.** Deleting a working-notes item is acceptable ONLY after its embedded reasoning (trade-offs, rejected alternatives, threshold rationale, cause-and-effect history) has been preserved in the spec. The spec is the durable record of "what AND why." If reasoning gets dropped during digest, future readers (planner, builder, future-PM) re-litigate settled decisions because the "why" is missing. The Step 4a extraction table is non-negotiable.
 - **One file per write** — batch all items for a target file into a single write, then verify the whole file. This minimizes read-verify cycles and reduces the risk of partial writes leaving a file in an inconsistent state.
 - **Specs can move back to backlog** — if the user decides a fully specified feature should be deferred, move it from the domain file to BACKLOG.md preserving the complete spec. Note which domain file it came from so it can be restored later.

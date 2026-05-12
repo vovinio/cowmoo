@@ -43,7 +43,7 @@ Read `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md` to understand what's 
 
 ---
 
-### 2.5. Cross-Check
+### 3. Cross-Check
 
 Before writing, verify completeness and consistency:
 
@@ -53,7 +53,7 @@ Before writing, verify completeness and consistency:
 
 ---
 
-### 3. Write to Working Notes
+### 4. Write to Working Notes
 
 Append extracted content to `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md`:
 
@@ -81,13 +81,13 @@ Append extracted content to `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md
 
 ---
 
-### 4. Verify
+### 5. Verify
 
 Re-read `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md` to verify the new content was appended correctly and existing content was not modified.
 
 ---
 
-### 5. Report
+### 6. Report
 
 Tell the user what was captured:
 
