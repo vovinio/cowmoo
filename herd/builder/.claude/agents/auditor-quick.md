@@ -2,7 +2,7 @@
 name: auditor-quick
 description: Fast security surface scan. Run alongside @auditor for broader coverage.
 tools: Read, Grep, Glob, Bash
-model: haiku
+model: sonnet
 maxTurns: 30
 ---
 

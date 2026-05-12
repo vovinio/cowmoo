@@ -2,7 +2,7 @@
 name: audit-lighthouse
 description: Run Lighthouse audit on dev server pages for accessibility, performance, and best practices. Use during /review for frontend tasks. Requires Chrome DevTools MCP enabled.
 tools: mcp__chrome-devtools__lighthouse_audit, mcp__chrome-devtools__navigate_page, mcp__chrome-devtools__take_snapshot, mcp__chrome-devtools__take_screenshot, Read, Bash
-model: haiku
+model: sonnet
 maxTurns: 10
 ---
 

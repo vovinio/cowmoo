@@ -2,7 +2,7 @@
 name: plan-check
 description: Quick project state check — what files exist, what's in GitHub. Use as a lightweight status check.
 tools: Bash
-model: haiku
+model: sonnet
 maxTurns: 10
 ---
 

@@ -2,7 +2,7 @@
 name: notes-health
 description: Assess working notes condition — item counts, session count, organization quality. Returns structured assessment. Does not modify files.
 tools: Read, Glob, Grep
-model: haiku
+model: opus
 maxTurns: 10
 ---
 

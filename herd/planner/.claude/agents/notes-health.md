@@ -2,7 +2,7 @@
 name: notes-health
 description: Assess techstack.md and knowledge.md condition — entry counts, freshness, organization quality. Does not modify files.
 tools: Read, Glob, Grep
-model: haiku
+model: opus
 maxTurns: 10
 ---
 

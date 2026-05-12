@@ -49,10 +49,13 @@ Project loaded.
 **Suggested focus:**
 - [Most important open area and why]
 
-What would you like to work on?
+[CLOSING — depends on how many candidates the suggested focus surfaces:]
+- **1 candidate** — prose: "Want to dig into [topic]?" or similar single-recommendation confirmation.
+- **2–4 candidates** — `AskUserQuestion` picker. Recommended candidate first with `(Recommended)` suffix; each option's `description` carries the tradeoff (what each candidate touches, what's affected). Per CLAUDE.md's picker rule and the `/start focus` example called out there.
+- **5+ candidates** — render the lineup as a brief table, then use `AskUserQuestion` to pick the next batch (top 2–4) or ask for an unlisted direction. Never end with bare prose like "walk through in order, or jump to a specific one, or do you have a different topic?" — that's a 3-option fork that the picker is for.
 ```
 
-Don't ask "what would you like to do?" generically — propose something specific based on what you see.
+Don't ask "what would you like to do?" generically — propose something specific based on what you see, AND render any 2-4-option fork through `AskUserQuestion` rather than prose, even when the user could in principle answer with free text. The picker enforces specificity at the response site, where it matters.
 
 ### Load Domain Files
 
