@@ -83,7 +83,9 @@ If either output is empty, an error message, or missing a required heading above
 
 **Tracked inbox issues:** from `@plan-check`'s "inbox" line. If it reports tracked issues, these are items a prior `/catchup` tracked for planning work. Mention them: "There are N tracked issues from a previous `/catchup` that need attention during this session: [list]."
 
-**Draft from previous session:** If `$PROJECT_DIR/cowmoo/agent-files/planner/draft.md` exists (per `@plan-check`'s "draft.md" line), propose the fork to the user: continue with the existing draft (review and refine, then `/review`) or start fresh (discard the draft, plan a new story). If the user chooses to continue → read `draft.md`, present its contents, suggest the next action (`/draft` to refine, `/review` if ready).
+**Draft from previous session:** If `$PROJECT_DIR/cowmoo/agent-files/planner/draft.md` exists (per `@plan-check`'s "draft.md" line), **render the continue-or-discard choice via `AskUserQuestion`** (single-select). Recommended option first with `(Recommended)` suffix — typically pick "continue" when the draft looks coherent and recent, pick "start fresh" when the draft is stale or the user's new context has moved past it. Each option's `description` carries the consequence ("reads the draft, presents its contents, suggests `/draft` to refine or `/review` if ready" vs "discards the draft and plans a new story from scratch"). Per CLAUDE.md's picker rule. Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker.
+
+If the user chooses to continue → read `draft.md`, present its contents, suggest the next action (`/draft` to refine, `/review` if ready).
 
 ---
 

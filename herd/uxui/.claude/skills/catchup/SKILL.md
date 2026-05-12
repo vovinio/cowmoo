@@ -3,7 +3,7 @@ name: catchup
 description: Walk through pending UXUI inbox — `for-uxui` agent messages (handled inline) and `uxui:review` designer submissions (dispatched to `/review-bundle`).
 user-invocable: true
 disable-model-invocation: true
-allowed-tools: Agent, Read, Glob, Bash, Edit, Write
+allowed-tools: Agent, Read, Glob, Bash, Edit, Write, AskUserQuestion
 ---
 
 # Catch Up
@@ -45,20 +45,20 @@ Show all items, grouped by kind:
 3. ...
 ```
 
-Designer submissions take priority — they block the design pipeline. Recommend handling them first if any are present.
+Designer submissions take priority — they block the design pipeline.
 
-Ask the user: "Which item should we start with? (pick by number, or 'all' — `uxui:review` items get dispatched to `/review-bundle`, `for-uxui` items get walked inline)"
+**Render the inbox-selection choice via `AskUserQuestion`** with `multiSelect: true`. Each option is one inbox item (`#N — title → <designer submission | agent message: type> (from <origin>)`); the user picks the items to handle in this pass. Recommended option first with `(Recommended)` suffix — pick the highest-priority item (any `uxui:review` designer submission before `for-uxui` agent messages, since submissions block the design pipeline; within each kind, oldest first) as the recommendation. Each option's `description` carries the one-line summary. Per CLAUDE.md's picker rule. Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker.
+
+If the inbox has only 1 item, skip the picker and prose-confirm: "Handle #N — <title>?" — a 1-option picker is degenerate.
 
 ---
 
-## Step 3: Route the picked item
+## Step 3: Route the picked items
 
-For the item the user picked, check its label first:
+For each item the user picked, process in priority order: `uxui:review` items first (designer submissions block the design pipeline, per Step 2), then `for-uxui` items. Check each item's label and route:
 
-- If `uxui:review` → **dispatch to `/review-bundle <number>`**. Tell the user: "Dispatching #<number> to `/review-bundle`. Run that skill now to evaluate the bundle." Do NOT attempt to fetch, evaluate, or comment inline. The `/review-bundle` skill handles fetch + evaluate + approve/reject end-to-end.
-- If `for-uxui` → process inline using the routing below (Spec update / UI gap / UI question).
-
-If the user asked to walk through "all," handle each label type differently: for `uxui:review` items, dispatch each one as in Step 3 above (this produces a list of `/review-bundle <number>` commands the user will run separately — do not attempt inline fetch/evaluate); for `for-uxui` items, process each one inline, one at a time, using the routing in Step 4. Do all `uxui:review` dispatches first so designer submissions (which block the design pipeline, per Step 2) lead the output.
+- If `uxui:review` → **dispatch to `/review-bundle <number>`**. Tell the user: "Dispatching #<number> to `/review-bundle`. Run that skill now to evaluate the bundle." Do NOT attempt to fetch, evaluate, or comment inline. The `/review-bundle` skill handles fetch + evaluate + approve/reject end-to-end. When multiple `uxui:review` items were picked, produce a list of `/review-bundle <number>` commands the user runs separately.
+- If `for-uxui` → process inline using the routing below (Spec update / UI gap / UI question), one at a time.
 
 ---
 

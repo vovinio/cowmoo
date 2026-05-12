@@ -80,6 +80,17 @@ When other agents (planner, builder) have questions or escalations, they create 
 
 The agent loads all inbox issues, categorizes them, and you triage: quick questions get resolved inline, issues needing spec work transition into a discussion session.
 
+### Competitive Intelligence Phase
+
+Reverse-engineer competitor platforms to inform product decisions.
+
+```
+/recon-chrome <url>   OR   /recon-playwright <url>   →   /compare
+```
+
+- **`/recon-chrome` / `/recon-playwright`** — automated 5-phase deep-dive of a live platform: scout, public-source research, entity inspection, ops inspection, then a domain-based product analysis written to `cowmoo/agent-files/pm/competitive/<platform>/`. Choose by tooling preference: Chrome MCP for zero-friction auth and GUI exploration; Playwright CLI for token efficiency on long sessions and CDP-attach auth.
+- **`/compare`** — leads a guided comparison between analyzed platforms and your specs. Surfaces parity gaps, UX patterns worth borrowing, and terminology differences. Decisions to adopt/adapt route through `/draft` like any other discussion.
+
 ---
 
 ## Typical Workflow
@@ -89,6 +100,8 @@ The agent loads all inbox issues, categorizes them, and you triage: quick questi
 1. **`/start`** — Initialize the project
 2. **Describe your product** — What problem does it solve? Who uses it? The agent will guide you through the core concepts
 3. **`/draft`** — Persist decisions to working notes
+
+**Alternative entry points:** Run **`/import <folder>`** to walk through existing markdown docs, or **`/import-design <url>`** to extract specs from a Claude Designer share URL. Both populate working notes the same way an organic discussion would.
 
 ### Building Out Specs Over Multiple Sessions
 
@@ -191,6 +204,7 @@ The specs are written in business language, not technical language. A developer 
 | `/status` | Quick read-only snapshot: item counts, domain list, last session summary. |
 | `/catchup` | Triage for-pm GitHub issues — quick-resolve or transition into a working session. |
 | `/import [folder]` | Import existing docs. Walks through by topic, resolves contradictions, populates working notes. |
+| `/import-design <url>` | Import specs from a Claude Designer share URL. Walks through screens transiently, populates working notes, hands the URL to UXUI for canonical capture. |
 | `/migrate` | Align existing specs from a previous agent version to current templates. |
 | `/propose` | Propose a change to the shared agent system — missing instructions, better approaches, gaps in skills. |
 
@@ -201,16 +215,33 @@ The specs are written in business language, not technical language. A developer 
 | `/copywrite` | Review and improve all user-facing text — terminology, messages, labels — informed by domain research via @research. |
 | `/ideate` | Research-informed product ideation — identify parity gaps, automation opportunities, and new capabilities based on current specs and industry context. |
 
+### Competitive Intelligence
+
+| Command | What It Does |
+|---------|-------------|
+| `/recon-chrome [url]` | Reverse-engineer a live web platform using Claude in Chrome. Scouts navigation, inspects entities and operations, produces a complete domain-based product analysis under `cowmoo/agent-files/pm/competitive/<platform>/chrome/`. |
+| `/recon-playwright [url]` | Same 5-phase deep-dive as `/recon-chrome` but uses Playwright CLI — token-efficient for long sessions (150-200 turns) and supports CDP-attach auth for headless flows. |
+| `/compare` | Guided competitive comparison — reads analyzed platforms and your specs, leads a domain-by-domain discussion of gaps, patterns to borrow, and terminology differences. Decisions route through `/draft` like any other discussion. |
+
 ### Agents
 
 | Agent | Purpose |
 |-------|---------|
 | `@inbox-reader` | Read for-pm GitHub issues with full context. Used by `/catchup`. |
-| `@pm-ops` | Execute GitHub and git write operations with verification (commits, comments, labels, CREATE_FOR_PLANNER / CREATE_FOR_UXUI). Used by `/publish`, `/catchup`, `/notify`. |
+| `@pm-ops` | Execute GitHub and git write operations with verification (commits, comments, labels, CREATE_FOR_PLANNER / CREATE_FOR_UXUI). Used by `/publish`, `/catchup`, `/notify`, `/import-design`. |
+| `@pm-bundle-ops` | Download a Claude Designer share URL into a transient `/tmp/pm-import-<timestamp>/` directory for `/import-design` to read. No project artifacts, no git. |
 | `@research` | Research external topics — industry standards, competitor approaches, best practices. Saves to RESEARCH.md. |
+| `@proposal-writer` | Write proposal files to `cowmoo/agent-files/pm/proposals/`. Background agent — used by `/propose`. |
 | `@check-terms` | Scan spec files against glossary for terminology inconsistencies. Used by `/review`. |
 | `@check-refs` | Verify cross-reference integrity between files. Used by `/review`. |
 | `@check-scope` | Verify scope boundaries between active specs and backlog. Used by `/review`. |
 | `@check-completeness` | Verify specs follow templates, flag missing sections and vague language. Used by `/review`. |
 | `@check-structure` | Verify domain cohesion, feature/domain classification, and spec self-containment. Used by `/review`. |
 | `@check-risk` | Examine specs for product-level risks — implicit assumptions, unaddressed scenarios, fragile dependencies. Used by `/review`. |
+| `@recon-scout-chrome` | Quick scout of a live web platform via Claude in Chrome — maps navigation, identifies entities, detects UI patterns. Used by `/recon-chrome`. |
+| `@recon-scout-pw` | Quick scout of a live web platform via Playwright CLI. Used by `/recon-playwright`. |
+| `@recon-research` | Research a platform from public sources after scouting — company info, docs, features, pricing. Shared by both recon skills. |
+| `@recon-entities-chrome` | Inspect entity creation and edit forms on a live web platform via Claude in Chrome. Used by `/recon-chrome`. |
+| `@recon-entities-pw` | Inspect entity forms via Playwright CLI. Used by `/recon-playwright`. |
+| `@recon-ops-chrome` | Inspect reports, analytics, admin, and tools via Claude in Chrome. Used by `/recon-chrome`. |
+| `@recon-ops-pw` | Inspect reports, analytics, admin, and tools via Playwright CLI. Used by `/recon-playwright`. |

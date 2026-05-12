@@ -3,7 +3,7 @@ name: review
 description: Verify implementation using 4 parallel check agents, then verify acceptance criteria with evidence. Run after /build.
 user-invocable: true
 disable-model-invocation: true
-allowed-tools: Agent, Read, Write, Edit, Glob, Grep, Bash
+allowed-tools: Agent, Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion
 ---
 
 # Review
@@ -167,6 +167,12 @@ Present a single merged report. For each quick fix and structural item, expand w
 3. **Alternatives** — 2-3 concrete choices with real tradeoffs
 4. **Recommendation** — which alternative goes first and why
 
+**Auto-fixes** are reported as a prose list — single action per finding, no fork.
+
+**Quick fixes and Structural findings** with 2-3 real resolutions are forks — **render each via the `AskUserQuestion` tool** (per CLAUDE.md `/review` quick-fix and structural picker moments). The recommended option goes first with `(Recommended)`; the tradeoff lives in each option's `description` in implementation terms ("add all 5 states per frontend rules" vs "add loading + error only — empty not applicable here"); include a "leave as-is" or "flag as deviation" escape option when the finding admits one. Do NOT collapse forks into prose `Alternatives: ...` lines. Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker.
+
+Example output (the prose preface stays in chat; each fork below fires as a separate AskUserQuestion):
+
 ```
 ## Review Findings
 
@@ -179,16 +185,25 @@ Present a single merged report. For each quick fix and structural item, expand w
 1. src/routes/auth.ts: Function `loginUser` doesn't follow naming convention — renaming to `handleLogin` (per codebase.md)
 2. src/db/migrations/003.sql: Missing `updated_at` column on `orders` table
 
-### Quick fixes
-3. src/components/OrderList.tsx: Only handles success state — missing loading, error, empty states
-   Alternatives: add all 5 states per frontend rules, or add loading + error only (empty not applicable here).
+### Quick fixes (each rendered as an AskUserQuestion picker)
+3. src/components/OrderList.tsx: Only handles success state — missing loading, error, empty states.
+   → Picker: question "How should we handle data-fetching states here?"
+     - "Add all 5 states per frontend rules (loading/error/empty/success/partial)" (Recommended) — matches the canonical vocabulary used elsewhere
+     - "Add loading + error only" — empty not applicable here (list is admin-only, never empty in practice)
+     - "Leave as-is" — accept the gap and log as deviation
 
-4. src/routes/auth.ts: Login error says "User not found" — must be generic per security rules
-   Alternatives: "Invalid credentials" for both cases, or "Login failed".
+4. src/routes/auth.ts: Login error says "User not found" — must be generic per security rules.
+   → Picker: question "Which generic error should we use?"
+     - "Invalid credentials" (Recommended) — standard phrasing, doesn't leak account existence
+     - "Login failed" — terser, same security property
+     - "Specify different wording" — keep the security property, change the copy
 
-### Structural
-5. PRD criterion "Given invalid email, When submitting, Then show inline validation" — no client-side validation at all
-   Alternatives: add client-side validation, or keep server-side only and flag as deviation.
+### Structural (each rendered as an AskUserQuestion picker)
+5. PRD criterion "Given invalid email, When submitting, Then show inline validation" — no client-side validation at all.
+   → Picker: question "How should we satisfy this criterion?"
+     - "Add client-side validation now" (Recommended) — meets the AC verbatim, low cost
+     - "Keep server-side only and flag as deviation" — accept the PRD/code mismatch, planner reviews
+     - "Reshape differently" — discuss alternative approach
 
 ### Security
 6. [CRITICAL findings, merged from @check-security, @auditor-quick, and @auditor where they ran — the security escalation in Step 1b ran automatically on CRITICAL]
@@ -196,7 +211,7 @@ Present a single merged report. For each quick fix and structural item, expand w
 Your call on each.
 ```
 
-**This is mandatory, not aspirational.** Every quick fix and structural item must have concrete alternatives and a recommendation.
+**This is mandatory, not aspirational.** Every quick fix and structural item must have concrete alternatives and a recommendation, rendered through the picker.
 
 ---
 

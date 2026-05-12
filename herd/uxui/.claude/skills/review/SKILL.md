@@ -3,7 +3,7 @@ name: review
 description: Verify UI definitions cover all specs. Classify findings, discuss, fix.
 user-invocable: true
 disable-model-invocation: true
-allowed-tools: Agent, Read, Write, Edit, Glob, Grep
+allowed-tools: Agent, Read, Write, Edit, Glob, Grep, AskUserQuestion
 ---
 
 # Review
@@ -88,6 +88,8 @@ Take the `@check-coverage` findings. Deduplicate. Classify:
 ```
 
 For each quick fix and structural item: present what the definition says, what's wrong, 2-3 options, and your recommendation.
+
+**Render the per-finding fix-path choice via `AskUserQuestion`** (single-select), not as a prose `(a)/(b)/(c)` list. Recommended option first with `(Recommended)` suffix; each option's `description` carries the tradeoff in design terms ("add all 5 states per ui-vocabulary" vs "add loading + error only — empty not applicable here"; "rewrite to use existing `destructive` role" vs "add new role `destructive-quiet` to roles.md first"). Include a "leave as-is" or "specify other" escape option when the finding admits one. Per CLAUDE.md's picker rule (the `/review quick-fix options` example called out there). Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker.
 
 ---
 

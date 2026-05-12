@@ -3,7 +3,7 @@ name: catchup
 description: Read and handle incoming for-planner messages — spec updates, deviations, blocks, UI updates. Quick-fix or prepare context for planning.
 user-invocable: true
 disable-model-invocation: true
-allowed-tools: Agent, Read, Write, Glob, Bash
+allowed-tools: Agent, Read, Write, Glob, Bash, AskUserQuestion
 ---
 
 # Catch Up
@@ -40,7 +40,9 @@ Show all messages with categories:
    [one-line summary]
 ```
 
-Ask: "Which message should we handle first?"
+**Render the message-selection choice via `AskUserQuestion`** with `multiSelect: true`. Each option is one inbox message (`#N — title → <message-type> (from <origin>)`); the user picks the messages to handle in this pass. Recommended option first with `(Recommended)` suffix — pick the highest-priority item (blocked-task RETURNs and deviation reports before spec/UI updates, since they often gate downstream PRDs; within each kind, oldest first). Each option's `description` carries the one-line summary. Per CLAUDE.md's picker rule. Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker.
+
+If the inbox has only 1 message, skip the picker and prose-confirm: "Handle #N — <title>?" — a 1-option picker is degenerate.
 
 ---
 
@@ -60,9 +62,7 @@ For each message the user picks, handle by type:
 ### Deviation report
 1. Read the full Record — what was planned vs what was built
 2. **Check for conflicting deviations** — scan other recent deviation reports (in this inbox or recently resolved) that touch the same entity, field, or module. If deviations conflict, resolve the conflict *before* approving either. Otherwise you end up with downstream PRDs pulled in contradictory directions.
-3. Present to user with recommendation:
-   - **Accept** — deviation is minor or an improvement
-   - **Reject** — deviation breaks downstream
+3. **Render the accept/reject choice via `AskUserQuestion`** (single-select). Recommended option first with `(Recommended)` suffix — base the recommendation on your scan of downstream impact (accept when minor or an improvement, reject when the deviation breaks downstream PRDs). Each option's `description` states the consequence in planning terms ("propagate the deviation to N downstream tasks" vs "send back with changes needed; task returns to `todo`"). Per CLAUDE.md's picker rule. Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker.
 4. If accepted and downstream tasks are affected:
    - Identify `todo` tasks that reference old paths/names/shapes
    - For each: update PRD via `@plan-ops` **UPDATE_TASK**
@@ -111,10 +111,10 @@ A `for-uxui` message was processed and the response requires action (e.g., "not 
 ### Other
 The message didn't fit the five named categories — e.g., a builder out-of-scope notice, an answer to a prior `for-pm` escalation relabeled as `for-planner`, or a manually-created `for-planner` issue. Never guess the category and run a wrong handler — the silent-close handlers (spec update, UI update, UI response) would lose real work.
 1. Read the full body and comments aloud to the user: "This message doesn't match the standard message types. Here's what it says: [...]"
-2. Ask the user what this is and how they want it routed. Typical outcomes:
-   - Identify it as one of the named types → handle via that branch
-   - Treat as a complex item → track via `node tools/dev-tools.cjs inbox add <number> "<title>"` for later planning work
-   - Close as noise / no action needed → `@plan-ops` **POST_COMMENT** + **CLOSE_ISSUE** with the user's wording
+2. **Render the routing choice via `AskUserQuestion`** (single-select). Recommended option first with `(Recommended)` suffix; each option's `description` carries the consequence in planning terms. Per CLAUDE.md's picker rule. Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker. Typical options:
+   - **Identify as a named type** — re-route to the matching handler (Spec update / Deviation report / Blocked task / UI definition update / UI response). Pick the type after asking the user.
+   - **Track for later planning** — substantial item that needs `/start` work. Adds to the inbox via `node tools/dev-tools.cjs inbox add <number> "<title>"`.
+   - **Close as noise** — no action needed. `@plan-ops` **POST_COMMENT** + **CLOSE_ISSUE** with the user's wording.
 3. Never auto-close or silently acknowledge an `other` message — the user confirms the resolution.
 
 ---

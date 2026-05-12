@@ -34,13 +34,15 @@ Show the full inbox with category and origin:
    <one-line summary>
 ```
 
-Ask: "Which issue should we start with?"
+**Render the issue-selection choice via `AskUserQuestion`** with `multiSelect: true`. Each option is one issue (`#N — title → category (from origin)`); the user picks the issues to handle in this pass. Recommended option first with `(Recommended)` suffix — pick the highest-priority issue (quick questions before spec-change-needed, oldest first within a category) as the recommendation; each option's `description` carries the one-line summary. Per CLAUDE.md's picker rule (the `/catchup triage` example called out there). Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker.
+
+If the inbox has only 1 issue, skip the picker and prose-confirm: "Handle #N — <title>?" — a 1-option picker is degenerate.
 
 ---
 
 ## Step 3: Process Each Issue
 
-For each issue the user picks, handle by category. The category determines how PM handles the issue; the **origin** (from `@inbox-reader`'s output in Step 1) determines where the answer routes back when resolving — see the routing rule below.
+Process each picked issue in order — handle by category, fully resolving each before moving to the next (per the "One at a time" rule below). The category determines how PM handles the issue; the **origin** (from `@inbox-reader`'s output in Step 1) determines where the answer routes back when resolving — see the routing rule below.
 
 ### Routing rule (applies to every inline resolution)
 

@@ -3,7 +3,7 @@ name: design-publish
 description: Publish the design draft to GitHub as N uxui:todo tasks. Pure ship — preview, confirm, create.
 user-invocable: true
 disable-model-invocation: true
-allowed-tools: Read, Bash, Agent
+allowed-tools: Read, Bash, Agent, AskUserQuestion
 ---
 
 # Design Publish
@@ -63,15 +63,18 @@ Exact-match each draft title against the returned titles. If any collide, surfac
 - #<N> — <title>
 ...
 
-These are likely previously-published tasks (possibly rejected back to uxui:todo). Publishing from the draft would duplicate them. Options:
-(a) These are the same tasks, still in flight — I should NOT re-publish. Cancel this /design-publish; if you want to revise, /review-bundle the existing issue or edit it directly on GitHub.
-(b) These are stale and should be replaced — close/delete issues <#N> ... on GitHub, then re-run /design-publish.
-(c) Proceed anyway — creates duplicates. (not recommended)
-
-What would you like to do?
+These are likely previously-published tasks (possibly rejected back to uxui:todo). Publishing from the draft would duplicate them.
 ```
 
-Default to (a). Only proceed past this check on explicit user confirmation of (b) (after collisions cleared) or (c). Titles follow `[UXUI] <domain>: <screen>` by construction, so exact strcmp is correct — no substring matching needed.
+**Render the collision-resolution choice via `AskUserQuestion`** (single-select). Recommended option first with `(Recommended)` suffix — default to **Cancel this publish** since closing in-flight work without confirmation risks losing designer iteration. Each option's `description` carries the consequence:
+
+- **Cancel this publish** (Recommended) — these are likely the same tasks still in flight. To revise, `/review-bundle` the existing issue or edit it directly on GitHub.
+- **Replace as stale** — close or delete the colliding issues on GitHub, then re-run `/design-publish`. Use when the collisions are dead artifacts from a prior run that should be replaced.
+- **Proceed anyway (duplicates)** — creates duplicate `uxui:todo` issues. Not recommended; only useful for unusual recovery cases where the duplicate is intentional.
+
+Per CLAUDE.md's picker rule. Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker.
+
+Only proceed past this check on explicit user confirmation of "Replace as stale" (after collisions cleared) or "Proceed anyway". Titles follow `[UXUI] <domain>: <screen>` by construction, so exact strcmp is correct — no substring matching needed.
 
 If no collisions, flow silently into Step 3.
 

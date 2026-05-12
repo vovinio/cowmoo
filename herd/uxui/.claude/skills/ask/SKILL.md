@@ -4,7 +4,7 @@ description: Send a for-pm (spec gaps) or for-planner (response to a for-uxui me
 user-invocable: true
 disable-model-invocation: true
 argument-hint: <pm | planner>
-allowed-tools: Bash, Read, Glob, Agent
+allowed-tools: Bash, Read, Glob, Agent, AskUserQuestion
 ---
 
 # Ask
@@ -28,7 +28,7 @@ If no argument is provided, scan the session and propose:
 
 Check `node tools/dev-tools.cjs inbox list` — if there's an active tracked `for-uxui` item from the planner and the current session diagnosed it as "not a real gap / task scope wrong", `planner` is the natural target.
 
-Ask the user: *"Is this a spec issue (send to PM) or a response to the tracked for-uxui issue (send to planner)?"*
+**Render the target choice via `AskUserQuestion`** (single-select). Recommended option first with `(Recommended)` suffix — pick PM when the discussion concerns a spec gap, contradiction, or business-logic question; pick planner when the session diagnosed a tracked `for-uxui` item and the response requires planner action. Each option's `description` carries the consequence ("creates a `for-pm` issue addressed to PM" vs "creates a `for-planner` issue responding to the tracked `for-uxui` item"). Per CLAUDE.md's picker rule. Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker.
 
 The target determines which label and which `@uxui-gh-ops` operation to use.
 

@@ -4,7 +4,7 @@ description: Create a for-pm (spec issues) or for-uxui (UI definition issues) Gi
 user-invocable: true
 disable-model-invocation: true
 argument-hint: <pm | uxui>
-allowed-tools: Agent, Read, Glob, Bash
+allowed-tools: Agent, Read, Glob, Bash, AskUserQuestion
 ---
 
 # Ask
@@ -21,11 +21,7 @@ Use when the planner finds a problem that can't be resolved without input from a
 
 Parse the argument: `pm` or `uxui`.
 
-If no argument is provided, ask the user which target based on the current discussion context:
-- "Is this a spec issue (send to PM) or a UI definition issue (send to UXUI)?"
-
-If the discussion is about a spec gap, contradiction, or business-logic question → PM.
-If the discussion is about a UI definition — missing screen state, UI question about `cowmoo/design/` files → UXUI.
+If no argument is provided, **render the target choice via `AskUserQuestion`** (single-select). Recommended option first with `(Recommended)` suffix — pick PM when the discussion concerns a spec gap, contradiction, or business-logic question; pick UXUI when the discussion concerns a UI definition issue (missing screen state, question about a `cowmoo/design/` file). Each option's `description` carries the consequence ("creates a `for-pm` issue addressed to PM" vs "creates a `for-uxui` issue addressed to UXUI"). Per CLAUDE.md's picker rule. Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker.
 
 The target determines which label and which `@plan-ops` operation to use.
 

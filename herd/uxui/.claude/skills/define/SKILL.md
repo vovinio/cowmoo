@@ -3,7 +3,7 @@ name: define
 description: Formalize working notes into cowmoo/design/ files — OVERVIEW, journeys, roles, screen-index, domains. Like PM's /digest but for UI.
 user-invocable: true
 disable-model-invocation: true
-allowed-tools: Write, Edit, Read, Glob, Bash
+allowed-tools: Write, Edit, Read, Glob, Bash, AskUserQuestion
 ---
 
 # Define
@@ -105,7 +105,9 @@ Skip if this run has no journey-level content.
 
 #### 3d. Update `cowmoo/design/domains/[domain].md` (for each ready screen)
 
-**One domain at a time.** Pick the domain with the most ready items (or let the user specify).
+**One domain at a time.** When 2+ domains have `[ready]` items, **render the domain-selection choice via `AskUserQuestion`** (single-select). Recommended option first with `(Recommended)` suffix — pick the domain with the most ready items as the recommendation, since processing it produces the largest delta in this run. Each option's `description` lists the count and a brief summary of what's ready ("4 ready items: 3 screens, 1 flow"). Per CLAUDE.md's picker rule. Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker.
+
+When only 1 domain has ready items, skip the picker and prose-confirm: "Process `<domain>` (the only domain with ready items)?" — a 1-option picker is degenerate.
 
 For each ready item, structure it per the domain-ui template:
 
