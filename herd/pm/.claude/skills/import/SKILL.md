@@ -84,7 +84,7 @@ For each topic:
    - Clearly defined and confirmed → tag `[ready]`
    - Explicitly out of scope or deferred → tag `[future]`
    - Needs discussion or has gaps → leave untagged
-4. **Ask specific questions** — resolve contradictions, fill gaps, clarify vague sections. One or two questions at a time.
+4. **Ask specific questions** — resolve contradictions, fill gaps, clarify vague sections. One or two questions at a time. **For contradiction resolution (imported doc disagrees with existing spec — typically keep current / adopt imported / merge specific fields), render the choice via `AskUserQuestion`, not as a prose `(a)/(b)/(c)` list.** Recommended option first with `(Recommended)` suffix; each option's `description` carries the tradeoff. Per CLAUDE.md's picker rule (the `/import contradictions` example called out there). Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker.
 5. **Wait for user answers** before moving on
 6. **Append confirmed understanding** to `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md` after each topic
 

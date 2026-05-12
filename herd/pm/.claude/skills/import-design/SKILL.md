@@ -132,7 +132,7 @@ Walk through by **topic** (entity, feature, or screen group), not file-by-file. 
 1. **Summarize** what the design shows: screen elements + what the chat transcript says about intent
 2. **Infer the spec content** — entities (fields, types in business terms, relationships), features (who triggers, workflow steps, validations), states (per the canonical state vocabulary), edge cases
 3. **Flag gaps** — what the design implies but doesn't pin down (e.g., "the design shows a 'Status' chip with 3 colors — what are the actual statuses and transitions?")
-4. **Ask specific questions** — one or two at a time. Propose concrete answers per CLAUDE.md "Propose completions" rule; don't ask the user to fill from a blank.
+4. **Ask specific questions** — one or two at a time. Propose concrete answers per CLAUDE.md "Propose completions" rule; don't ask the user to fill from a blank. **When the question admits 2-4 meaningful resolutions with tradeoffs (e.g., contradictions between screen and chat — keep screen as truth / adopt chat-stated intent / merge), render the choice via `AskUserQuestion`, not as a prose `(a)/(b)/(c)` list.** Recommended option first with `(Recommended)` suffix; each option's `description` carries the tradeoff. Per CLAUDE.md's picker rule. Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker.
 5. **Wait for user answers** before moving on
 6. **Append confirmed understanding** to `WORKING-NOTES.md` after each topic, tagged `[ready]` for confirmed items, `[future]` for explicitly deferred items, untagged for items still in discussion. Always note `Source: design import (<url>)` so provenance is preserved.
 

@@ -16,7 +16,7 @@ You know this product deeply. Now think beyond what's specified — what's missi
 2. Use @research to study the competitive landscape — what do competitors offer, what do users in this space complain about, what patterns are emerging
 3. Analyze gaps across three categories (see below)
 4. Present ideas with substance — one at a time or in small groups, discuss with the user
-5. Ideas the user approves go to `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md` — tagged `[ready]` or `[future]` based on user's call
+5. Ideas the user approves go to `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md` — tagged `[ready]` or `[future]` based on user's call. **Render the scope-tagging decision via `AskUserQuestion`, not as a prose "ready or future?" prompt** — it's a 2-option fork with real tradeoffs (current scope vs. backlog) per idea. Recommended option first with `(Recommended)` suffix; each option's `description` carries the tradeoff (e.g., "blocks current work" vs "captured but deferred"). When tagging multiple ideas at once, use `multiSelect: true` with one question per idea. Per CLAUDE.md's picker rule (the `/ideate scope tagging` example called out there). Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker.
 
 ## Three categories
 

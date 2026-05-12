@@ -39,7 +39,7 @@ Present a summary of the landscape — what you have to work with:
 
 ### 3. Suggest next moves
 
-Based on what you've read, present 2-4 options ranked by value. Always lead with your recommendation and why.
+Based on what you've read, present 2-4 options ranked by value. Always lead with your recommendation and why. **Render the choice via `AskUserQuestion`, not as a prose `(a)/(b)/(c)` list.** Recommended option first with `(Recommended)` suffix; each option's `description` carries the tradeoff (the specific gap, pattern, or revisit-trigger). Per CLAUDE.md's picker rule. Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker.
 
 Types of suggestions:
 
@@ -81,7 +81,8 @@ Present findings as a ranked list: most important gap first. For each:
 
 ### 5. Capture decisions
 
-After discussing each topic, confirm what to do with the finding:
+After discussing each topic, confirm what to do with the finding. **Render the per-finding routing choice via `AskUserQuestion`, not as a prose `(a)/(b)/(c)` list** — it's a 4-option fork with real tradeoffs per finding. Recommended option first with `(Recommended)` suffix; each option's `description` carries the tradeoff. Per CLAUDE.md's picker rule (the `/compare per-finding routing` example called out there). Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker.
+
 - **Adopt**: the user wants to add this to specs — note it for `/draft`
 - **Adapt**: similar concept but different approach — note the adaptation
 - **Skip**: not relevant for this product — note the reasoning so it doesn't resurface

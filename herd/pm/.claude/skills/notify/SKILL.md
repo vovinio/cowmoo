@@ -27,7 +27,7 @@ Parse the argument:
 1. Were spec files committed this session? If no, there's nothing to announce — skip to Step 5 (inbox check).
 2. Use Glob once to list `$PROJECT_DIR/cowmoo/design/domains/*.md`. If any changed spec domain has a matching design-domain filename in that list, `for-uxui` is a candidate.
 3. Specs feed downstream work — `for-planner` is almost always a candidate.
-4. Propose the target fork to the user — `planner`, `uxui`, `both`, or `none`. When presenting, note whether `$PROJECT_DIR/cowmoo/design/domains/<domain>.md` exists for the changed domain so the user knows if UXUI has matching content to update.
+4. Propose the target fork to the user — `planner`, `uxui`, `both`, or `none`. **Render this choice via `AskUserQuestion`, not as a prose `(a)/(b)/(c)/(d)` list** — it's a 4-option fork with real tradeoffs (who consumes the spec change). Recommended option first with `(Recommended)` suffix; each option's `description` carries the tradeoff — for `uxui` and `both`, include whether `$PROJECT_DIR/cowmoo/design/domains/<domain>.md` exists for the changed domain so the user knows if UXUI has matching content to update. Per CLAUDE.md's picker rule (the `/notify target selection` example called out there). Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker.
 5. Accept the user's choice: `planner`, `uxui`, `both`, or `none`.
 
 If the user picks `both`, run the notify flow twice — once per target — sequentially.

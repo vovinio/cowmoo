@@ -103,6 +103,8 @@ Present a single merged report:
 
 **This is mandatory, not aspirational.** Every quick fix and structural item must have concrete options and a recommendation. If you can't propose a solution, explain why and what information is needed. Never present a finding as just "this is wrong" — always include "here's how to fix it."
 
+**Render the per-finding resolution choice via `AskUserQuestion`, not as a prose `(a)/(b)/(c)` list.** When a finding has 2-4 legitimate fix paths (e.g., remove / simplify / document / keep), use the picker — recommended option first with `(Recommended)` suffix; each option's `description` carries the tradeoff. Per CLAUDE.md's picker rule (the `/review finding resolution` example called out there). Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker.
+
 For contradiction-type findings (two specs say different things), quote both sides so the user sees the conflict directly.
 
 ---

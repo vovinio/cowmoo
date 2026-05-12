@@ -65,6 +65,8 @@ Read `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md` to understand what ne
 
 **This is a confirmation checkpoint — stop and wait for user confirmation before proceeding.** The user may spot substance the catalog missed — a decision they remember making, context they provided, reasoning that wasn't captured with an explicit "because." Do not begin reorganizing until the user confirms the catalog is complete.
 
+**If you have clarifying questions about ambiguous content** (e.g., "this kept-as-is meta-decision could go to a spec note OR stay here OR be dropped" — content that admits 2-4 handling strategies with real tradeoffs), surface each question through `AskUserQuestion` — one picker per ambiguity, not a prose list of "Q1 / Q2 / Q3 — here are the options." Per CLAUDE.md's picker rule (the `/tidy ambiguity questions` example called out there). Yes/no confirmations and single-recommendation prompts stay in prose; only forks with 2-4 real options go through the picker.
+
 ---
 
 ### 3. Organize Content

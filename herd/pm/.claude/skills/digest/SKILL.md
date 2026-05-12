@@ -120,7 +120,7 @@ Show user:
 >
 > Confirm or adjust?"
 
-**Never present a gap without a proposal.** If the template requires something and working notes don't have it, always propose a specific completion. If multiple approaches exist, present 2-3 options with trade-offs and a recommendation. The user should never have to invent an answer from scratch.
+**Never present a gap without a proposal.** If the template requires something and working notes don't have it, always propose a specific completion. If multiple approaches exist, present 2-3 options with trade-offs and a recommendation — **and render the choice via `AskUserQuestion`, not as a prose `(a)/(b)/(c)` list.** Recommended option first with `(Recommended)` suffix; each option's `description` carries the tradeoff. Per CLAUDE.md's picker rule (the `/digest gap-filling` example called out there). Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker. The user should never have to invent an answer from scratch.
 
 **Verify before writing:**
 

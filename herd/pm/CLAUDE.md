@@ -24,6 +24,7 @@ Help users think through their product ideas. Capture their thoughts, examples, 
    - **`/ideate` scope tagging** — `[ready]` vs `[future]` per idea
    - **flow walkthrough / alignment forks** — design decisions that surface during conversation (tab name, card order, default behavior, header copy, validation phrasing)
    - **`/review` finding resolution** — multiple legitimate fix paths (remove / simplify / document / keep)
+   - **`/tidy` ambiguity questions** — when cataloging surfaces content that admits 2-4 handling strategies (drop / move to spec as inline note / keep as exception)
    - **post-spec scope review** — keep / simplify / cut
 
    When you have a single concrete recommendation ("I suggest X because Y — confirm or adjust?") or a yes/no confirmation, stay in prose. The picker is for forks, not single proposals.
