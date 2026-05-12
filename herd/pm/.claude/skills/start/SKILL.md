@@ -3,7 +3,7 @@ name: start
 description: Initialize new project or resume existing project
 user-invocable: true
 disable-model-invocation: true
-allowed-tools: Write, Read, Glob, Agent, Bash
+allowed-tools: Write, Read, Glob, Bash
 ---
 
 # Start
@@ -12,42 +12,57 @@ Initialize or resume the product specification project.
 
 ## Step 1: Check Project State
 
-Run `node tools/dev-tools.cjs check-files` and read all four lines (`working-notes:`, `backlog:`, `product:`, `domain-specs:`).
+Run `node tools/dev-tools.cjs check-files` and read all four lines (`working-notes:`, `backlog:`, `product:`, `domain-specs:`). Each reports a state: `not found`, `exists (empty)`, `exists (has content)`, or a numeric count for `domain-specs:`.
 
 - `working-notes: not found` → go to **NOT INITIALIZED** below
-- `working-notes:` reports `0 ready, 0 open, 0 future` **AND** `domain-specs: 0` → go to **GREENFIELD** below (fresh project with no content yet)
+- `working-notes: exists (empty)` AND `domain-specs: 0` → go to **GREENFIELD** below (fresh project with no content yet)
 - anything else → go to **EXISTING PROJECT** below
 
 ---
 
 ## If File Exists → EXISTING PROJECT
 
-### Assess Notes
+### Step 2: Load Session-Start Context
 
-Spawn `@notes-health` agent to assess the working notes condition. This returns item counts, session count, organization quality, and a recommendation.
+Read the following files **fully** — no partial reads, no sampling. These are what you need to PROPOSE a session focus:
 
-### Read Product Context
+1. `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md` — discussion capture, open decisions, review findings routed for later thought, design reasoning.
+2. `$PROJECT_DIR/cowmoo/agent-files/pm/BACKLOG.md` — deferred items with their full context and deferral reasoning. You need this so you don't re-propose something already-deferred and so you can surface backlog items the user might want to revisit.
+3. `$PROJECT_DIR/cowmoo/specs/PRODUCT.md` — product overview, glossary, roles, key behaviors, key constraints. The foundation for any cross-domain reasoning.
 
-Read `$PROJECT_DIR/cowmoo/specs/PRODUCT.md` for product overview context.
+Use Glob to **list** the files in `$PROJECT_DIR/cowmoo/specs/domains/` (names only — you'll read the relevant domain(s) after the user picks a focus, per Rule 3 "One domain at a time" in CLAUDE.md). Loading every domain upfront would fight that rule and bloat context with files the session won't touch.
 
-### Propose Session Focus
+Read each loaded file in a single Read call (no offset/limit). If a file is unusually large, that's a signal worth raising to the user — not a reason to read partially.
 
-Combine the @notes-health assessment with the product context to present:
+### Step 3: Assess Working Notes Condition
+
+Now that you've read WORKING-NOTES.md in full, classify what you see — without spawning a sub-agent. You have full context, so you can do this inline.
+
+A bullet (`- ` line) is an **item** only if it represents a currently-open decision, question, or topic in discussion. Bullets are NOT items when they appear in:
+- Sections whose header contains `DIGESTED`, `Archive`, `applied`, `progress`, `log`, `Source`, or similar history/metadata wording — these describe completed or referential work.
+- Lists of captured user quotes, examples, or sub-options under a finding's "Options" list (those are part of a single finding, not separate items).
+- Past-tense logs ("2026-05-09 #N — Topic X → file.md" are digest log entries, not items).
+
+Count three buckets:
+- **Items tagged `[ready]`** (anywhere in the file) — confirmed and waiting for `/digest`
+- **Items tagged `[future]`** (anywhere) — these should already be in BACKLOG.md; if any remain in WORKING-NOTES, `/digest` is overdue
+- **Truly open items** (untagged, in active-discussion sections only) — what's currently being thought through
+
+Also note: raw bullet total vs active-item total. If the file has 50+ more raw bullets than active items, it has accumulated archive/log/digested-section content that should be cleaned by `/tidy` (or by re-running `/digest` if items are tagged but un-processed, or by manual pruning if it's audit-log accumulation).
+
+### Step 4: Propose Session Focus
+
+Combine what you read across all four sources to present:
 
 ```
 Project loaded.
 
-**Notes:** [N] ready, [N] future, [N] open — across [N] sessions
-**Condition:** <assessment from @notes-health>
+**Notes:** [N] ready, [N] future, [N] open  
+  (and if the raw bullet total is notably larger than active items: "**Raw bullets:** N total — [N - active] are archive / log / digested-section content; consider `/tidy`")
+**Backlog:** [N] deferred items
+**Domains:** [N] domain files — [list domain names inline]
 
-<If @notes-health recommends /tidy:>
-**Heads up:** Notes need reorganization — [specific reason from @notes-health]. Consider running /tidy before your next /digest.
-
-<If @notes-health recommends /digest:>
-**Heads up:** [N] items ready for formalization. Consider running /digest in a dedicated session.
-
-**Suggested focus:**
-- [Most important open area and why]
+**Suggested focus:** [the most important open area, with reasoning — drawn from notes + backlog + domains]
 
 [CLOSING — depends on how many candidates the suggested focus surfaces:]
 - **1 candidate** — prose: "Want to dig into [topic]?" or similar single-recommendation confirmation.
@@ -55,23 +70,19 @@ Project loaded.
 - **5+ candidates** — render the lineup as a brief table, then use `AskUserQuestion` to pick the next batch (top 2–4) or ask for an unlisted direction. Never end with bare prose like "walk through in order, or jump to a specific one, or do you have a different topic?" — that's a 3-option fork that the picker is for.
 ```
 
-Don't ask "what would you like to do?" generically — propose something specific based on what you see, AND render any 2-4-option fork through `AskUserQuestion` rather than prose, even when the user could in principle answer with free text. The picker enforces specificity at the response site, where it matters.
+Don't ask "what would you like to do?" generically — propose something specific based on what you see, AND render any 2–4-option fork through `AskUserQuestion` rather than prose, even when the user could in principle answer with free text. The picker enforces specificity at the response site, where it matters.
 
-### Load Domain Files
+### Step 5: Load the Picked Domain + Scan for Related Content
 
-Once the user picks a focus (or brings their own topic):
-- Read the relevant domain file(s) from `$PROJECT_DIR/cowmoo/specs/domains/`
-- Only load adjacent domains if the work clearly requires it
-- Read RESEARCH.md only if the topic involves competitive or market context
+Once the user picks a focus (or brings their own topic), Read the relevant domain file(s) from `$PROJECT_DIR/cowmoo/specs/domains/` **fully**. Typically one domain per session per Rule 3; if the focus genuinely spans two adjacent domains, load both. Do NOT load domains unrelated to the picked focus.
 
-### Scan for Related Content
-
-After loading the relevant domain file(s), scan them for references to the session topic. Flag any existing spec content that might be affected by the upcoming discussion — entity fields, feature rules, glossary entries, etc. Present these as a brief hint:
+Then scan what you've loaded (PRODUCT.md + the picked domain(s) + BACKLOG.md, all already in context) for references to the session topic. Flag any existing spec content that might be affected by the upcoming discussion — entity fields, feature rules, glossary entries, etc.
 
 ```
 **Related spec content:**
 - [domain.md] — [entity/feature] references [topic] at line [N]
 - [PRODUCT.md] — glossary entry for [term] may need attention
+- [BACKLOG.md] — deferred item "[name]" relates to this topic — review or pull forward?
 ```
 
 This gives the user (and you) a head start — no mid-conversation surprises when you discover existing spec content that contradicts or needs updating.
@@ -80,7 +91,7 @@ This gives the user (and you) a head start — no mid-conversation surprises whe
 
 ## If Empty → GREENFIELD
 
-The project is initialized but no product content exists yet — no working-notes items and no domain specs. `@notes-health` has nothing to assess, so skip it.
+The project is initialized but no product content exists yet — no working-notes items and no domain specs. There's nothing to assess and nothing to read in full beyond confirming the state.
 
 Present this greeting:
 
@@ -94,7 +105,7 @@ Alternatives:
 - **No clear idea yet?** Describe the problem you're solving and who has it — we'll work forward from there.
 ```
 
-Wait for the user. Do not spawn `@notes-health`, do not proceed to domain loading, and do not scan for related content — there is none.
+Wait for the user. Do not read any further files — there is nothing to read.
 
 ---
 
@@ -111,7 +122,10 @@ Stop.
 Before finishing, confirm:
 
 - [ ] Project state checked (existing, greenfield, or not initialized)
-- [ ] For existing: @notes-health assessment loaded, product context read, session focus proposed
-- [ ] For greenfield: greeting shown with /draft and /import options; @notes-health NOT spawned
+- [ ] For existing: WORKING-NOTES.md + BACKLOG.md + PRODUCT.md Read **in full** at Step 2 (no offset/limit on any read); domains/ listed by name only
+- [ ] For existing: working-notes assessed inline — ready / future / open counts plus raw-vs-active gap when notable
+- [ ] For existing: session focus proposed with specific reasoning, rendered through picker when 2–4+ candidates
+- [ ] For existing: after focus picked, the relevant domain file(s) loaded fully at Step 5 (typically one per session per Rule 3)
+- [ ] For greenfield: greeting shown with /draft and /import options; no file reads beyond state check
 - [ ] For not initialized: user told which required files are missing
-- [ ] User has context to start working
+- [ ] User has full context to start working — main agent holds the ground truth, not a sub-agent's summary

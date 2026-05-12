@@ -78,6 +78,28 @@ For each item ready for specs in this domain:
 - Section doesn't apply? → Write "N/A — [reason]"
 - Add beyond template if something important isn't covered
 
+**Extract decision reasoning (the why, not just the what):**
+
+This is the digest quality gate. Working-notes entries often contain the **reasoning** behind a decision — "we considered X but chose Y because Z," "this option was rejected because…", trade-off explanations, alternative-paths-considered, scenarios that prompted the rule. **This reasoning must land somewhere durable in the spec before the working-notes entry is deleted.**
+
+For each working-notes item you're about to digest, scan it for:
+- "considered X but chose Y" / "rejected X in favor of Y" patterns
+- "because Z" / "rationale:" / "trade-off:" explanations
+- "we tried X first, it didn't work because Y" history
+- explicit "this rule exists to prevent…" cause statements
+- numeric thresholds with the reasoning for that specific number (e.g., "5 attempts/hour because…")
+
+If you find reasoning, find a home for it in the spec:
+
+| Reasoning shape | Where it lands in the spec |
+|---|---|
+| Trade-off explaining a Key Behavior or Constraint | Inline note under that Key Behavior in PRODUCT.md (e.g., "**Rationale:** considered X; chose Y because Z") |
+| Reason for a specific threshold/limit | Inline next to the field where the limit appears, prefixed with `→` or `(why: ...)` |
+| Why a rejected alternative was rejected | A short "**Considered alternative:**" line in the relevant entity / feature section |
+| Cross-cutting decision rationale that doesn't fit one spec section | A short `### Design notes` sub-section at the end of the relevant spec file |
+
+If no good home exists in the existing template, **add one rather than dropping the reasoning.** The spec can grow new sections; the reasoning cannot be reconstructed from a deleted note.
+
 **Propose completions for gaps:**
 
 If template requires something not in working notes, propose it:
@@ -92,6 +114,10 @@ Show user:
 > "I've drafted [Item Name]. These parts I proposed:
 > - [what you proposed]
 >
+> Reasoning I preserved from working-notes:
+> - [decision] → landed as [where in spec]
+> - [trade-off] → landed as [where in spec]
+>
 > Confirm or adjust?"
 
 **Never present a gap without a proposal.** If the template requires something and working notes don't have it, always propose a specific completion. If multiple approaches exist, present 2-3 options with trade-offs and a recommendation. The user should never have to invent an answer from scratch.
@@ -104,6 +130,7 @@ Check:
 - [ ] No vague language ("appropriate", "relevant", "etc.")?
 - [ ] No references to deferred/backlog concepts? Specs must be self-contained.
 - [ ] User confirmed proposals?
+- [ ] **Every "we considered X / chose Y because Z" / trade-off / rejected-alternative from the source working-notes items has a durable home in the spec** (per the extraction table above). If reasoning is being dropped, stop and add it.
 
 All checks pass → proceed to write.
 
@@ -147,6 +174,10 @@ Preserve everything — deferred items could be blunt ideas or fully detailed fe
 
 #### 3d. Clean Processed Items from Working Notes
 
+Before removing anything, **re-verify the reasoning gate:** for each item you're about to delete from WORKING-NOTES.md, confirm that any "we considered X / chose Y because Z," trade-off rationale, or rejected-alternative explanation it contained has landed in the spec per Step 3a's extraction table. If you skipped this for any item, stop and patch the spec — don't delete first and try to remember later.
+
+Once the reasoning gate is clear:
+
 Remove from `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md`:
 - Items successfully written to spec files (verified in 3b)
 - Items successfully moved to BACKLOG.md (verified in 3c)
@@ -157,11 +188,13 @@ Keep in working notes:
 
 Remove session headers (`## Session — [topic]`) that have no remaining items beneath them.
 
-#### 3e. Checkpoint
+#### 3e. Within-Run Checkpoint (transient only)
 
-After processing the domain, update a short progress note at the top of WORKING-NOTES.md — what's done, what's left. This keeps progress visible and lets the user run `/digest` again for the next domain.
+If you need to remember mid-run state (e.g., partial-failure recovery during a long digest of one domain), write a transient `## In-progress: <domain>` block at the top of WORKING-NOTES.md naming what's been written and what's left.
 
-Remove the checkpoint when the digest completes.
+**Delete this checkpoint before reporting digest complete.** It is a within-run safety net, NOT a record of what was digested.
+
+Do NOT write a permanent "Digest progress" section into WORKING-NOTES.md. The durable record of what was digested lives in git history — `/publish` commits the spec changes with a conventional message (`spec(<domain>): <description>`), and `git log` is the audit trail. Keeping a digest log inside WORKING-NOTES.md is the failure mode that turns the staging file into a permanent history file; never do it.
 
 **Do not process additional domains in this run — move to Step 4.** One domain per digest run. The user will run `/digest` again for the next domain.
 
@@ -207,10 +240,11 @@ Before finishing, confirm:
 
 - [ ] All `[ready]` items for the target domain transformed to spec format
 - [ ] User confirmed all proposed completions
+- [ ] **Reasoning preservation gate cleared** — every "we considered X / chose Y because Z," trade-off, threshold rationale, and rejected-alternative from the source items has a durable home in the spec (per Step 3a's extraction table)
 - [ ] Spec files written and self-verified (write → re-read → verify)
 - [ ] `[future]` items moved to BACKLOG.md with full context
-- [ ] Processed items cleaned from working notes
-- [ ] Progress checkpoint updated in working notes
+- [ ] Processed items cleaned from working notes (after reasoning gate cleared, not before)
+- [ ] Within-run transient checkpoint (if used) deleted before reporting complete — no "Digest progress" / "Digest runs to date" log left in WORKING-NOTES.md
 - [ ] Report presented with next steps (/review → /publish)
 
 ---
@@ -220,6 +254,8 @@ Before finishing, confirm:
 - **Self-verify every edit** — the write → re-read → verify loop catches silent data loss (dropped fields, mangled formatting, missing sections) that would otherwise go unnoticed until the next `/review` run.
 - **Full context in backlog** — never strip reasoning or detail when moving to backlog. Deferred items may be picked up months later by a different person; without context they become opaque line items that nobody acts on.
 - **Don't digest uncertain items** — if something isn't confirmed, it stays in notes. Putting unconfirmed content into specs creates false confidence — readers assume specs are settled decisions.
-- **One domain at a time** — complete the full cycle (transform → write → clean) for each domain before starting the next. Focused work produces better output. A half-processed domain is recoverable via the checkpoint, but two half-processed domains are a mess.
+- **One domain at a time** — complete the full cycle (transform → write → clean) for each domain before starting the next. Focused work produces better output. A half-processed domain is recoverable via the transient checkpoint (deleted at completion); two half-processed domains are a mess.
+- **WORKING-NOTES.md is staging, not history.** Every item this skill processes is either written into a spec (Step 3b) or moved to BACKLOG.md (Step 3c) — and then removed from WORKING-NOTES.md (Step 3d). No "kept for traceability," no "Digest progress" log, no exceptions. Git history (committed by `/publish`) is the durable audit trail.
+- **Reasoning travels with the decision.** Deleting a working-notes item is acceptable ONLY after its embedded reasoning (trade-offs, rejected alternatives, threshold rationale, cause-and-effect history) has been preserved in the spec. The spec is the durable record of "what AND why." If reasoning gets dropped during digest, future readers (planner, builder, future-PM) re-litigate settled decisions because the "why" is missing. The Step 3a extraction table is non-negotiable.
 - **One file per write** — batch all items for a target file into a single write, then verify the whole file. This minimizes read-verify cycles and reduces the risk of partial writes leaving a file in an inconsistent state.
 - **Specs can move back to backlog** — if the user decides a fully specified feature should be deferred, move it from the domain file to BACKLOG.md preserving the complete spec. Note which domain file it came from so it can be restored later.

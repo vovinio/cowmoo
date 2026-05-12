@@ -117,13 +117,21 @@ Existing docs → /import  ↗                 /digest → Backlog (deferred)
                                            /digest → deleted from notes
 ```
 
-**Rule 1: Notes and specs never overlap.** Once something is digested into a spec, it's removed from notes. Specs are self-contained — reading a spec gives full context without cross-referencing notes.
+**Rule 1: WORKING-NOTES.md is staging only — never history.** Every item lives in working notes briefly, then leaves. `/digest` writes confirmed items into specs (and deletes them from notes), moves `[future]` items into BACKLOG.md (and deletes them from notes), and the result is a file that trends toward empty between sessions. `/review` writes unresolved findings into a single current "Gaps Found in /review" section that gets reconciled (entries removed) when the underlying issues are resolved.
+
+  Working notes do NOT contain:
+  - A "Digest progress" log — `git log` of `/publish` commits is the durable digest history.
+  - A "Resolved Review Items (Archive)" section — resolved findings are removed entirely; git history is the audit trail.
+  - Multiple dated `## Gaps Found in /review #N` sections — one current section only.
+  - Decisions marked `[applied]` that are already in specs — those don't belong in notes anywhere.
+
   Common rationalizations — all wrong:
-  - "I'll clean it up in the next /tidy" → Clean it now. Overlap creates conflicting sources of truth.
+  - "I'll clean it up in the next /tidy" → Clean it during `/digest` or `/review`. Don't defer cleanup to a future skill that might not run.
   - "The note has extra context the spec doesn't" → Then the spec is incomplete. Enrich the spec, remove the note.
   - "It's not exactly the same content" → If it covers the same decision, it overlaps. One source of truth.
+  - "We need it for traceability" → Git history is traceability. Commit messages, diffs, and the durable spec files together capture the decision trail. Working notes do not.
 
-**Rule 2: Future items are isolated.** BACKLOG.md holds deferred items. They're removed from the active workflow. `/start` doesn't load the backlog. Working notes hold future items only briefly — they move to backlog during digest.
+**Rule 2: Future items live in BACKLOG.md.** BACKLOG.md holds deferred items with their full context and deferral reasoning. `/start` reads it in full so the agent knows what's already been deferred and can surface backlog items the user might want to pull forward. Working notes hold `[future]` items only briefly — they move to backlog during `/digest` and are deleted from working notes in the same step.
 
 **Rule 3: One domain at a time.** Focus on one domain, finish it, then move to the next. Cross-domain discoveries go to working notes and get picked up when that domain is the focus. This is about where you write, not what you read — read any file for reference at any time.
 
@@ -146,7 +154,6 @@ Confirmed and deferred items in working notes get a tag. Untagged items are impl
 
 ## Available Agents
 
-- `@notes-health` — Assess working notes condition. Read-only.
 - `@inbox-reader` — Read for-pm GitHub issues with full context and categorize them.
 - `@pm-ops` — Execute GitHub and git write operations (commits, comments, labels, CREATE_FOR_PLANNER / CREATE_FOR_UXUI). Verifies every step.
 - `@pm-bundle-ops` — Download a Claude Designer share URL into a transient `/tmp/pm-import-<timestamp>/` directory for `/import-design` to read. No project artifacts, no git. Wraps `node tools/dev-tools.cjs design-fetch`.

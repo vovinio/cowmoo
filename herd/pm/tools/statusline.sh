@@ -221,6 +221,11 @@ line2=""
 if [ -n "$files_dir" ]; then
     notes_file="$files_dir/WORKING-NOTES.md"
     if [ -f "$notes_file" ]; then
+        # Count only TAGGED items — these are unambiguous regardless of which
+        # section they sit in. Untagged-"open" was the unreliable signal that
+        # over-counted captured user quotes, log entries, and "DIGESTED"-section
+        # bullets. The accurate "open" assessment lives in /start, which Reads
+        # the file in full and classifies semantically.
         eval $(awk '
             /^## / {
                 if (/\[ready\]/) tag="ready"
@@ -230,16 +235,15 @@ if [ -n "$files_dir" ]; then
             /^- / {
                 if (/\[ready\]/ || tag=="ready") r++
                 else if (/\[future\]/ || tag=="future") f++
-                else o++
             }
-            END { printf "nr=%d nf=%d no=%d", r+0, f+0, o+0 }
+            END { printf "nr=%d nf=%d", r+0, f+0 }
         ' "$notes_file" 2>/dev/null)
 
-        if [ "$nr" -gt 0 ] || [ "$no" -gt 0 ]; then
+        if [ "$nr" -gt 0 ] || [ "$nf" -gt 0 ]; then
             dot=" ${dim}\xc2\xb7${reset} "
             parts=""
             [ "$nr" -gt 0 ] && { [ -n "$parts" ] && parts+="$dot"; parts+="${green}${nr} ready${reset}"; }
-            [ "$no" -gt 0 ] && { [ -n "$parts" ] && parts+="$dot"; parts+="${dim}${no} open${reset}"; }
+            [ "$nf" -gt 0 ] && { [ -n "$parts" ] && parts+="$dot"; parts+="${yellow}${nf} future${reset}"; }
             line2+="$parts"
         fi
     fi

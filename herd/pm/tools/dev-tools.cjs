@@ -38,41 +38,16 @@ function fileStatus(filePath) {
   return content.length === 0 ? 'exists (empty)' : 'exists (has content)';
 }
 
-function workingNotesParse() {
-  if (!PROJECT_DIR) return { state: 'not found', ready: 0, open: 0, future: 0 };
-  const p = path.join(PROJECT_DIR, 'cowmoo', 'agent-files', 'pm', 'WORKING-NOTES.md');
-  if (!fs.existsSync(p)) return { state: 'not found', ready: 0, open: 0, future: 0 };
-  let notes;
-  try { notes = fs.readFileSync(p, 'utf8'); } catch { return { state: 'not found', ready: 0, open: 0, future: 0 }; }
-  if (notes.trim().length === 0) return { state: 'exists (empty)', ready: 0, open: 0, future: 0 };
-  // Per-item [ready]/[future] tags are canonical; section-level tag on a `##` header
-  // acts as a fallback cascade for hand-authored notes.
-  let ready = 0, future = 0, open = 0, sectionTag = null;
-  for (const line of notes.split('\n')) {
-    if (line.startsWith('## ')) {
-      if (line.includes('[ready]')) sectionTag = 'ready';
-      else if (line.includes('[future]')) sectionTag = 'future';
-      else sectionTag = null;
-    } else if (/^- /.test(line)) {
-      if (line.includes('[ready]') || sectionTag === 'ready') ready++;
-      else if (line.includes('[future]') || sectionTag === 'future') future++;
-      else open++;
-    }
-  }
-  return { state: 'exists (has content)', ready, open, future };
-}
-
 // --- Check Files ---
 
 function checkFiles() {
   if (!PROJECT_DIR) { console.log('check-files: PROJECT_DIR not set'); return; }
-  const wn = workingNotesParse();
-  if (wn.state === 'exists (has content)') {
-    console.log(`working-notes: exists (has content) — ${wn.ready} ready, ${wn.open} open, ${wn.future} future`);
-  } else {
-    console.log(`working-notes: ${wn.state}`);
-  }
   const fp = (rel) => path.join(PROJECT_DIR, rel);
+  // working-notes status is reported the same way as the other files —
+  // just existence/empty/has-content. Counts (and the semantic question
+  // of which bullets are real items) belong to /start, which Reads the
+  // file directly and assesses inline.
+  console.log(`working-notes: ${fileStatus(fp('cowmoo/agent-files/pm/WORKING-NOTES.md'))}`);
   console.log(`backlog: ${fileStatus(fp('cowmoo/agent-files/pm/BACKLOG.md'))}`);
   console.log(`product: ${fileStatus(fp('cowmoo/specs/PRODUCT.md'))}`);
   const domainsDir = fp('cowmoo/specs/domains');
@@ -123,17 +98,9 @@ function hookSessionStart() {
     } catch {}
   }
 
-  // Show working notes status
-  const wn = workingNotesParse();
-  const items = wn.ready + wn.open + wn.future;
-  if (items > 0) {
-    const parts = [];
-    if (wn.ready > 0) parts.push(`${wn.ready} ready`);
-    if (wn.open > 0) parts.push(`${wn.open} open`);
-    if (wn.future > 0) parts.push(`${wn.future} future`);
-    console.log(`\nWorking notes: ${parts.join(', ')}`);
-    if (wn.ready > 0) console.log('Ready items found — consider /digest when appropriate.');
-  }
+  // Working-notes status is not reported at session start. /start does a
+  // full Read of the file and assesses inline; pre-empting that here with
+  // a partial status line would just duplicate noise.
 }
 
 // --- Workflow Step Tracking ---

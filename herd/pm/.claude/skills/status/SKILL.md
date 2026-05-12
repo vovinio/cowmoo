@@ -1,6 +1,6 @@
 ---
 name: status
-description: Quick read-only project snapshot — working notes counts, domain list, backlog size, inbox
+description: Quick read-only project snapshot — file states, tagged-item counts, inbox, domains, backlog size
 user-invocable: true
 disable-model-invocation: true
 allowed-tools: Read, Glob, Agent, Bash
@@ -8,7 +8,7 @@ allowed-tools: Read, Glob, Agent, Bash
 
 # Status
 
-Quick snapshot of the project state. No loading into discussion mode — just report and done.
+Quick snapshot of the project state. No discussion mode, no semantic deep-dive — that's `/start`'s job. `/status` reports the state and stops.
 
 ---
 
@@ -22,20 +22,27 @@ Run `node tools/dev-tools.cjs check-files` and read the `working-notes:` line.
 
 ### 2. Check Inbox
 
-Spawn `@inbox-reader` with operation **GET_INBOX** to get any pending for-pm issues.
+Spawn `@inbox-reader` with operation **GET_INBOX** to get any pending for-pm issues. Show any pending issues — they may need attention.
 
-Show any pending issues — these may need your attention.
+### 3. Gather Counts (lightweight)
 
-### 3. Read Key Files
+For the working-notes count, use a quick grep — counting only TAGGED items, which are unambiguous regardless of section context. The raw-vs-active semantic count (which requires reading the file fully and judging) is `/start`'s job, not `/status`'s.
 
-Read:
-- `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md`
-- `$PROJECT_DIR/cowmoo/specs/PRODUCT.md`
-- `$PROJECT_DIR/cowmoo/agent-files/pm/BACKLOG.md`
+```bash
+notes="$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md"
+ready_count=$(grep -cE '^- .*\[ready\]|^## .*\[ready\]' "$notes" 2>/dev/null)
+future_count=$(grep -cE '^- .*\[future\]|^## .*\[future\]' "$notes" 2>/dev/null)
+```
 
-Use Glob to list all files in `$PROJECT_DIR/cowmoo/specs/domains/`.
+For the backlog count: number of top-level entries (top-level `##` headers under the `# Backlog` heading).
 
-### 4. Count and Report
+For domains: Glob `$PROJECT_DIR/cowmoo/specs/domains/*.md` and count names.
+
+For the last session header: grep for the most recent `## Session —` header in WORKING-NOTES.md (or "no sessions recorded" if none).
+
+For the product name: grep PRODUCT.md for its top-level `# ` heading (one Bash call, no full read).
+
+### 4. Report
 
 ```
 ## Project Status
@@ -44,17 +51,15 @@ Use Glob to list all files in `$PROJECT_DIR/cowmoo/specs/domains/`.
 
 **Product:** [name from PRODUCT.md, or "unnamed" if not yet defined]
 
-**Working Notes:**
-- [N] items tagged [ready]
-- [N] items tagged [future]
-- [N] untagged items (in discussion)
+**Working Notes:** [N] tagged [ready], [N] tagged [future]
+  (If raw `- ` line count is significantly higher than tagged-count, add: "Run /start for a full assessment — the file has untagged content that needs semantic review.")
 
 **Domains:** [N] domain files
 - [list each domain file name]
 
 **Backlog:** [N] deferred items
 
-**Last session:** [brief summary from most recent session header in working notes, or "no sessions recorded"]
+**Last session:** [brief one-liner from most recent `## Session —` header, or "no sessions recorded"]
 ```
 
 ---
@@ -62,8 +67,9 @@ Use Glob to list all files in `$PROJECT_DIR/cowmoo/specs/domains/`.
 ## Rules
 
 - **Read only** — don't modify any files
-- **Quick** — no analysis, no suggestions, just counts and facts
+- **Quick** — grep + glob, no full file reads. If you need full reads, you're doing `/start`'s work.
 - **Don't enter discussion mode** — report and stop
+- **Tagged-only counts** — `/status` only counts `[ready]` and `[future]` items. The "untagged-as-open" count requires semantic judgment about which sections are active vs. archive — that's `/start`'s job.
 
 ---
 
@@ -72,7 +78,7 @@ Use Glob to list all files in `$PROJECT_DIR/cowmoo/specs/domains/`.
 Before finishing, confirm:
 
 - [ ] Inbox checked
-- [ ] Working notes counted (ready/future/open)
-- [ ] Domain files listed
-- [ ] Backlog counted
-- [ ] Report presented
+- [ ] Tagged counts gathered via grep (not full Read)
+- [ ] Domain files listed via Glob
+- [ ] Backlog count + product name + last session header gathered via grep
+- [ ] Report presented; no discussion follow-up

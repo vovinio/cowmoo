@@ -140,19 +140,38 @@ For each fix the user approves:
 
 ---
 
-## Step 6: Track Unresolved Items
+## Step 6: Reconcile Working Notes
 
-**This step is mandatory and automatic.** When the user stops engaging with fixes (says "save", "done", "later", moves on, or finishes all quick fixes without addressing structural items), immediately write all unresolved items to working notes. Do not ask permission, do not wait to be reminded.
+**This step is mandatory and runs even when all findings were resolved this session.** It has two parts: (a) add new unresolved findings; (b) clean up routings the user resolved inline during this run.
 
-Route unresolved items to `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md` under `## Gaps Found by Review`:
+Read `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md` first. Find any existing review-routing sections (e.g., `## Gaps Found by Review`, `## Gaps Found in /review (<date>)`).
 
-- **Structural items** — route to working notes by default. If the user chose to fix one inline during Step 4-5, it's resolved and doesn't need tracking. But any structural item that wasn't fully resolved goes to working notes.
+**For this run's findings that the user resolved inline during Step 4–5:**
+
+If the resolved finding had a corresponding entry already sitting in WORKING-NOTES.md (from a prior run that you noticed during the routing-read in this step), remove that entry now. The spec is fixed; the routing is no longer needed. This is the only **auto-cleanup** of cross-run entries — it's safe because the user explicitly resolved the finding in this session.
+
+**For prior-run entries this run did NOT flag again (cross-run staleness):**
+
+Do NOT auto-remove these. LLM-driven check agents have variance; a finding disappearing from this run doesn't prove it was resolved — it might have just been under-detected this time. Removing it silently would be data loss.
+
+Instead, surface a list of "candidate stale routings" at the end of Step 6's report:
+
+```
+**Candidate stale routings** (in WORKING-NOTES.md from prior runs, not flagged in this run):
+- [entry title from working-notes]
+- [entry title from working-notes]
+
+These may be resolved (in which case removing them is correct) or may be issues this run's check agents missed (in which case removing would lose them). Want me to remove any of these from WORKING-NOTES.md? (Confirm individually, or say "remove all" / "keep all".)
+```
+
+Apply removals only with explicit user confirmation per item or batch. Don't act unilaterally.
+
+**For this run's unresolved findings:**
+
+- **Structural items** — route to working notes by default. If the user chose to fix one inline during Step 4–5, it's resolved and doesn't need tracking.
 - **Quick fix leftovers** — any quick fix the user didn't resolve this session.
 
-**Read `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md` first.** Check for existing entries from prior review runs:
-- **New finding** — append a new entry.
-- **Existing entry that's thin or outdated** — rewrite it with the full context from this run.
-- **Existing entry that's already rich and current** — leave it. Add a note if this run found new details.
+Write them to a single section: `## Gaps Found in /review (<date>)`. Do NOT create new dated sections every run — overwrite or merge into one current "Gaps Found in /review" section. A `## Gaps Found in /review #3`, `## Gaps Found in /review #4` pattern means review-routing is acting as audit log, not staging. One section, current state only.
 
 **Quality bar — same as the report.** Each working notes entry must include:
 
@@ -160,6 +179,8 @@ Route unresolved items to `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md` 
 2. **Why it matters** — who it affects, what breaks or is confusing
 3. **Recommendation** — a clear pick with reasoning
 4. **Options** — 2-3 alternatives with trade-offs
+
+**No "Resolved Review Items (Archive)" section in WORKING-NOTES.md.** Resolved items are removed entirely (with user confirmation for cross-run cleanups). Git history of the spec changes is the durable record of what was resolved and why; the commit message on `/publish` captures the decision.
 
 ---
 
@@ -199,4 +220,6 @@ Before finishing, confirm:
 - **Don't skip the discussion** — present findings and wait for user decisions
 - **Route structural items** — always go to working notes, even if user doesn't explicitly defer
 - **Track leftovers** — unresolved items go to WORKING-NOTES.md, never silently dropped
-- **Enrich stale entries** — if an item already exists from a prior run but is thin, rewrite with full context
+- **Auto-clean only inline-resolved** — Step 6 auto-removes routings the user resolved inline this session (safe, explicit). Cross-run staleness (entries this run didn't flag again) is surfaced as a confirm list, never auto-removed — check-agent variance makes silent removal a data-loss risk.
+- **One "Gaps Found in /review" section** — current state only. Never accumulate dated sections per run (no `#1`, `#2`, `#3`, `#4` — that's audit-log behavior in the wrong file)
+- **No "Archive" section in WORKING-NOTES.md** — resolved items are removed entirely (auto when inline-resolved, with user approval for cross-run); git history is the durable record

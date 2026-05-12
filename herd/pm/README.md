@@ -205,7 +205,6 @@ The specs are written in business language, not technical language. A developer 
 
 | Agent | Purpose |
 |-------|---------|
-| `@notes-health` | Assess working notes condition (counts, organization quality). Used by `/start`. |
 | `@inbox-reader` | Read for-pm GitHub issues with full context. Used by `/catchup`. |
 | `@pm-ops` | Execute GitHub and git write operations with verification (commits, comments, labels, CREATE_FOR_PLANNER / CREATE_FOR_UXUI). Used by `/publish`, `/catchup`, `/notify`. |
 | `@research` | Research external topics — industry standards, competitor approaches, best practices. Saves to RESEARCH.md. |
