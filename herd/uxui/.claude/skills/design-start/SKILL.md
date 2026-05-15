@@ -60,17 +60,19 @@ gh issue list --label "uxui:done" --state closed --json number,title --limit 50
 
 ---
 
-## Step 2: Form a synthesis
+## Step 2: Form a synthesis (internal — no chat output)
 
-After the reads, form a concise mental model:
+After the reads, build a concise mental model. **Don't echo this back as a verification step** — the user invoked `/design-start` to GET your proposal, not to verify your reading. The synthesis becomes evidence inside the Step 3 proposal ("Inherits", "Why these together", "Why now").
+
+Hold in context:
 
 - **What's defined:** N screens across M domains (+ K cross-domain flows from journeys.md)
-- **What's been approved:** N screens (closed `uxui:done`); list briefly with their bundles
+- **What's been approved:** N screens (closed `uxui:done`); their bundles
 - **What's pending:** screens with UI defs but no bundle attached yet
 - **What's in flight:** open `uxui:todo` (designer queue), `uxui:review` (waiting for review)
-- **Visual direction so far:** 2-4 sentences distilling the character + patterns captured in `VISUAL-JOURNAL.md` (e.g., "warm earth tones, serif headers, dense layout, conversational voice; 8px default radius established; blur-validation UX"). For first session or when the journal is empty: "None yet — first design batch will set direction."
+- **Visual direction so far:** the character + patterns captured in `VISUAL-JOURNAL.md` (e.g., "warm earth tones, serif headers, dense layout, conversational voice; 8px default radius established; blur-validation UX"). For first session or when the journal is empty: "None yet — first design batch will set direction."
 
-Present this synthesis to the user briefly — 5-10 lines, not a wall of text.
+Step 3 surfaces the load-bearing parts of this synthesis as the proposal's evidence — no separate "present synthesis" chat step.
 
 ---
 

@@ -35,33 +35,35 @@ Read `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md` to understand what ne
 
 ### 2. Catalog Substance (before any changes)
 
-**Output the catalog explicitly to the user** — do not rely on memory. List:
+**Output the catalog as a scannable verification checklist** — one line per item, grouped by category with counts. This is a verification checkpoint, not a tight stamp: the user needs to spot anything the catalog missed, so each item must name the specific decision or value, not just a count.
 
 ```
 ## Substance Catalog
 
-### Design Reasoning ([N] items)
-1. [topic]: [considered X, chose Y, because Z]
-2. ...
+Design Reasoning ([N])
+  • <topic>: chose <Y> over <X> because <Z>
+  • ...
 
-### Edge Cases & Error Messages ([N] items)
-- [list specific ones]
+Edge Cases & Error Messages ([N])
+  • <entity/feature>: <scenario> → <handling>
 
-### Field Lists ([N] lists)
-- [entity/feature]: [field count]
+Field Lists ([N])
+  • <entity/feature>: <count> fields — <one-line summary>
 
-### Key Numbers
-- [thresholds, defaults, limits]
+Key Numbers ([N])
+  • <name>: <value> — <why>
 
-### Cross-Domain Impacts ([N] items)
-- [which spec files need what changes]
+Cross-Domain Impacts ([N])
+  • <spec file>: <what change>
 
-### Future Scope ([N] items)
-- [deferred items with reasoning]
+Future Scope ([N])
+  • <item>: <one-line deferral reason>
 
-### Open Questions ([N] items)
-- [unresolved items]
+Open Questions ([N])
+  • <unresolved item>
 ```
+
+**Misunderstanding check.** "Design reasoning: 3 items" is not enough — the user can't spot a miscapture from a count alone. "Design reasoning: invoice numbering chose sequential over UUID for human-readability" lets them verify intent in one glance. If load-bearing detail doesn't fit on one line for an item, give it two — don't drop it.
 
 **This is a confirmation checkpoint — stop and wait for user confirmation before proceeding.** The user may spot substance the catalog missed — a decision they remember making, context they provided, reasoning that wasn't captured with an explicit "because." Do not begin reorganizing until the user confirms the catalog is complete.
 
@@ -133,29 +135,21 @@ If anything is missing, fix it before proceeding to the report. Do not report "t
 
 ### 6. Report
 
+Emit a tight stamp — counts of what was tidied plus the "Preserved" verification line so the user can confirm nothing was lost. Don't echo each reorganized item back; the reorganized content is already in WORKING-NOTES.md.
+
 ```
-## Tidy Complete
+Tidied → WORKING-NOTES.md
+[N] topics organized · [N] ready · [N] open · [N] scaffolding removed · [N] future
 
-### Organized
-- [what was reorganized and how]
+Preserved (vs Step 2 catalog):
+  • Design reasoning: [N]/[N]
+  • Edge cases / error messages: [N]/[N]
+  • Cross-domain impacts: [N]/[N]
 
-### Ready for Digest
-- [items tagged as ready]
-
-### Still Open
-- [untagged items still in discussion]
-
-### Removed (Scaffolding Only)
-- [items removed and why — object now if any should be kept]
-
-### Preserved (verified against catalog)
-- [N] / [N] design reasoning items across [N] topics
-- [N] edge cases / error messages
-- [N] cross-domain impacts
-
-### Future Scope (pending)
-- [items tagged [future] that will move to backlog during digest]
+Next: continue discussion, or /digest when ready
 ```
+
+The "Preserved" line is the trust signal — `[N]/[N]` confirms substance counts match the Step 2 catalog. If any actual < expected, stop and patch before reporting tidy complete (per Step 5's verification rule).
 
 ---
 

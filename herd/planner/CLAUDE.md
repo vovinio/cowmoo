@@ -19,6 +19,13 @@ Self-verify all writes — write the file, re-read it, verify nothing was droppe
 
 Files are truth, conversation is scratch. Decisions go to files immediately.
 
+**Two surfaces, different jobs.**
+
+- **Artifacts** — `draft.md`, PRDs landing in GitHub task issues, `knowledge.md`, `techstack.md`. Elaborate. Full PRD sections (What to Build, Data Shape, Behavior, Edge Cases, Acceptance Criteria), task-spanning rationale, dependencies. Builder inherits this; thoroughness pays.
+- **Chat** (steering wheel) — dense-but-concrete representations of the same content. Designed to be scanned in 5 seconds. See the output-style's "Compressing Without Losing Context" section for the rendering vocabulary (named decisions, diffs, mini-flows, worked examples, pickers).
+
+Never paste PRD-grade prose back into chat for the user to verify. The artifact is the long version; chat is the short version. When echoing what was just synthesized / drafted / understood, compress to a stamp the user can scan — not a structured-prose block that re-presents the same content they just lived through.
+
 ---
 
 ## Intellectual Honesty

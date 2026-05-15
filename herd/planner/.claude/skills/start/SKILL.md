@@ -95,17 +95,24 @@ Based on everything loaded, determine where we are and propose the best next act
 
 **No stories exist (first-time planning):**
 
-Present your understanding of the product:
-- Key domains and how they connect
-- User roles and their scope
-- Complexity assessment
+Lead with the proposed build order. Surface understanding as evidence inside the proposal — don't gate on the user validating your reading of the specs first. The user invoked `/start` to GET your proposal.
 
-Then propose a development strategy:
-- Recommend a build order with reasoning (e.g., "Auth first because everything depends on it")
-- Propose the first 3-5 stories at outline level (name, scope, what each delivers)
-- Ask: "Does this order make sense? Want to adjust before we detail the first story?"
+```
+Proposed build order (first 3–5 stories):
+1. <Story name> — <one-line scope + what it unlocks>
+2. <Story name> — <one-line>
+3. <Story name> — <one-line>
 
-Read `references/feature-questions.md` — ask the 2-3 most relevant questions per feature type for the first story being planned. Skip questions specs already answer.
+Why this order: <load-bearing reasoning — dependencies, foundational pieces, integrations>
+Inherits: <key spec context — domains touched, roles involved>
+Open assumptions: <2–3 inferred things the user should confirm or redirect>
+
+→ Approve order, name a story to swap, or redirect to a different starting point?
+```
+
+On "name a story to swap" or "redirect" — adjust the order inline and re-present only the changed slots. Don't re-show unchanged stories.
+
+After the order is approved, read `references/feature-questions.md` and ask the 2-3 most relevant questions for the first story being planned. Skip questions specs already answer; lead each question with a proposed default per the propose-first discipline.
 
 **Stories exist (subsequent planning):**
 

@@ -65,7 +65,10 @@ Project loaded.
 **Suggested focus:** [the most important open area, with reasoning — drawn from notes + backlog + domains]
 
 [CLOSING — depends on how many candidates the suggested focus surfaces:]
-- **0 candidates** — nothing in notes, backlog, or domain specs is open. Don't ask open-endedly — propose a specific starting point grounded in what you DID read: a glossary term in PRODUCT.md that lacks a domain, a role whose workflows aren't yet captured, or a new domain area implied by the product overview. Prose only — no picker. Example: "Notes are clear and no domains exist yet. PRODUCT.md mentions [X] — want to define it as the first domain? Or describe a different area you'd like to capture."
+- **0 candidates** — nothing in notes, backlog, or domain specs is open. Don't ask open-endedly. Render `AskUserQuestion` seeded from what you DID read in PRODUCT.md: 2–3 concrete starting points (a glossary term that lacks a domain, a role whose workflows aren't yet captured, a product area implied by the overview) plus a free-text fallback option. Recommended option first with `(Recommended)` suffix; each option's `description` names the consequence (which file gets created, what's affected — not a label repeat). Example seeds:
+  - "Define `<glossary-term>` as first domain" — *creates `domains/<term>.md`; already named in PRODUCT.md glossary*
+  - "Capture workflows for role `<R>`" — *defines features for an already-named role; touches existing domains if any*
+  - "Describe a different area" — *free-text fallback when none of the above fit*
 - **1 candidate** — prose: "Want to dig into [topic]?" or similar single-recommendation confirmation.
 - **2–4 candidates** — `AskUserQuestion` picker. Recommended candidate first with `(Recommended)` suffix; each option's `description` carries the tradeoff (what each candidate touches, what's affected). Per CLAUDE.md's picker rule and the `/start focus` example called out there.
 - **5+ candidates** — render the lineup as a brief table, then use `AskUserQuestion` to pick the next batch (top 2–4) or ask for an unlisted direction. Never end with bare prose like "walk through in order, or jump to a specific one, or do you have a different topic?" — that's a 3-option fork that the picker is for.

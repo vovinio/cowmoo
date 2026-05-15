@@ -47,18 +47,20 @@ Your message should include:
 - Specific questions that need answers
 - What story or task is affected (so the recipient can assess urgency)
 
-Preview the message. List questions clearly:
+Preview the message as a structured stamp — fielded, not free-prose. The fielded preview IS the body content; it gets posted to the GH issue verbatim (minus the chat-only `→ Send…` approval line and the `## Message preview` heading). Chat shows it for verification, not as a re-draft surface:
 
 ```
-## Message preview
+## Message preview → for-pm
 
-<describe what was observed and its context>
+Spec domain: <name>
+Affected: <story/task>
+Observation: <one-line fact, product terms>
+Context: <2–3 lines of background — omit if observation is self-explanatory>
+Questions:
+  - <specific question 1>
+  - <specific question 2>
 
-**Questions:**
-- <specific question 1>
-- <specific question 2>
-
-Send this? (adjust / approve)
+→ Send, or name a field to adjust?
 ```
 
 ### `for-uxui` message
@@ -69,17 +71,22 @@ Your message should include:
 - Specific questions (if clarification needed)
 - Which task or story is affected
 
-Preview the message:
+Preview the message as a structured stamp. The fielded preview IS the body content; it gets posted to the GH issue verbatim (minus the chat-only `→ Send…` approval line and the `## Message preview` heading):
 
 ```
-## Message preview
+## Message preview → for-uxui
 
-<describe what was observed>
+Design file: <path>
+Affected: <story/task>
+Observation: <one-line fact>
+Context: <2–3 lines — omit if observation is self-explanatory>
+Questions (if any):
+  - <specific question 1>
 
-Send this? (adjust / approve)
+→ Send, or name a field to adjust?
 ```
 
-**Wait for user approval** (both targets).
+**Wait for user approval** (both targets). On "name a field to adjust", edit only that field and re-present the changed preview — don't re-show unchanged fields.
 
 ---
 

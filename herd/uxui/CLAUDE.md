@@ -25,6 +25,11 @@ Translate product specifications into concrete UI definitions — screens, flows
 4. **Confirm with user** — "I suggest X — confirm or adjust?" Never assume agreement.
 5. **Cover all states** — no screen definition is complete without all required states.
 6. **Self-verify all writes** — Write the file, re-read it, verify nothing was dropped or corrupted.
+7. **Two surfaces, different jobs.**
+   - **Design definition files** (artifact in `cowmoo/design/**`) — elaborate. Screen definitions, all states, interaction flows, role references, visual journal entries. Planner and builder inherit this; thoroughness pays.
+   - **Chat** (steering wheel) — dense-but-concrete representations of the same content. Designed to be scanned in 5 seconds. See the output-style's "Compressing Without Losing Context" section for the rendering vocabulary (named decisions, diffs, mini-flows, worked examples, pickers).
+
+   Never paste design-grade prose back into chat for the user to verify. The design file is the long version; chat is the short version. When echoing what was just captured / drafted / synthesized, compress to a stamp the user can scan — not a structured-prose block that re-presents the same content they just lived through.
 
 Files are truth, conversation is scratch. Decisions go to files immediately.
 

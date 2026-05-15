@@ -45,44 +45,65 @@ For visual continuity: the batch's "Inherits" notes from `/design-start` already
 
 ---
 
-## Step 3: Compose each task body inline
+## Step 3: Compose task bodies (batched, single approval gate)
 
-For each screen in the batch:
+Compose every task body in the locked batch in one pass, then present the batch as a single compressed preview. Collapsing N per-screen approval gates into one keeps chat scannable; the full composed bodies live in your conversation context and get written to `draft.md` in Step 4 (where the user can inspect them in the file).
 
-1. **Briefly check** with the user — any specific emphasis for this screen beyond what was discussed in `/design-start`? (Default OK if none.)
+### 3a. Quick batch-wide check
+Ask once, upfront: any specific emphasis for any screen in this batch beyond what `/design-start` covered? Single list, not per-screen (default: none).
 
-2. **Compose the body inline** following the `design-task.md` template. The body has two sections:
+### 3b. Compose each body silently
+For each screen, compose the body following the `design-task.md` template. The body has two sections:
 
-   **Instructions section** (short, scannable bullets for the human):
-   - Brief invocation — paste prompt below into `claude.ai/design`
-   - 2-4 "Pay attention to" bullets specific to this screen's risk areas (states with edge-case copy, accessibility considerations, brand voice precision)
-   - Acceptance checks (3-5 yes/no items derived from required states + spec validations)
-   - Submission steps (share URL → comment → relabel `uxui:review`)
-   - Optional: note about session continuity
+**Instructions section** (short, scannable bullets for the human):
+- Brief invocation — paste prompt below into `claude.ai/design`
+- 2-4 "Pay attention to" bullets specific to this screen's risk areas (states with edge-case copy, accessibility considerations, brand voice precision)
+- Acceptance checks (3-5 yes/no items derived from required states + spec validations)
+- Submission steps (share URL → comment → relabel `uxui:review`)
+- Optional: note about session continuity
 
-   **Claude Design Prompt section** (dense, self-contained, copy-paste verbatim into CD — no project file references):
-   1. `# [Screen Name]` — one-sentence purpose
-   2. `## Product context` — inline tone words, references, anti-references, voice samples (from OVERVIEW)
-   3. `## Business context` — inline relevant entities, rules, validations, terminology (from spec, only what this screen needs)
-   4. `## Screen definition` — Purpose, Entry points, Type, Layout, Components, Copy (from domain file)
-   5. `## Required states` — only states applicable to this screen, with each state's meaning inlined per `ui-vocabulary.md`
-   6. `## Role meanings` — only roles this screen uses, each with semantic purpose inlined from `roles.md`
-   7. `## Interactions` — from the screen definition
-   8. `## Visual direction already established` — concrete visual decisions inherited from prior approved bundles (or "None yet — this batch establishes initial direction" for first batch)
-   9. `## Output expectation` — framework-agnostic HTML/CSS, viewport, mobile notes if applicable
+**Claude Design Prompt section** (dense, self-contained, copy-paste verbatim into CD — no project file references):
+1. `# [Screen Name]` — one-sentence purpose
+2. `## Product context` — inline tone words, references, anti-references, voice samples (from OVERVIEW)
+3. `## Business context` — inline relevant entities, rules, validations, terminology (from spec, only what this screen needs)
+4. `## Screen definition` — Purpose, Entry points, Type, Layout, Components, Copy (from domain file)
+5. `## Required states` — only states applicable to this screen, with each state's meaning inlined per `ui-vocabulary.md`
+6. `## Role meanings` — only roles this screen uses, each with semantic purpose inlined from `roles.md`
+7. `## Interactions` — from the screen definition
+8. `## Visual direction already established` — concrete visual decisions inherited from prior approved bundles (or "None yet — this batch establishes initial direction" for first batch)
+9. `## Output expectation` — framework-agnostic HTML/CSS, viewport, mobile notes if applicable
 
-3. **Critical rules for the Prompt section:**
-   - Inline everything. No "see X" pointers to project files. Claude Design has no access to anything.
-   - Roles by name only. Never inline raw values (no hex, no pixels).
-   - Voice samples are concrete sentences, not adjectives.
-   - States use the canonical vocabulary names from `ui-vocabulary.md`.
+**Critical rules for the Prompt section:**
+- Inline everything. No "see X" pointers to project files. Claude Design has no access to anything.
+- Roles by name only. Never inline raw values (no hex, no pixels).
+- Voice samples are concrete sentences, not adjectives.
+- States use the canonical vocabulary names from `ui-vocabulary.md`.
 
-4. **Present the composed body to the user** inline. User may:
-   - **Approve** — the body goes into the draft as-is
-   - **Refine** — describe what to change; agent edits inline
-   - **Discuss** — work through ambiguity, then refine
+### 3c. Present the batch in one compressed preview
 
-Hold off on writing the draft file until all task bodies are composed and approved.
+Show the user named decisions per task — not full bodies. The composed prose stays in your context and lands in `draft.md` at Step 4.
+
+```
+## Batch preview — <N> tasks ready for draft
+
+### Task 1 — <Screen 1 name>
+Pay attention to: <2–3 named risks>
+States: <state list>
+Roles: <role list>
+Visual direction: <one-line — inherited specifics or "initial direction">
+
+### Task 2 — <Screen 2 name>
+...
+
+→ Approve all, name task(s) to refine, or ask to see a full body before approving?
+```
+
+**Misunderstanding check.** The named decisions per task must be specific enough that a wrong composition would render visibly different in the preview (different state list, wrong roles, missing visual direction). If two different compositions could produce the same preview line, re-add the load-bearing detail as a named decision.
+
+**On refine** — edit the held body for the named task(s) inline; re-present only the changed task(s) in the same compressed shape. Don't re-show unchanged tasks.
+**On "show full body for task N"** — present the full composed body for that task only; ask the approval question again.
+
+Hold off on writing the draft file (Step 4) until the user approves the full batch.
 
 ---
 

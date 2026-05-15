@@ -65,31 +65,27 @@ Check if `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md` exists.
 
 ## Step 3: Present Understanding
 
-Share with the user before going deeper:
+Share a scannable overview before the walk-through. One line per domain, named concepts, and ambiguities. Don't preview the full walk-through order — name only the first topic (dependency-rooted) so the user can confirm or redirect. The full walk-through unfolds topic by topic in Step 4.
 
 ```
 ## Import Overview
 
-**Product:** [One-sentence summary of what this product appears to be]
+Product: <one-sentence summary>
 
-**Domains identified:**
-- [Domain A] — covered by [files], [brief scope]
-- [Domain B] — covered by [files], [brief scope]
+Domains ([N]):
+  • <Domain A>: <brief scope> — <which file(s)>
+  • <Domain B>: <brief scope> — <which file(s)>
 
-**Core concepts:** [Key entities and relationships that span multiple files]
+Core concepts: <key entities/relationships spanning files, one line>
 
-**Observations:**
-- [Contradictions between files]
-- [Gaps — things referenced but never defined]
-- [Vague sections that need clarification]
+Ambiguities ([N]):
+  • <contradiction | gap | vague>: <specific item>
 
-**Suggested walk-through order:**
-1. [Topic] — foundational, other things depend on it
-2. [Topic] — builds on #1
-3. ...
-
-Ready to walk through?
+Starting with: <first topic> — foundational, others depend on it.
+Different starting point?
 ```
+
+**Misunderstanding check.** If the domains and ambiguities lines could equally describe a *different* product the user didn't actually have in mind, add a one-line `Key call:` naming the most product-defining decision you read (e.g., `Key call: <product> = self-serve, not assisted onboarding`). Otherwise the overview is enough.
 
 ---
 

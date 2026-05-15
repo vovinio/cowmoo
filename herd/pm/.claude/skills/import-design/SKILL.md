@@ -116,33 +116,29 @@ Read every file completely. Build a mental map:
 
 ## Step 5: Present Overview
 
-Share with the user before walking through:
+Share a scannable overview before the walk-through. Keep the screens list verbatim (one line per screen — the screen-to-entity mapping IS the walk-through's whole point) but compress the narrative. Don't preview the full walk-through order; name only the first topic (dependency-rooted).
 
 ```
 ## Design Import Overview
 
-**Product (inferred):** [one-sentence summary based on screens + chats]
+Product (inferred): <one-sentence summary based on screens + chats>
 
-**Screens identified:**
-- [Screen A] (project/screen-a.html) — [what it shows, who uses it]
-- [Screen B] (project/screen-b.html) — [...]
+Screens ([N]):
+  • <Screen A> (project/screen-a.html) — <what it shows, who uses it>
+  • <Screen B> (project/screen-b.html) — <...>
 
-**Implied entities:** [Entity X with fields a/b/c; Entity Y with fields ...]
-**Implied features:** [Feature P (workflow on Screen A → B); Feature Q ...]
-**Implied roles:** [admin, member, viewer — or "single role visible"]
+Implied entities: <Entity X (fields a/b/c); Entity Y (fields ...)>
+Implied features: <Feature P (Screen A → B workflow); Feature Q (...)>
+Implied roles: <admin, member, viewer | or "single role visible">
 
-**Observations:**
-- [Contradictions between screens or between screen and chat]
-- [Things shown in UI but never explained — what does field X mean?]
-- [Assumptions worth flagging — e.g., chat says "auto-save" but no UI shows it]
+Ambiguities ([N]):
+  • <contradiction | undefined-in-UI | unsupported-by-UI>: <specific item>
 
-**Suggested walk-through order:**
-1. [Foundational entity/screen — others depend on it]
-2. [Next layer]
-...
-
-Ready to walk through?
+Starting with: <first topic> — foundational, others depend on it.
+Different starting point?
 ```
+
+**Misunderstanding check.** Screens list stays dense — don't drop a screen for compression; every screen is load-bearing. If the inferred entities / features / roles could equally describe a different product the user didn't intend, add a one-line `Key call:` naming the inferred product-defining decision (e.g., `Key call: multi-tenant SaaS inferred from workspace-switcher in <Screen X>`).
 
 ---
 

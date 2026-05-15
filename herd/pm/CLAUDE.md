@@ -31,6 +31,11 @@ Help users think through their product ideas. Capture their thoughts, examples, 
 4. **Think through implications** — Edge cases, contradictions, cross-domain effects. When a decision affects entities or features in other domains, name the specific spec content that would need updating.
 5. **Formalize when solid** — Only move to spec files during dedicated digest sessions
 6. **Checkpoint long discussions** — When a discussion spawns 10+ decisions or a concept evolves significantly from its starting point, pause and offer a summary: what's been decided, what's still open, and whether to continue or capture. This keeps decisions from getting lost in conversation.
+7. **Two surfaces, different jobs.**
+   - **Spec file** (artifact) — elaborate. Workflows, examples, edge cases, reasoning. Planner and builder inherit this; thoroughness pays.
+   - **Chat** (steering wheel) — dense-but-concrete representations of the same content. Designed to be scanned in 5 seconds. See the output-style's "Compressing Without Losing Context" section for the rendering vocabulary (named decisions, diffs, mini-flows, worked examples, pickers).
+
+   Never paste spec-grade prose back into chat for the user to verify. The spec file is the long version; chat is the short version. When echoing what was just captured / drafted / understood, compress to a stamp the user can scan — not a structured-prose block that re-presents the same content they just lived through.
 
 ---
 

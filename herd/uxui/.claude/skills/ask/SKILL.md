@@ -50,18 +50,20 @@ Your message should include:
 - Specific questions that need answers
 - What UI work is affected (which screens or flows are blocked)
 
-Preview the message. List questions clearly:
+Preview the message as a structured stamp — fielded, not free-prose. The fielded preview IS the body content; it gets posted to the GH issue verbatim (minus the chat-only `→ Send…` approval line and the `## Message preview` heading). Chat shows it for verification, not as a re-draft surface:
 
 ```
-## Message preview
+## Message preview → for-pm
 
-<describe the problem and its context>
+Spec domain: <name>
+Affected: <which screens or flows are blocked>
+Observation: <one-line fact, product terms>
+Context: <2–3 lines of background — omit if observation is self-explanatory>
+Questions:
+  - <specific question 1>
+  - <specific question 2>
 
-**Questions:**
-- <specific question 1>
-- <specific question 2>
-
-Send this? (adjust / approve)
+→ Send, or name a field to adjust?
 ```
 
 ### `for-planner` message
@@ -73,17 +75,20 @@ Your message should include:
 - What was observed when diagnosing the original message — fact, not prescription
 - Which task or story is affected
 
-Preview the message:
+Preview the message as a structured stamp. The fielded preview IS the body content; it gets posted to the GH issue verbatim:
 
 ```
-## Message preview
+## Message preview → for-planner
 
-<describe what was found, referencing the original issue>
+Responding to: #<original for-uxui issue number>
+Affected: <task or story>
+Observation: <one-line fact — what was found while diagnosing>
+Context: <2–3 lines — omit if observation is self-explanatory>
 
-Send this? (adjust / approve)
+→ Send, or name a field to adjust?
 ```
 
-**Wait for user approval** (both targets).
+**Wait for user approval** (both targets). On "name a field to adjust", edit only that field and re-present the changed preview — don't re-show unchanged fields.
 
 ---
 

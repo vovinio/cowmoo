@@ -89,25 +89,28 @@ Re-read `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md` to verify the new 
 
 ### 6. Report
 
-Tell the user what was captured:
+Emit a tight stamp — counts of what was saved plus forward-pointing gaps. The captured items are already in WORKING-NOTES.md; don't echo them back as a structured-prose block.
 
 ```
-## Captured
+Saved → WORKING-NOTES.md
+[N] decisions · [N] open · [N] future
 
-### Decisions
-- [what was decided]
+Gaps this session:
+  • <Entity/Feature>: missing <workflow | validations | edge cases | ...>
+  • <Entity/Feature>: missing <...>
 
-### Open Questions
-- [what's still unresolved]
-
-### Future Scope
-- [deferred item]
-
-### Not Yet Covered
-- [Entity/Feature]: missing [workflow / edge cases / validations / etc.]
+Next: continue this domain, or /digest when ready
 ```
 
-The "Not Yet Covered" section flags gaps based on what a complete spec needs (workflow, validations, edge cases, permissions, acceptance criteria for features; relationships, fields, rules, states for entities). Only include items that were discussed this session but have obvious missing pieces. This section is report-only — do not write it to working notes.
+The "Gaps" section flags forward-pointing items based on what a complete spec needs (workflow, validations, edge cases, permissions, acceptance criteria for features; relationships, fields, rules, states for entities). One line per gap, ≤3 gaps surfaced — the highest-priority ones. This section is report-only — do not write it to working notes.
+
+**Misunderstanding check.** If a wrong interpretation of the session could produce the same counts (e.g., 8 decisions could be 8 *wrong* decisions), add a single named-decision line above the gaps so the user can verify intent in one glance:
+
+```
+Key call: <topic> → <X> (not <Y>)
+```
+
+Use this only when a load-bearing decision in the session would be invisible from counts alone. Otherwise the stamp is enough.
 
 ---
 

@@ -125,15 +125,21 @@ If template requires something not in working notes, propose it:
 | Missing edge case | "I suggest: [scenario] → [handling]" |
 | Missing acceptance criteria | "I suggest: Given [X], When [Y], Then [Z]" |
 
-Show user:
-> "I've drafted [Item Name]. These parts I proposed:
-> - [what you proposed]
->
-> Reasoning I preserved from working-notes:
-> - [decision] → landed as [where in spec]
-> - [trade-off] → landed as [where in spec]
->
-> Confirm or adjust?"
+Show user a structured stamp — deltas only, not the whole drafted item. The full draft is in the spec file (one click away); chat shows what PM *proposed* (the parts the user didn't explicitly say) plus a pointer to where reasoning landed:
+
+```
+Drafted: <Item Name> → cowmoo/specs/domains/<domain>.md
+
+Proposed (your call):
+  • <what PM proposed — e.g., error wording for `terms_invalid`>
+  • <what PM proposed — e.g., default = "Net 30">
+
+Reasoning preserved: <N> trade-offs / threshold rationale → <where in spec, e.g., "Design notes §" or "inline at field">
+
+→ Open file, or confirm?
+```
+
+If nothing was proposed (the working-notes item was complete), drop the "Proposed" section. If no reasoning was preserved (none was present in the source item), drop that line. Never echo the full drafted spec content back into chat — the spec file IS the long version.
 
 **Never present a gap without a proposal.** If the template requires something and working notes don't have it, always propose a specific completion. If multiple approaches exist, present 2-3 options with trade-offs and a recommendation — **and render the choice via `AskUserQuestion`, not as a prose `(a)/(b)/(c)` list.** Recommended option first with `(Recommended)` suffix; each option's `description` carries the tradeoff. Per CLAUDE.md's picker rule (the `/digest gap-filling` example called out there). Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker. The user should never have to invent an answer from scratch.
 

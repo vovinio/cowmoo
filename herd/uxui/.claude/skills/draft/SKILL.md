@@ -84,32 +84,29 @@ Re-read `$PROJECT_DIR/cowmoo/agent-files/uxui/WORKING-NOTES.md` to verify the ne
 
 ### 5. Report
 
-Tell the user what was captured:
+Emit a tight stamp — counts of what was saved plus forward-pointing gaps. The captured items are already in WORKING-NOTES.md; don't echo them back as a structured-prose block.
 
 ```
-## Captured
+Saved → WORKING-NOTES.md
+[N] decisions · [N] open · [N] future
+Touched: <OVERVIEW · journeys · roles · domain:<name> · patterns> (omit categories with 0 captures)
 
-### Design Intent / Navigation (OVERVIEW)
-- [intent or nav decision]
+Gaps this session:
+  • <Screen/State>: missing <states | interactions | flows | empty/error/loading copy | ...>
+  • <Screen/State>: missing <...>
 
-### Journeys
-- [end-to-end arc that emerged]
-
-### Roles
-- [new role added to vocabulary]
-
-### Screen Definitions (domain: [name])
-- [screen]: [what was decided]
-
-### Interaction Patterns
-- [pattern]: [what was decided]
-
-### Open Questions
-- [what's unresolved]
-
-### Not Yet Covered
-- [Screen/State]: missing [specific states, interactions, or flows]
+Next: continue this domain, or /define when ready
 ```
+
+The "Gaps" section flags forward-pointing items based on what a complete UI definition needs (declared states per `ui-vocabulary.md`, interactions, role references, empty/error/loading copy). One line per gap, ≤3 gaps surfaced. This section is report-only — do not write it to working notes.
+
+**Misunderstanding check.** If a wrong interpretation of the session could produce the same counts (8 decisions could be 8 *wrong* decisions about which screens, which states, which roles), add a single named-decision line above the gaps so the user can verify intent in one glance:
+
+```
+Key call: <topic> → <X> (not <Y>)   e.g.  Empty state: dedicated illustration (not skeleton placeholder)
+```
+
+Use only when a load-bearing decision would be invisible from counts alone.
 
 ---
 

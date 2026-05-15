@@ -41,10 +41,17 @@ Read all of these:
 Determine where we are:
 
 **No cowmoo/design/ files exist (first time):**
-- Present your understanding of the product from specs
-- List the domains and estimate UI complexity for each (number of entities, features, expected screens)
-- Propose which domain to start with and why (typically: core domain first, or the domain with most user-facing features)
-- Explain the flow: discussion on a domain → `/draft` → `/define` → `/review` → `/publish`. The first `/define` session creates initial `OVERVIEW.md` (with Design Intent prose and Navigation), seeds `roles.md`, and writes the first `domains/*.md`.
+
+Don't echo a spec-reading recap to the user — they invoked `/start` to GET your proposal. Build the mental model internally; surface it as evidence inside Step 3's recommendation.
+
+Hold internally:
+- Domains identified from specs and their UI complexity (number of entities, features, expected screens)
+- The most foundational domain (typically: core domain, or the domain with most user-facing features) — this becomes Step 3's proposed starting point
+- Open assumptions about the product worth flagging when Step 3 proposes
+
+Surface in Step 3's proposal:
+- The proposed starting domain + why-this-one reasoning (Inherits / Why now)
+- The flow ahead: discussion on this domain → `/draft` → `/define` → `/review` → `/publish`. First `/define` creates initial `OVERVIEW.md` (Design Intent + Navigation), seeds `roles.md`, writes first `domains/*.md`.
 
 **cowmoo/design/ files exist (returning):**
 - Compare specs vs cowmoo/design/ coverage — which domains are defined, which aren't
@@ -71,9 +78,21 @@ Determine where we are:
 
 ## Step 3: Propose Focus
 
-Based on the assessment, propose a specific action:
+Based on the assessment, propose a specific action — embed reasoning + flow inside the proposal, don't echo it back as a separate verification step.
 
-- **First time:** "I recommend starting with [domain] because [reasoning]. Let's begin by defining the UI — discussion first, then /draft, then /define."
+- **First time:**
+  ```
+  Proposed starting domain: <name>
+
+  Why this domain: <load-bearing reasoning — foundational, most user-facing, etc.>
+  Domain landscape: <one-line — N domains, complexity profile>
+  Open assumptions: <2-3 inferred from specs — confirm or redirect>
+
+  Flow ahead: discussion → /draft → /define → /review → /publish. First /define creates initial OVERVIEW.md (Design Intent + Navigation), seeds roles.md, writes first domains/*.md.
+
+  → Approve this starting domain, or name a different one?
+  ```
+
 - **Continuing:** "Let's continue with [domain]. Last session we defined [X], next up is [Y]."
 - **All domains covered:** "All spec domains have UI definitions. Run /review for a full coverage check."
 
