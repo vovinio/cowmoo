@@ -153,7 +153,13 @@ When the user has 2-4 distinct routes (e.g. "approve as-is", "approve and add ne
 
 If the user approves:
 
-1. **If ROLE_ADDITIONS were accepted** — discuss role names with user, then Edit `cowmoo/design/roles.md` to add them. Run `@uxui-git-ops COMMIT_ROLES` with `roles: add <role names>` message. (COMMIT_ROLES stages only `roles.md` — unrelated pending UXUI-territory changes are not swept into the roles commit.) Then run `@uxui-git-ops PUSH` to publish the roles commit. PUSH failure is non-fatal — the local commit is intact; surface the error and continue with the next steps. PUSH skips silently if the project has no `origin` remote.
+1. **If ROLE_ADDITIONS were accepted** — discuss role names with user, then Edit `cowmoo/design/roles.md` to add them. Run `@uxui-git-ops COMMIT_ROLES` with `roles: add <role names>` message. (COMMIT_ROLES stages only `roles.md` — unrelated pending UXUI-territory changes are not swept into the roles commit.)
+
+   **If COMMIT_ROLES reports `COMMIT_ROLES: ✗`** — the op refused (mid-merge state) or failed verification (commit contains paths other than `roles.md`). Surface the report verbatim and **stop the approval flow** — do NOT proceed to step 2. The user resolves the underlying state then re-runs `/review-bundle`.
+
+   **On `COMMIT_ROLES: ✓`** — proceed. If the success report includes a `Note:` line about pre-existing foreign staged content, surface it.
+
+   Then run `@uxui-git-ops PUSH` to publish the roles commit. PUSH failure is non-fatal — the local commit is intact; surface the error and continue with the next steps. PUSH skips silently if the project has no `origin` remote.
 
 2. **Check for a prior partial run** — detect whether a previous invocation on this same ticket already attached a bundle line. Only runs on re-invocation; first-time runs fall through the "no prior attachment" branch immediately and proceed to step 3.
 
@@ -205,17 +211,19 @@ If the user approves:
    - **Patterns set up for downstream screens:** reusable decisions this bundle establishes for later work (e.g. "8px as default border-radius", "serif headers / sans body pairing").
    - **Deviations / open items:** anything the evaluator flagged as `CONCERN` or `OBSERVATION` that was accepted with rationale.
 
-   Present the composed block to the user for approval:
+   Present the composed block as a durable-record preview, not a draft for chat-review:
 
    ```
-   ## Summary for journal — #<issue> (<domain>/<screen>)
+   ## Journal entry preview — #<issue> (<domain>/<screen>)
+
+   This goes to VISUAL-JOURNAL.md AND posts as a comment on the GH issue:
 
    <composed block>
 
-   Approve, or adjust before journaling?
+   → Approve to finalize, or name a section to adjust?
    ```
 
-   Iterate inline with the user until approved. This is the final content that will (a) live in `cowmoo/design/VISUAL-JOURNAL.md` and (b) be posted as a summary comment on the GitHub issue — so treat it as the durable record of what was approved.
+   Frame the approval as "commit this final form?" — the block IS spec-grade content (the durable record of what was approved), not a draft you're asking the user to wordsmith in chat. On adjust, edit only the named section inline and re-present the changed section, not the whole block.
 
 5. **Update the journal + post summary comment** via `@uxui-journal-ops`:
 
@@ -243,9 +251,13 @@ If the user approves:
 
    ATTACH_DESIGN now stages BOTH the domain file (from step 3) and the journal file (from step 5) and commits them together in one message.
 
-   **Guard:** if the op reports `ATTACH_DESIGN: Nothing to commit — domain file and journal unchanged` AND step 2 did not detect a pre-existing attachment, neither step 3 nor step 5 took effect. Stop here, investigate (was the screen heading found? did UPDATE_JOURNAL succeed?), and resolve before proceeding. Do NOT run APPROVE_DESIGN with an un-attached bundle — that would close the issue without recording the bundle reference.
+   **If ATTACH_DESIGN reports `ATTACH_DESIGN: ✗`** — the op refused (mid-merge state) or failed verification (commit contains paths outside the domain-file + VISUAL-JOURNAL.md shape). Surface the report verbatim and **stop the approval flow** — do NOT proceed to PUSH or APPROVE_DESIGN. The user resolves the underlying state (recovery command is in the report) then re-runs `/review-bundle`.
 
-   After a successful ATTACH_DESIGN, run `@uxui-git-ops PUSH` so the bundle attachment + journal commit lands on the remote before APPROVE_DESIGN closes the issue. PUSH failure is non-fatal — surface the error and continue. PUSH skips silently if the project has no `origin` remote.
+   **Guard:** if the op reports `ATTACH_DESIGN: Nothing to commit.` AND step 2 did not detect a pre-existing attachment, neither step 3 nor step 5 took effect. Stop here, investigate (was the screen heading found? did UPDATE_JOURNAL succeed?), and resolve before proceeding. Do NOT run APPROVE_DESIGN with an un-attached bundle — that would close the issue without recording the bundle reference.
+
+   **On `ATTACH_DESIGN: ✓`** — proceed. If the success report includes a `Note:` line about pre-existing foreign staged content, surface it.
+
+   Run `@uxui-git-ops PUSH` so the bundle attachment + journal commit lands on the remote before APPROVE_DESIGN closes the issue. PUSH failure is non-fatal — surface the error and continue. PUSH skips silently if the project has no `origin` remote.
 
 7. **Approve and close** via `@uxui-gh-ops`:
 

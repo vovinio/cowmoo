@@ -53,77 +53,44 @@ Confirm the comment appears.
 
 ### COMMIT
 
-Stage and commit files. The builder specifies a **scope** that determines which paths are staged.
+Stage and commit files, via the canonical `commit` subcommand in `dev-tools.cjs`. The builder specifies a **scope** that determines which paths are staged. The subcommand owns the whole procedure — merge-state guard, pathspec-restricted staging, index-lock retry, hash-pinned content-verify — so foreign pre-staged content cannot be swept into the commit, and a commit that somehow escaped scope fails loudly rather than silently.
 
-**Input from builder:** scope, commit message
+**Input from builder:** scope (`code` | `working`), commit message
 
 **Scopes:**
 
-| Scope | What's staged | Command |
-|-------|---------------|---------|
-| `code` | The project's product tree — code, tests, docs, manifests at the repo root + the builder's own `cowmoo/codebase/` map. Excludes other agents' territories (`cowmoo/specs/`, `cowmoo/stack/`, `cowmoo/design/`) and ALL agent-files (committed separately via `scope=working` or by other agents). | `git add . ':(exclude)cowmoo/specs' ':(exclude)cowmoo/stack' ':(exclude)cowmoo/design' ':(exclude)cowmoo/agent-files' ':(exclude)cowmoo/config.json'` |
-| `working` | Builder working files + proposals (BUILD-NOTES, deviations, etc.) | `git add cowmoo/agent-files/builder/` |
+| Scope | What's committed |
+|-------|------------------|
+| `code` | The project's product tree — code, tests, docs, manifests at the repo root + the builder's own `cowmoo/codebase/` map. Excludes other agents' territories (`cowmoo/specs/`, `cowmoo/stack/`, `cowmoo/design/`), ALL agent-files, and `cowmoo/config.json`. |
+| `working` | Builder working files + proposals — `cowmoo/agent-files/builder/` (BUILD-NOTES, deviations, etc.). |
 
-Why exclusion-based for `scope=code`: the builder doesn't know where each project puts its code (src/, app/, lib/, tests/ at root, packages/*/src/ for monorepos, etc.), so hardcoding a single directory name would silently drop files. Instead, stage the entire product tree by excluding only what belongs to OTHER agents (their public outputs, all `cowmoo/agent-files/`, and the project config file `cowmoo/config.json`). Builder's own deliverables — code at repo root + `cowmoo/codebase/` — are kept in. This makes COMMIT layout-agnostic: code in `src/`, tests in `tests/` at repo root (Python/Rust/Go convention), migrations in `db/migrations/`, workflows in `.github/` — all get picked up correctly. And when `/map-codebase` updates `cowmoo/codebase/codebase.md`, that change ships in the next code commit too.
+Why exclusion-based for `scope=code`: the builder doesn't know where each project puts its code (src/, app/, lib/, tests/ at root, packages/*/src/ for monorepos, etc.). The `code` profile stages the whole product tree and excludes only what belongs to OTHER agents — so it's layout-agnostic, and `/map-codebase` updates to `cowmoo/codebase/codebase.md` ship in the next code commit too.
 
-**Commit message format:** Conventional commits — `feat(scope): description`, `fix(scope): description`. For scope=working, use `docs(builder): description`. For map-only updates, use `docs(builder): refresh codebase map`. If the builder provides a non-conventional message, use it as-is.
-
-**Pre-check:**
-```bash
-# scope=code — product tree + cowmoo/codebase/, excluding other agents' territories
-git -C "$PROJECT_DIR" status --porcelain -- . \
-  ':(exclude)cowmoo/specs' \
-  ':(exclude)cowmoo/stack' \
-  ':(exclude)cowmoo/design' \
-  ':(exclude)cowmoo/agent-files' \
-  ':(exclude)cowmoo/config.json'
-
-# scope=working — builder's own scratch + proposals
-git -C "$PROJECT_DIR" status --porcelain -- cowmoo/agent-files/builder/
-```
-If no changes, report `COMMIT: Nothing to commit.` and skip.
+**Commit message format:** Conventional commits — `feat(scope): description`, `fix(scope): description`. For scope=working, use `docs(builder): description`. For map-only updates, `docs(builder): refresh codebase map`. If the builder provides a non-conventional message, use it as-is.
 
 **Execute:**
 ```bash
-# scope=code
-git -C "$PROJECT_DIR" add . \
-  ':(exclude)cowmoo/specs' \
-  ':(exclude)cowmoo/stack' \
-  ':(exclude)cowmoo/design' \
-  ':(exclude)cowmoo/agent-files' \
-  ':(exclude)cowmoo/config.json'
-
-# scope=working
-git -C "$PROJECT_DIR" add cowmoo/agent-files/builder/
-```
-Then commit:
-```bash
-git -C "$PROJECT_DIR" commit -m "$(cat <<'EOF'
+node tools/dev-tools.cjs commit <code|working> "$(cat <<'EOF'
 <message>
 EOF
 )"
 ```
 
-**Verify:**
-```bash
-git -C "$PROJECT_DIR" log --oneline -1
-# For scope=code: confirm staged paths are clean
-git -C "$PROJECT_DIR" status --porcelain -- . \
-  ':(exclude)cowmoo/specs' ':(exclude)cowmoo/stack' \
-  ':(exclude)cowmoo/design' ':(exclude)cowmoo/agent-files' \
-  ':(exclude)cowmoo/config.json'
-# For scope=working: confirm builder's own dir is clean
-git -C "$PROJECT_DIR" status --porcelain -- cowmoo/agent-files/builder/
-```
-Confirm the commit was created and the staged paths are clean.
+**Interpret the output** — the subcommand prints exactly one report and sets the exit code:
 
-**Report:** `COMMIT: ✓ <short hash> <message>. Working tree clean for staged paths.`
+| Output | Exit | Meaning |
+|---|---|---|
+| `COMMIT: ✓ <hash> <subject>...` | 0 | Committed. If a `Note:` line follows, pre-existing foreign staged content was left in the index — relay it. |
+| `COMMIT: Nothing to commit.` | 0 | No changes in the requested scope. |
+| `COMMIT: ✗ <reason>` | 1 | Refused (mid-merge/rebase), or failed (index locked after retries, foreign content in the commit, git error). The message names the recovery. |
+
+**Report:** Relay the subcommand's output **verbatim** to the builder — every line, including any `Note:` or recovery line. Do not paraphrase: the `✓` / `✗` / `Nothing to commit` markers are what the `/publish` skill keys on.
 
 **Rules:**
-- **Never mix scopes in one commit.** `code` stages product tree + code map; `working` stages builder's own scratch. Run them as separate commits.
-- **Always include the full exclusion list** for `scope=code`. Forgetting an `:(exclude)` would stage another agent's files into a `feat(…)` commit.
-- **Never use `git add .`** without the exclusion list — same reason.
-- **Never use `git add -A`** — same reason, and it also stages files outside the current directory.
+- **The subcommand is the implementation.** Never hand-roll `git add` / `git commit` in this operation — `node tools/dev-tools.cjs commit` owns the canonical procedure (pathspec restriction, the scope-exclusion set, merge guard, index-lock retry, hash-pinned verify). If the procedure or the exclusion set needs to change, change `dev-tools.cjs`, not this file.
+- **Pass exactly one scope.** `code` or `working` — never both in one invocation. Run them as separate commits.
+- **Relay verbatim.** The exit code and the report line drive the caller's flow; don't reword them.
+- **Foreign content in commit is a hard fail.** If the subcommand reports `COMMIT: ✗ commit contains paths outside territory`, the commit was created but the publish flow stops. Do not push.
 
 ---
 

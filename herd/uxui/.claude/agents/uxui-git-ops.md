@@ -24,37 +24,32 @@ The UXUI agent tells you which operation to perform and provides the necessary c
 
 ### COMMIT
 
-General Phase A commit — stages all UXUI-territory changes (UI definitions, working notes, proposals) and commits with the provided message.
+General Phase A commit — stages all UXUI-territory changes (UI definitions, working notes, proposals) and commits with the provided message, via the canonical `commit` subcommand in `dev-tools.cjs`. The subcommand owns the whole procedure — merge-state guard, pathspec-restricted staging, index-lock retry, hash-pinned content-verify — so foreign pre-staged content cannot be swept into UXUI's commit, and a commit that somehow escaped UXUI territory fails loudly rather than silently.
 
 **Input from UXUI:** commit message
 
-**Pre-check:**
-```bash
-git -C "$PROJECT_DIR" status --porcelain -- cowmoo/design/ cowmoo/agent-files/uxui/
-```
-If no changes, report `COMMIT: Nothing to commit.` and skip.
-
 **Execute:**
 ```bash
-git -C "$PROJECT_DIR" add cowmoo/design/ cowmoo/agent-files/uxui/
-git -C "$PROJECT_DIR" commit -m "$(cat <<'EOF'
+node tools/dev-tools.cjs commit general "$(cat <<'EOF'
 <message>
 EOF
 )"
 ```
 
-**Verify:**
-```bash
-git -C "$PROJECT_DIR" log --oneline -1
-git -C "$PROJECT_DIR" status --porcelain -- cowmoo/design/ cowmoo/agent-files/uxui/
-```
-Confirm the commit was created and the staged paths are clean.
+**Interpret the output** — the subcommand prints exactly one report and sets the exit code:
 
-**Report:** `COMMIT: ✓ <short hash> <message>. Working tree clean for staged paths.`
+| Output | Exit | Meaning |
+|---|---|---|
+| `COMMIT: ✓ <hash> <subject>...` | 0 | Committed. If a `Note:` line follows, pre-existing foreign staged content was left in the index — relay it. |
+| `COMMIT: Nothing to commit.` | 0 | No UXUI-territory changes. |
+| `COMMIT: ✗ <reason>` | 1 | Refused (mid-merge/rebase), or failed (index locked after retries, foreign content in the commit, git error). The message names the recovery. |
+
+**Report:** Relay the subcommand's output **verbatim** to UXUI — every line, including any `Note:` or recovery line. Do not paraphrase: the `✓` / `✗` / `Nothing to commit` markers are what the `/publish` skill keys on.
 
 **Rules:**
-- **Only stage UXUI paths.** `cowmoo/design/`, `cowmoo/agent-files/uxui/` — nothing else.
-- **Never use `git add .` or `git add -A`.** Always use the explicit paths above.
+- **The subcommand is the implementation.** Never hand-roll `git add` / `git commit` in this operation — `node tools/dev-tools.cjs commit general` owns the canonical procedure (pathspec restriction, merge guard, index-lock retry, hash-pinned verify). If the procedure needs to change, change `dev-tools.cjs`, not this file.
+- **Relay verbatim.** The exit code and the report line drive the caller's flow; don't reword them.
+- **Foreign content in commit is a hard fail.** If the subcommand reports `COMMIT: ✗ commit contains paths outside territory`, the commit was created but the publish flow stops. Do not push.
 
 ---
 
@@ -93,69 +88,62 @@ Confirm the branch line no longer shows `[ahead N]`.
 
 ### COMMIT_ROLES
 
-Scoped commit for role-vocabulary additions. Used by `/review-bundle` when approving ROLE_ADDITIONS, so unrelated pending UXUI-territory changes (WORKING-NOTES, design-draft, in-progress domain edits) are NOT swept into a "roles: add" commit.
+Scoped commit for role-vocabulary additions, via the canonical `commit` subcommand in `dev-tools.cjs` (mode `roles`). Used by `/review-bundle` when approving ROLE_ADDITIONS, so unrelated pending UXUI-territory changes (WORKING-NOTES, design-draft, in-progress domain edits) are NOT swept into a "roles: add" commit. The `roles` mode is strictly scoped to `cowmoo/design/roles.md` — its content-verify rejects ANY other path, even other UXUI-territory files.
 
 **Input from UXUI:** commit message (typically `roles: add <role names>`)
 
-**Pre-check:**
-```bash
-git -C "$PROJECT_DIR" status --porcelain -- cowmoo/design/roles.md
-```
-If no changes, report `COMMIT_ROLES: Nothing to commit — roles.md unchanged.` and stop.
-
 **Execute:**
 ```bash
-git -C "$PROJECT_DIR" add cowmoo/design/roles.md
-git -C "$PROJECT_DIR" commit -m "$(cat <<'EOF'
+node tools/dev-tools.cjs commit roles "$(cat <<'EOF'
 <message>
 EOF
 )"
 ```
 
-**Verify:**
-```bash
-git -C "$PROJECT_DIR" log --oneline -1
-git -C "$PROJECT_DIR" status --porcelain -- cowmoo/design/roles.md
-```
-Confirm the commit was created and `roles.md` is clean.
+**Interpret the output** — the subcommand prints exactly one report and sets the exit code:
 
-**Report:** `COMMIT_ROLES: ✓ <short hash> <message>. roles.md clean.`
+| Output | Exit | Meaning |
+|---|---|---|
+| `COMMIT_ROLES: ✓ <hash> <subject>...` | 0 | Committed. If a `Note:` line follows, pre-existing staged content other than `roles.md` was left in the index — relay it. |
+| `COMMIT_ROLES: Nothing to commit.` | 0 | `roles.md` unchanged. |
+| `COMMIT_ROLES: ✗ <reason>` | 1 | Refused (mid-merge/rebase), or failed (index locked after retries, a path other than `roles.md` in the commit, git error). The message names the recovery. |
+
+**Report:** Relay the subcommand's output **verbatim** to UXUI — every line, including any `Note:` or recovery line. Do not paraphrase: the `✓` / `✗` / `Nothing to commit` markers are what `/review-bundle` keys on.
 
 **Rules:**
-- **Only stage `cowmoo/design/roles.md`.** Never stage broader paths — that's what COMMIT is for.
+- **The subcommand is the implementation.** Never hand-roll `git add` / `git commit` — `node tools/dev-tools.cjs commit roles` owns the canonical procedure. If it needs to change, change `dev-tools.cjs`.
+- **`roles` mode is strict.** The subcommand's `roles` profile commits and verifies `cowmoo/design/roles.md` ONLY — broader scope is what mode `general` (the COMMIT op) is for.
+- **Relay verbatim.** The exit code and the report line drive the caller's flow; don't reword them.
 
 ---
 
 ### ATTACH_DESIGN
 
-Specialized commit for attaching a bundle reference to a domain file AND the corresponding journal entry. Run after `/review-bundle` approves and the prior steps have (a) edited the domain file with the new `**Bundle:**` line and (b) run `@uxui-journal-ops UPDATE_JOURNAL` to write/replace the journal entry. This op stages both files and commits them together.
+Specialized commit for attaching a bundle reference to a domain file AND the corresponding journal entry, via the canonical `commit` subcommand in `dev-tools.cjs` (mode `attach-design`). Run after `/review-bundle` approves and the prior steps have (a) edited the domain file with the new `**Bundle:**` line and (b) run `@uxui-journal-ops UPDATE_JOURNAL` to write/replace the journal entry. The `attach-design` mode stages and commits exactly two paths — `cowmoo/design/domains/<domain>.md` and `cowmoo/design/VISUAL-JOURNAL.md`; its content-verify rejects anything else.
 
-**Input from UXUI:** domain, ticket number, screen name (for commit message)
+**Input from UXUI:** domain, ticket number, screen name (for the commit message)
 
-**Pre-check:**
+**Execute:** Build the commit message `design(<domain>): attach bundle + journal for <screen> (ticket #<ticket>)`, then:
 ```bash
-git -C "$PROJECT_DIR" status --porcelain -- cowmoo/design/domains/<domain>.md cowmoo/design/VISUAL-JOURNAL.md
-```
-If neither path has changes, report `ATTACH_DESIGN: Nothing to commit — domain file and journal unchanged.` and stop.
-
-If only one of the two paths is dirty, still proceed (the other path may be legitimately unchanged — e.g. idempotent re-run where only the journal needs a refresh, or an edge case where only the domain file needs attention). The caller's step 2 pre-check distinguishes these cases before spawning this op.
-
-**Execute:**
-```bash
-git -C "$PROJECT_DIR" add cowmoo/design/domains/<domain>.md cowmoo/design/VISUAL-JOURNAL.md
-git -C "$PROJECT_DIR" commit -m "design(<domain>): attach bundle + journal for <screen> (ticket #<ticket>)"
+node tools/dev-tools.cjs commit attach-design <domain> "design(<domain>): attach bundle + journal for <screen> (ticket #<ticket>)"
 ```
 
-The `git add` will no-op for any path that has no changes; the final commit contains only the actually-modified files.
+If either target path has no changes, the subcommand simply commits the one that does (or reports `Nothing to commit.` if neither changed) — an idempotent re-run where only the journal needs a refresh is fine.
 
-**Verify:**
-```bash
-git -C "$PROJECT_DIR" log --oneline -1
-git -C "$PROJECT_DIR" status --porcelain -- cowmoo/design/domains/<domain>.md cowmoo/design/VISUAL-JOURNAL.md
-```
-Confirm commit created and both paths are clean.
+**Interpret the output** — the subcommand prints exactly one report and sets the exit code:
 
-**Report:** `ATTACH_DESIGN #<ticket>: ✓ Committed bundle reference + journal entry. <short hash>.`
+| Output | Exit | Meaning |
+|---|---|---|
+| `ATTACH_DESIGN: ✓ <hash> <subject>...` | 0 | Committed. If a `Note:` line follows, pre-existing staged content outside the two ATTACH_DESIGN paths was left in the index — relay it. |
+| `ATTACH_DESIGN: Nothing to commit.` | 0 | Neither the domain file nor `VISUAL-JOURNAL.md` changed. |
+| `ATTACH_DESIGN: ✗ <reason>` | 1 | Refused (mid-merge/rebase), or failed (index locked after retries, a path outside the two valid shapes in the commit, git error). The message names the recovery. |
+
+**Report:** Relay the subcommand's output **verbatim** to UXUI — every line, including any `Note:` or recovery line. Do not paraphrase: the `✓` / `✗` / `Nothing to commit` markers are what `/review-bundle` keys on.
+
+**Rules:**
+- **The subcommand is the implementation.** Never hand-roll `git add` / `git commit` — `node tools/dev-tools.cjs commit attach-design` owns the canonical procedure. If it needs to change, change `dev-tools.cjs`.
+- **`attach-design` mode is scoped to the two paths.** The subcommand's `attach-design` profile commits and verifies a `cowmoo/design/domains/*.md` file plus `cowmoo/design/VISUAL-JOURNAL.md` — nothing else, not even other UXUI-territory files.
+- **Relay verbatim.** The exit code and the report line drive the caller's flow; don't reword them.
 
 ---
 

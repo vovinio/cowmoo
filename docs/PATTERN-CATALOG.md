@@ -96,6 +96,7 @@ Required functions (every agent):
 - `workflowCheck()` — PreToolUse Skill hook, calls `markStep()` only (no warnings).
 - `nextStep()` — reads `.workflow-step` marker for the statusline.
 - `territoryCheck()` — PreToolUse Edit|Write hook, blocks writes outside the agent's scope.
+- `commitOp()` — the canonical pathspec-restricted commit (merge-state guard, index-lock retry, hash-pinned content-verify), exposed as the `commit` subcommand and invoked by the agent's ops sub-agent. Each agent supplies its own territory profile(s) as data; the `commitOp` body plus its support helpers (`git`, `indexMutate`, `inMergeState`) are parallel across agents. See Pattern 6 for the commit operation's canonical shape.
 - Territory constant — `TERRITORY` (allow-list) or `FORBIDDEN` (deny-list) declared near top of file. Choice is per-agent: allow-list for narrow-scope agents (PM, UXUI, planner) and deny-list for broad-scope agents (builder).
 
 Required conventions:
@@ -212,6 +213,7 @@ Required conventions:
 - Every git call uses `git -C "$PROJECT_DIR"`; never bare `git`.
 - Explicit staging paths only; never `git add .` or `git add -A`.
 - Every operation verifies its effect before reporting success.
+- **Commit operations delegate to the `dev-tools.cjs commit` subcommand.** Any operation that commits (PM/planner/UXUI `COMMIT`, UXUI `COMMIT_ROLES` and `ATTACH_DESIGN`, builder's scoped `COMMIT`) is a thin wrapper: it invokes `node tools/dev-tools.cjs commit ...` with the operation's mode/scope and message, then relays the printed report **verbatim** (the `✓` / `✗` / `Nothing to commit` markers and exit code drive the caller skill). The ops agent never hand-rolls `git add` / `git commit` for a commit operation. The subcommand (`commitOp` in `dev-tools.cjs`, see Pattern 2) owns the canonical procedure: merge-state guard (refuse cleanly mid-merge/rebase/cherry-pick/revert), pathspec-restricted commit (pre-existing foreign staged content cannot be swept in), index-lock retry (a concurrent agent's `index.lock` contention recovers transparently), and a **hash-pinned content-verify** — verify `git show --name-only` against the captured commit hash, never `HEAD`, because a concurrent agent committing right after moves `HEAD`. Foreign content in the commit is a hard fail. The reference territory profiles live in each agent's `dev-tools.cjs`.
 - Any operation that creates a new issue uses Pattern 14's project-board-linkage shape (never `gh project list` + `gh project item-add`). Operations that create nested issues (story ↔ task) additionally use Pattern 14's sub-issue-linkage shape.
 - Comment bodies use identity prefix from Pattern 15.
 

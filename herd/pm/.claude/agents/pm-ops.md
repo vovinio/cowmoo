@@ -29,37 +29,32 @@ You can receive multiple operations in one request — execute them sequentially
 
 ### COMMIT
 
-Stage PM files and commit.
+Stage PM files and commit, via the canonical `commit` subcommand in `dev-tools.cjs`. The subcommand owns the whole procedure — merge-state guard, pathspec-restricted staging, index-lock retry, hash-pinned content-verify — so foreign pre-staged content cannot be swept into PM's commit, and a commit that somehow escaped PM territory fails loudly rather than silently. The logic lives in one tested place rather than as inline bash here.
 
 **Input from PM:** commit message
 
-**Pre-check:**
-```bash
-git -C "$PROJECT_DIR" status --porcelain -- cowmoo/specs/ cowmoo/agent-files/pm/
-```
-If no changes, report `COMMIT: Nothing to commit.` and skip.
-
 **Execute:**
 ```bash
-git -C "$PROJECT_DIR" add cowmoo/specs/ cowmoo/agent-files/pm/
-git -C "$PROJECT_DIR" commit -m "$(cat <<'EOF'
+node tools/dev-tools.cjs commit "$(cat <<'EOF'
 <message>
 EOF
 )"
 ```
 
-**Verify:**
-```bash
-git -C "$PROJECT_DIR" log --oneline -1
-git -C "$PROJECT_DIR" status --porcelain -- cowmoo/specs/ cowmoo/agent-files/pm/
-```
-Confirm the commit was created and the staged paths are clean.
+**Interpret the output** — the subcommand prints exactly one report and sets the exit code:
 
-**Report:** `COMMIT: ✓ <short hash> <message>. Working tree clean for staged paths.`
+| Output | Exit | Meaning |
+|---|---|---|
+| `COMMIT: ✓ <hash> <subject>...` | 0 | Committed. If a `Note:` line follows, pre-existing foreign staged content was left in the index — relay it. |
+| `COMMIT: Nothing to commit.` | 0 | No PM-territory changes. |
+| `COMMIT: ✗ <reason>` | 1 | Refused (mid-merge/rebase), or failed (index locked after retries, foreign content in the commit, git error). The message names the recovery. |
+
+**Report:** Relay the subcommand's output **verbatim** to PM — every line, including any `Note:` or recovery line. Do not paraphrase: the `✓` / `✗` / `Nothing to commit` markers are what the `/publish` skill keys on.
 
 **Rules:**
-- **Only stage PM paths.** `cowmoo/specs/`, `cowmoo/agent-files/pm/` — nothing else.
-- **Never use `git add .` or `git add -A`.** Always use the explicit paths above.
+- **The subcommand is the implementation.** Never hand-roll `git add` / `git commit` in this operation — `node tools/dev-tools.cjs commit` owns the canonical procedure (pathspec restriction, merge guard, index-lock retry, hash-pinned verify). If the procedure needs to change, change `dev-tools.cjs`, not this file.
+- **Relay verbatim.** The exit code and the report line drive the caller's flow; don't reword them.
+- **Foreign content in commit is a hard fail.** If the subcommand reports `COMMIT: ✗ commit contains paths outside territory`, the commit was created but the publish flow stops. Do not push.
 
 ---
 

@@ -39,7 +39,13 @@ Wait for explicit approval before proceeding.
 
 ## Step 3: Commit and Push
 
-Spawn `@pm-ops` with operation **COMMIT** and the approved message. Wait for confirmation that the commit was verified.
+Spawn `@pm-ops` with operation **COMMIT** and the approved message. Wait for the COMMIT report.
+
+**If the report begins with `COMMIT: ✗`** — the operation either refused to run (mid-merge/rebase/cherry-pick state) or failed during verification (foreign content in the commit). Surface the report verbatim to the user and **stop the publish flow** — do NOT proceed to PUSH. The user resolves the underlying state (finish the merge, investigate the foreign content with the recovery command in the report) then re-runs `/publish`.
+
+**If the report shows `COMMIT: Nothing to commit.`** — there were no PM-territory changes. Report this plainly and skip PUSH (nothing was created to push).
+
+**On `COMMIT: ✓`** — proceed. If the success report includes a `Note:` line about pre-existing foreign staged content, surface that line to the user so they know it stayed staged.
 
 Then spawn `@pm-ops` with operation **PUSH** to publish the commit to the remote. Wait for the PUSH report.
 
@@ -89,7 +95,10 @@ Before finishing, confirm:
 ## Edge Cases
 
 - **No changes** — nothing to commit. Don't create an empty commit.
-- **Commit fails** — report the failure to user.
+- **Commit refuses (`COMMIT: ✗ repo is mid-merge/rebase/cherry-pick`)** — repo is in a transitional state. Surface the message verbatim; stop the publish flow. User finishes the underlying operation manually, then re-runs `/publish`.
+- **Commit verify fails (`COMMIT: ✗ commit contains paths outside territory`)** — the commit was created locally but contains non-PM paths. Surface the message verbatim including the recovery command; stop the publish flow. Do NOT push the tainted commit.
+- **Commit succeeds with foreign staged content** — report includes a `Note:` line; surface it so the user knows pre-existing staged paths remained in the index.
+- **Commit fails (any other reason)** — report the failure to user; stop the publish flow.
 - **Specs changed AND `downstream-engaged` exits 0** — suggest `/notify` after committing.
 - **Specs changed but `downstream-engaged` exits 1 (greenfield project)** — skip the `/notify` suggestion entirely. The user is still in PM-only formalization; downstream agents haven't been engaged yet.
 - **Only working notes changed** — no `/notify` suggestion needed.

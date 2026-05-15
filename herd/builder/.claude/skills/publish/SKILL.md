@@ -100,7 +100,11 @@ In order:
 7. **Commit working files** — `@task-ops` COMMIT scope=working (if BUILD-NOTES or other working files changed)
 8. **Push working files** — `@task-ops` PUSH (no-op if step 7 produced no commit; otherwise pushes the working-files commit). Same skip/failure semantics as step 2.
 
-**If any step fails:** Report which step failed and list the remaining `@task-ops` operations still needed. Do not skip failed steps or proceed as if they succeeded. **PUSH failure is non-fatal** — the local commit is correct; surface the error and continue with the next step.
+**If a COMMIT step reports `COMMIT: ✗`** — the op refused to run (mid-merge/rebase/cherry-pick state) or failed verification (foreign content in the commit — for scope=code this means another agent's territory leaked in; for scope=working this means content outside `cowmoo/agent-files/builder/` landed). Surface the report verbatim and **stop the publish flow** — do NOT proceed to PUSH, POST_COMMENT, COMPLETE, or any subsequent step. The user resolves the underlying state (finish the merge, investigate the foreign content with the recovery command in the report) then re-runs `/publish`.
+
+**On `COMMIT: ✓` with a `Note:` line about pre-existing foreign staged content** — surface that line to the user so they know it stayed staged.
+
+**If any other step fails:** Report which step failed and list the remaining `@task-ops` operations still needed. Do not skip failed steps or proceed as if they succeeded. **PUSH failure is non-fatal** — the local commit is correct; surface the error and continue with the next step.
 
 ---
 

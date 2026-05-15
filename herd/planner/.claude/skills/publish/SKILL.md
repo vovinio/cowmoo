@@ -70,6 +70,14 @@ Spawn `@plan-ops` with **COMMIT** operation:
 - Stage: `cowmoo/agent-files/planner/`, `cowmoo/stack/` (captures the knowledge.md append; draft.md was untracked, so its deletion is disk-only and not represented in the commit)
 - Message: describe what changed
 
+Wait for the COMMIT report.
+
+**If the report begins with `COMMIT: ✗`** — the operation either refused to run (mid-merge/rebase/cherry-pick state) or failed during verification (foreign content in the commit). Surface the report verbatim to the user and **stop the publish flow** — do NOT proceed to PUSH or issue creation. The user resolves the underlying state (finish the merge, investigate the foreign content with the recovery command in the report) then re-runs `/publish`.
+
+**If the report shows `COMMIT: Nothing to commit.`** — there were no planner-territory changes. Surface that and skip PUSH (nothing to push) and issue creation.
+
+**On `COMMIT: ✓`** — proceed. If the success report includes a `Note:` line about pre-existing foreign staged content, surface that line to the user so they know it stayed staged.
+
 Then spawn `@plan-ops` with **PUSH** to publish the commit to the remote before any GitHub issues are created — the issues should reference a pushed state.
 
 If the project has no `origin` remote, PUSH reports `skipped` and the flow continues. If PUSH fails (network, auth, conflict), surface the error and continue with issue creation — the commit is intact locally and the user can re-push manually. Do NOT abort the rest of the publish flow.

@@ -196,40 +196,32 @@ Confirm the comment appears.
 
 ### COMMIT
 
-Stage all planner files and commit.
+Stage planner files and commit, via the canonical `commit` subcommand in `dev-tools.cjs`. The subcommand owns the whole procedure — merge-state guard, pathspec-restricted staging, index-lock retry, hash-pinned content-verify — so foreign pre-staged content cannot be swept into the planner's commit, and a commit that somehow escaped planner territory fails loudly rather than silently. The logic lives in one tested place rather than as inline bash here.
 
 **Input from planner:** commit message
 
-**Pre-check:**
-```bash
-git -C "$PROJECT_DIR" status --porcelain -- cowmoo/agent-files/planner/ cowmoo/stack/
-```
-If no changes, report `COMMIT: Nothing to commit.` and skip.
-
 **Execute:**
 ```bash
-git -C "$PROJECT_DIR" add cowmoo/agent-files/planner/ cowmoo/stack/
-```
-Then commit:
-```bash
-git -C "$PROJECT_DIR" commit -m "$(cat <<'EOF'
+node tools/dev-tools.cjs commit "$(cat <<'EOF'
 <message>
 EOF
 )"
 ```
 
-**Verify:**
-```bash
-git -C "$PROJECT_DIR" log --oneline -1
-git -C "$PROJECT_DIR" status --porcelain -- cowmoo/agent-files/planner/ cowmoo/stack/
-```
-Confirm the commit was created and staged paths are clean.
+**Interpret the output** — the subcommand prints exactly one report and sets the exit code:
 
-**Report:** `COMMIT: ✓ <short hash> <message>. Working tree clean for staged paths.`
+| Output | Exit | Meaning |
+|---|---|---|
+| `COMMIT: ✓ <hash> <subject>...` | 0 | Committed. If a `Note:` line follows, pre-existing foreign staged content was left in the index — relay it. |
+| `COMMIT: Nothing to commit.` | 0 | No planner-territory changes. |
+| `COMMIT: ✗ <reason>` | 1 | Refused (mid-merge/rebase), or failed (index locked after retries, foreign content in the commit, git error). The message names the recovery. |
+
+**Report:** Relay the subcommand's output **verbatim** to the planner — every line, including any `Note:` or recovery line. Do not paraphrase: the `✓` / `✗` / `Nothing to commit` markers are what the `/publish` skill keys on.
 
 **Rules:**
-- **Only stage planner paths.** `cowmoo/agent-files/planner/`, `cowmoo/stack/` — nothing else. (`cowmoo/codebase/` is owned by the builder; never stage it from here.)
-- **Never use `git add .` or `git add -A`.** Always use the explicit paths above.
+- **The subcommand is the implementation.** Never hand-roll `git add` / `git commit` in this operation — `node tools/dev-tools.cjs commit` owns the canonical procedure (pathspec restriction, merge guard, index-lock retry, hash-pinned verify). If the procedure needs to change, change `dev-tools.cjs`, not this file. (`cowmoo/codebase/` is owned by the builder; the subcommand's planner profile already excludes it.)
+- **Relay verbatim.** The exit code and the report line drive the caller's flow; don't reword them.
+- **Foreign content in commit is a hard fail.** If the subcommand reports `COMMIT: ✗ commit contains paths outside territory`, the commit was created but the publish flow stops. Do not push.
 
 ---
 

@@ -42,7 +42,9 @@ Wait for explicit approval before proceeding.
 
 ## Step 3: Commit and Push
 
-Spawn `@uxui-git-ops` with operation **COMMIT** and the approved message. Wait for confirmation that the commit was verified.
+Spawn `@uxui-git-ops` with operation **COMMIT** and the approved message. Wait for the COMMIT report.
+
+**If the report begins with `COMMIT: ✗`** — the operation either refused to run (mid-merge/rebase/cherry-pick state) or failed during verification (foreign content in the commit). Surface the report verbatim to the user and **stop the publish flow** — do NOT proceed to PUSH or produce the Step 4 "Committed" report. The user resolves the underlying state (finish the merge, investigate the foreign content with the recovery command in the report) then re-runs `/publish`.
 
 **If the op reports `COMMIT: Nothing to commit.`** — there were no staged UXUI-territory changes. Report this plainly to the user:
 
@@ -53,7 +55,9 @@ If you expected changes, re-check Step 1 (conversation scan) or verify edits lan
 
 Do NOT produce the Step 4 "Committed" report in this case. Stop.
 
-Otherwise, spawn `@uxui-git-ops` with operation **PUSH** to publish the commit to the remote. Wait for the PUSH report.
+**On `COMMIT: ✓`** — proceed. If the success report includes a `Note:` line about pre-existing foreign staged content, surface that line to the user so they know it stayed staged.
+
+Spawn `@uxui-git-ops` with operation **PUSH** to publish the commit to the remote. Wait for the PUSH report.
 
 If the project has no `origin` remote, PUSH reports `skipped` and the publish completes locally — that's expected on a fresh project that hasn't been linked to GitHub yet.
 
