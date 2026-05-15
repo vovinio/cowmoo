@@ -60,34 +60,27 @@ EOF
 
 ### PUSH
 
-Push the current branch to the configured remote.
-
-**Pre-check:**
-```bash
-git -C "$PROJECT_DIR" remote get-url origin >/dev/null 2>&1
-```
-If exit is non-zero (no `origin` remote configured), report `PUSH: skipped — no git remote 'origin' configured.` and stop.
+Push the current branch to the configured remote, via the canonical `push` subcommand in `dev-tools.cjs`. The subcommand owns the whole procedure — origin pre-check, the idempotent `push -u origin HEAD`, an extended network timeout, and an `[ahead N]` verify — so the logic lives in one tested place rather than as inline bash here.
 
 **Execute:**
 ```bash
-git -C "$PROJECT_DIR" push -u origin HEAD 2>&1
+node tools/dev-tools.cjs push
 ```
-The `-u origin HEAD` form is idempotent — sets upstream on the first push, plain push afterwards.
 
-**Verify:**
-```bash
-git -C "$PROJECT_DIR" status -sb
-```
-Confirm the branch line no longer shows `[ahead N]`.
+**Interpret the output** — the subcommand prints exactly one report and sets the exit code:
 
-**Report:**
-- Success: `PUSH: ✓ to origin/<branch>`
-- Skipped: `PUSH: skipped — no git remote 'origin' configured.`
-- Failure: `PUSH: ✗ <reason>` — the local commit stands; user can retry with `git push` or re-run the publish skill.
+| Output | Exit | Meaning |
+|---|---|---|
+| `PUSH: ✓ to origin/<branch>` | 0 | Pushed; branch is in sync with the remote. |
+| `PUSH: skipped — no git remote 'origin' configured.` | 0 | No `origin` remote — fresh project not yet linked to GitHub. |
+| `PUSH: ✗ <reason>` | 1 | Push failed (network, auth, rejected). The local commit stands. |
+
+**Report:** Relay the subcommand's output **verbatim** — the `✓` / `skipped` / `✗` markers are what the `/publish` skill keys on. Do not paraphrase.
 
 **Rules:**
-- **Push failure does NOT roll back the commit.** The local commit is correct; only the remote sync failed. Surface the error and continue with the rest of the publish flow.
-- **Network or auth errors** propagate as the failure reason — don't try to fix them automatically.
+- **The subcommand is the implementation.** Never hand-roll `git push` here — `node tools/dev-tools.cjs push` owns the canonical procedure. If it needs to change, change `dev-tools.cjs`, not this file.
+- **Push failure does NOT roll back the commit.** The local commit is correct; only the remote sync failed. Surface the `✗` report and continue with the rest of the publish flow.
+- **Relay verbatim.** The exit code and report line drive the caller's flow; don't reword them.
 
 ---
 
@@ -114,7 +107,7 @@ Confirm issue created with `for-planner` label.
 
 **Add to project board:** see [Project Board](#project-board).
 
-**Report:** `CREATE_FOR_PLANNER: ✓ #<number> "<title>" created with label [for-planner]. Project: <added | no board>.`
+**Report:** `CREATE_FOR_PLANNER: ✓ #<number> "<title>" created with label [for-planner]. Project: <added | no board | add failed>.`
 
 ---
 
@@ -141,7 +134,7 @@ Confirm issue created with `for-uxui` label.
 
 **Add to project board:** see [Project Board](#project-board).
 
-**Report:** `CREATE_FOR_UXUI: ✓ #<number> "<title>" created with label [for-uxui]. Project: <added | no board>.`
+**Report:** `CREATE_FOR_UXUI: ✓ #<number> "<title>" created with label [for-uxui]. Project: <added | no board | add failed>.`
 
 ---
 
@@ -183,25 +176,22 @@ gh issue edit <number> --remove-label "for-pm" --add-label "for-<transfer-target
 
 ## Project Board
 
-CREATE_FOR_PLANNER and CREATE_FOR_UXUI add their created issue to the project board as a final step. This is non-blocking — if no board exists or the add fails, the operation still succeeds.
+Issue-creation operations add their created issue to the project board as a final step, via the canonical `board-add` subcommand in `dev-tools.cjs`. The subcommand owns the whole procedure — `$GH_PROJECT_ID` override, first-linked-ProjectV2 lookup, and the `addProjectV2ItemById` mutation. **Non-blocking** — the issue already exists; a board miss never fails the operation.
 
-**Lookup (once per invocation — reuse for all operations):**
+**Execute** (with the number of the just-created issue):
 ```bash
-OWNER=$(echo "$GH_REPO" | cut -d/ -f1)
-REPO=$(echo "$GH_REPO" | cut -d/ -f2)
-# Uses the first linked project. If the repo has multiple boards, set $GH_PROJECT_ID to pin a specific one.
-PROJECT_ID="${GH_PROJECT_ID:-$(gh api graphql -f query="{ repository(owner:\"$OWNER\",name:\"$REPO\") { projectsV2(first:1) { nodes { id title } } } }" --jq '.data.repository.projectsV2.nodes[0].id')}"
+node tools/dev-tools.cjs board-add <number>
 ```
 
-If `$PROJECT_ID` is empty or null — no board exists. Report "no board" in the operation report and skip.
+The subcommand always exits 0 and prints exactly one line:
 
-**Add:**
-```bash
-ISSUE_ID=$(gh issue view <number> --json id --jq .id) \
-  && gh api graphql -f query="mutation { addProjectV2ItemById(input: {projectId: \"$PROJECT_ID\", contentId: \"$ISSUE_ID\"}) { item { id } } }"
-```
+| Output | Meaning |
+|---|---|
+| `Project: added` | Issue added to the board. |
+| `Project: no board` | Repo has no linked project (or none resolvable). Expected on projects without a board. |
+| `Project: add failed` | A board exists but the add did not complete. |
 
-If the add fails, note it in the report but don't fail the operation.
+**Splice** this line into the operation's report verbatim — it becomes the `Project: ...` segment of the `CREATE_*` report.
 
 ---
 

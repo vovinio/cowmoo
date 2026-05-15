@@ -51,7 +51,7 @@ Confirm issue created with `for-pm` label.
 
 **Add to project board:** see [Project Board](#project-board).
 
-**Report:** `CREATE_FOR_PM: ✓ #<number> "<title>" created with label [for-pm]. Project: <added | no board>.`
+**Report:** `CREATE_FOR_PM: ✓ #<number> "<title>" created with label [for-pm]. Project: <added | no board | add failed>.`
 
 ---
 
@@ -78,7 +78,7 @@ Confirm issue created with `for-planner` label.
 
 **Add to project board:** see [Project Board](#project-board).
 
-**Report:** `CREATE_FOR_PLANNER: ✓ #<number> "<title>" created with label [for-planner]. Project: <added | no board>.`
+**Report:** `CREATE_FOR_PLANNER: ✓ #<number> "<title>" created with label [for-planner]. Project: <added | no board | add failed>.`
 
 ---
 
@@ -106,7 +106,7 @@ Confirm issue created with `uxui:todo` label.
 
 **Add to project board:** see [Project Board](#project-board).
 
-**Report:** `CREATE_DESIGN_TASK: ✓ Created #<number> — <title>. Label: uxui:todo. Project: <added | no board>.`
+**Report:** `CREATE_DESIGN_TASK: ✓ Created #<number> — <title>. Label: uxui:todo. Project: <added | no board | add failed>.`
 
 ---
 
@@ -240,25 +240,22 @@ Confirm the comment appears.
 
 ## Project Board
 
-CREATE_FOR_PM, CREATE_FOR_PLANNER, and CREATE_DESIGN_TASK all add their created issue to the project board as a final step. This is non-blocking — if no board exists or the add fails, the operation still succeeds.
+Issue-creation operations add their created issue to the project board as a final step, via the canonical `board-add` subcommand in `dev-tools.cjs`. The subcommand owns the whole procedure — `$GH_PROJECT_ID` override, first-linked-ProjectV2 lookup, and the `addProjectV2ItemById` mutation. **Non-blocking** — the issue already exists; a board miss never fails the operation.
 
-**Lookup (once per invocation — reuse for all operations):**
+**Execute** (with the number of the just-created issue):
 ```bash
-OWNER=$(echo "$GH_REPO" | cut -d/ -f1)
-REPO=$(echo "$GH_REPO" | cut -d/ -f2)
-# Uses the first linked project. If the repo has multiple boards, set $GH_PROJECT_ID to pin a specific one.
-PROJECT_ID="${GH_PROJECT_ID:-$(gh api graphql -f query="{ repository(owner:\"$OWNER\",name:\"$REPO\") { projectsV2(first:1) { nodes { id title } } } }" --jq '.data.repository.projectsV2.nodes[0].id')}"
+node tools/dev-tools.cjs board-add <number>
 ```
 
-If `$PROJECT_ID` is empty or null — no board exists. Report "no board" in the operation report and skip.
+The subcommand always exits 0 and prints exactly one line:
 
-**Add:**
-```bash
-ISSUE_ID=$(gh issue view <number> --json id --jq .id) \
-  && gh api graphql -f query="mutation { addProjectV2ItemById(input: {projectId: \"$PROJECT_ID\", contentId: \"$ISSUE_ID\"}) { item { id } } }"
-```
+| Output | Meaning |
+|---|---|
+| `Project: added` | Issue added to the board. |
+| `Project: no board` | Repo has no linked project (or none resolvable). Expected on projects without a board. |
+| `Project: add failed` | A board exists but the add did not complete. |
 
-If the add fails, note it in the report but don't fail the operation.
+**Splice** this line into the operation's report verbatim — it becomes the `Project: ...` segment of the `CREATE_*` report.
 
 ---
 

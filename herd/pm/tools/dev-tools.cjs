@@ -534,6 +534,93 @@ const PM_COMMIT_PROFILE = {
   inTerritory: (p) => PM_TERRITORY_ROOTS.some((r) => p === r || p.startsWith(r + '/')),
 };
 
+// --- Push (canonical remote-sync for the ops agents) ---
+//
+// Replaces inline bash in the ops-agent PUSH operation. Agent-independent —
+// push targets origin/HEAD regardless of which agent committed, so this takes
+// no profile and is a verbatim copy across all four dev-tools.cjs files.
+//
+// Output markers (ops agent + /publish skills match on the PUSH: prefix):
+//   PUSH: ✓ to origin/<branch>                          — success    (exit 0)
+//   PUSH: skipped — no git remote 'origin' configured.  — no remote  (exit 0)
+//   PUSH: ✗ <reason>                                    — failed     (exit 1)
+//
+// A push failure NEVER rolls back the commit — the local commit is correct.
+function pushOp() {
+  if (!PROJECT_DIR) { console.log('PUSH: ✗ PROJECT_DIR not set.'); process.exit(1); }
+
+  // Pre-check — `remote get-url` exits non-zero when origin is absent.
+  if (!git(['remote', 'get-url', 'origin']).ok) {
+    console.log("PUSH: skipped — no git remote 'origin' configured.");
+    process.exit(0);
+  }
+
+  // Execute. `-u origin HEAD` is idempotent. Network I/O can exceed git()'s
+  // 20s default, so the timeout is raised to 120s for this call only.
+  const pushed = git(['push', '-u', 'origin', 'HEAD'], { timeout: 120000 });
+  if (!pushed.ok) {
+    // git push diagnostics span multiple stderr lines; surface the first
+    // fatal/error/rejected line — the informative one — not the last.
+    const errLines = splitLines(pushed.err);
+    const reason = errLines.find((l) => /fatal:|error:|rejected/i.test(l)) || errLines[0] || `git push exited ${pushed.code}`;
+    console.log(`PUSH: ✗ ${reason}`);
+    process.exit(1);
+  }
+
+  // Verify — the branch line of `status -sb` must no longer show [ahead N].
+  const sb = git(['status', '-sb']);
+  const branchLine = splitLines(sb.out)[0] || '';
+  const m = branchLine.match(/^##\s+([^.\s]+)/);
+  const branch = m ? m[1] : 'HEAD';
+  if (/\[ahead /.test(branchLine)) {
+    console.log(`PUSH: ✗ push reported success but branch still shows ${branchLine.trim()} — re-run after checking the remote.`);
+    process.exit(1);
+  }
+
+  console.log(`PUSH: ✓ to origin/${branch}`);
+  process.exit(0);
+}
+
+// --- Project board (canonical issue→board linkage for the ops agents) ---
+//
+// Replaces the inline `## Project Board` bash block. Agent-independent —
+// verbatim copy across all four dev-tools.cjs files.
+//
+// NON-BLOCKING: final step of an issue-creation op. Always exits 0.
+//   Project: added         — issue added to the board
+//   Project: no board      — repo has no linked ProjectV2 (or $GH_REPO unset)
+//   Project: add failed    — board exists but the add did not complete
+function boardAddOp(issueNumber) {
+  const out = (line) => { console.log(line); process.exit(0); };  // always exit 0
+
+  if (!issueNumber || !/^[0-9]+$/.test(String(issueNumber))) {
+    return out('Project: add failed');
+  }
+
+  const repo = process.env.GH_REPO || '';
+  const slash = repo.indexOf('/');
+  if (slash < 1 || slash === repo.length - 1) {
+    return out('Project: no board');  // $GH_REPO unset/malformed
+  }
+  const owner = repo.slice(0, slash);
+  const name = repo.slice(slash + 1);
+
+  // $GH_PROJECT_ID override honored first; else query first linked ProjectV2.
+  let projectId = process.env.GH_PROJECT_ID && process.env.GH_PROJECT_ID.trim();
+  if (!projectId) {
+    const q = `{ repository(owner:"${owner}",name:"${name}") { projectsV2(first:1) { nodes { id } } } }`;
+    projectId = run(`gh api graphql -f query=${JSON.stringify(q)} --jq '.data.repository.projectsV2.nodes[0].id'`);
+  }
+  if (!projectId || projectId === 'null') return out('Project: no board');
+
+  const issueId = run(`gh issue view ${issueNumber} --json id --jq .id`);
+  if (!issueId || issueId === 'null') return out('Project: add failed');
+
+  const mut = `mutation { addProjectV2ItemById(input: {projectId: "${projectId}", contentId: "${issueId}"}) { item { id } } }`;
+  const added = run(`gh api graphql -f query=${JSON.stringify(mut)}`);
+  return out(added === null ? 'Project: add failed' : 'Project: added');
+}
+
 // --- Main ---
 
 const [,, command, subcommand] = process.argv;
@@ -577,6 +664,12 @@ switch (command) {
   case 'commit':
     commitOp(PM_COMMIT_PROFILE, process.argv[3] || '');
     break;
+  case 'push':
+    pushOp();
+    break;
+  case 'board-add':
+    boardAddOp(process.argv[3]);
+    break;
   default:
-    console.log('Usage: node tools/dev-tools.cjs <hook|git-check|territory-check|check-files|inbox|workflow-check|next-step|design-fetch|downstream-engaged|commit>');
+    console.log('Usage: node tools/dev-tools.cjs <hook|git-check|territory-check|check-files|inbox|workflow-check|next-step|design-fetch|downstream-engaged|commit|push|board-add>');
 }

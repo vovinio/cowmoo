@@ -55,34 +55,27 @@ EOF
 
 ### PUSH
 
-Push the current branch to the configured remote. Applies after any of `COMMIT`, `COMMIT_ROLES`, or `ATTACH_DESIGN`.
-
-**Pre-check:**
-```bash
-git -C "$PROJECT_DIR" remote get-url origin >/dev/null 2>&1
-```
-If exit is non-zero (no `origin` remote configured), report `PUSH: skipped — no git remote 'origin' configured.` and stop.
+Push the current branch to the configured remote, via the canonical `push` subcommand in `dev-tools.cjs`. Applies after any of `COMMIT`, `COMMIT_ROLES`, or `ATTACH_DESIGN`. The subcommand owns the whole procedure — origin pre-check, the idempotent `push -u origin HEAD`, an extended network timeout, and an `[ahead N]` verify — so the logic lives in one tested place rather than as inline bash here.
 
 **Execute:**
 ```bash
-git -C "$PROJECT_DIR" push -u origin HEAD 2>&1
+node tools/dev-tools.cjs push
 ```
-The `-u origin HEAD` form is idempotent — sets upstream on the first push, plain push afterwards.
 
-**Verify:**
-```bash
-git -C "$PROJECT_DIR" status -sb
-```
-Confirm the branch line no longer shows `[ahead N]`.
+**Interpret the output** — the subcommand prints exactly one report and sets the exit code:
 
-**Report:**
-- Success: `PUSH: ✓ to origin/<branch>`
-- Skipped: `PUSH: skipped — no git remote 'origin' configured.`
-- Failure: `PUSH: ✗ <reason>` — the local commit stands; user can retry with `git push` or re-run the publish skill.
+| Output | Exit | Meaning |
+|---|---|---|
+| `PUSH: ✓ to origin/<branch>` | 0 | Pushed; branch is in sync with the remote. |
+| `PUSH: skipped — no git remote 'origin' configured.` | 0 | No `origin` remote — fresh project not yet linked to GitHub. |
+| `PUSH: ✗ <reason>` | 1 | Push failed (network, auth, rejected). The local commit stands. |
+
+**Report:** Relay the subcommand's output **verbatim** — the `✓` / `skipped` / `✗` markers are what the calling skill keys on. Do not paraphrase.
 
 **Rules:**
-- **Push failure does NOT roll back the commit.** The local commit is correct; only the remote sync failed. Surface the error and continue with the rest of the calling skill (e.g., `/review-bundle` still flips the label after `ATTACH_DESIGN`).
-- **Network or auth errors** propagate as the failure reason — don't try to fix them automatically.
+- **The subcommand is the implementation.** Never hand-roll `git push` here — `node tools/dev-tools.cjs push` owns the canonical procedure. If it needs to change, change `dev-tools.cjs`, not this file.
+- **Push failure does NOT roll back the commit.** The local commit is correct; only the remote sync failed. Surface the `✗` report and continue with the rest of the calling skill (e.g., `/review-bundle` still flips the label after `ATTACH_DESIGN`).
+- **Relay verbatim.** The exit code and report line drive the caller's flow; don't reword them.
 
 ---
 
