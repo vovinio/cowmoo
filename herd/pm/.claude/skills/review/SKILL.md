@@ -3,7 +3,7 @@ name: review
 description: Verify spec integrity — terminology, references, scope, completeness, structure, product risk. Run after /digest to verify before shipping.
 user-invocable: true
 disable-model-invocation: true
-allowed-tools: Agent, Read, Write, Edit, Glob, Grep
+allowed-tools: Agent, Read, Write, Edit, Glob, Grep, Bash
 ---
 
 # Review
@@ -107,6 +107,21 @@ Present a single merged report:
 
 For contradiction-type findings (two specs say different things), quote both sides so the user sees the conflict directly.
 
+**Heavy-report companion (HTML).** A full six-check report is a wall of text in the terminal. When the report is **heavy** — as a guide, **8 or more quick-fix and structural findings combined, or 3 or more structural items** (auto-fixes are one-liners and don't count toward heaviness) — deliver it as an HTML companion instead of inline:
+
+1. Assemble the entire `# Review Results` content above — all three tiers, every finding expanded with quoted spec text, what's wrong, options, and recommendation, plus Clean Areas — as a single **self-contained** HTML file: inline `<style>`, no external assets, no build step.
+2. Render it for legibility: the three effort tiers as color-coded sections (auto-fix / quick-fix / structural — a risk map), findings grouped by check with anchor links between checks, quoted spec text in monospace. **Number every finding** (1, 2, 3, …) so Step 4's pickers can name them.
+3. Write it to `/tmp/pm-review-<timestamp>.html` and open it with `open /tmp/pm-review-<timestamp>.html`.
+4. In the terminal, show only a compressed stamp — not the full report:
+
+   `Review: <N> auto-fix · <N> quick · <N> structural → /tmp/pm-review-<timestamp>.html`
+
+   Then proceed to Step 4. The per-finding `AskUserQuestion` pickers run in the terminal as normal, each naming its finding number from the HTML.
+
+When the report is **light** (below that bar — a handful of findings, mostly auto-fix and quick-fix), present `# Review Results` inline in the terminal as written above — no HTML.
+
+If the HTML write or `open` fails, fall back to presenting the full report inline in the terminal. The companion is a convenience; never block the skill on it.
+
 ---
 
 ## Step 4: Discuss with User
@@ -202,6 +217,7 @@ Before finishing, confirm:
 - [ ] Findings deduplicated across agents
 - [ ] Classified by effort (auto-fix / quick fix / structural)
 - [ ] Each finding expanded with product context, options, recommendation
+- [ ] Heavy report delivered as an HTML companion in `/tmp/` and opened; light report shown inline
 - [ ] Auto-fixes applied (with user confirmation)
 - [ ] Quick fixes discussed and resolved inline
 - [ ] Structural items routed to working notes

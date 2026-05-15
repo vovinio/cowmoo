@@ -253,6 +253,18 @@ If any `[future]` items remain in working notes that weren't associated with a p
 **Next:** Run /review to verify spec integrity, then /publish to ship.
 ```
 
+**Heavy-digest companion (HTML).** When this digest wrote **substantial** content — multiple items or sections across one or more spec files, or a new entity or feature — also deliver the report as an HTML companion the user can review before shipping:
+
+1. Assemble a "Digest Delta" as a single **self-contained** HTML file (inline `<style>`, no external assets, no build step). Per spec file changed: the before/after of each item, what PM *proposed* vs. what the user confirmed, and where decision reasoning landed. Include the Moved-to-Backlog list.
+2. Write it to `/tmp/pm-digest-<timestamp>.html` and open it with `open /tmp/pm-digest-<timestamp>.html`.
+3. In the terminal, show a compressed stamp instead of the per-file Before/After block — the Before/After detail lives in the HTML, not in both places:
+
+   `Digest: <N> files updated · <N> → backlog · <N> still in notes → /tmp/pm-digest-<timestamp>.html`
+
+   This HTML is the artifact the user reviews before `/review` → `/publish`.
+
+When the digest was **trivial** (a single small change), keep the terminal report as written above — no HTML. If the HTML write or `open` fails, fall back to the terminal report; never block the skill on the companion.
+
 ---
 
 ## Completion Checklist
@@ -268,6 +280,7 @@ Before finishing, confirm:
 - [ ] If a stale checkpoint was found at Step 2, it was either resumed from or discarded — not silently ignored
 - [ ] Within-run transient checkpoint (if used) deleted before reporting complete — no "Digest progress" / "Digest runs to date" log left in WORKING-NOTES.md
 - [ ] Report presented with next steps (/review → /publish)
+- [ ] Substantial digest delivered as an HTML companion in `/tmp/` and opened; trivial digest reported inline
 
 ---
 

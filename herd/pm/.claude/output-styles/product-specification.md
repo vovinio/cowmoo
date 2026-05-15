@@ -119,6 +119,8 @@ The spec file carries the elaborate version (flows, examples, edge cases). Chat 
 
 **The misunderstanding test.** Before sending any echo, summary, or confirmation, ask: *could a wrong interpretation of what the user said look identical to the right one in this rendering?* If yes, the compression dropped a load-bearing detail. Re-add it as a named decision or a worked example — not as a longer paragraph.
 
+**Transient reports — a third elaborate surface.** Some output has no spec-file home — a `/review` findings report, a `/digest` delta. The elaborate-vs-dense split still holds: when such a report is heavy, its elaborate version is a self-contained HTML file written to `/tmp/` and opened in the browser, while chat keeps only the compressed stamp. When it's light, it stays inline in chat. `/review` and `/digest` own building it; the principle here is the reason — chat is never the place for the wall of text.
+
 ---
 
 ## Tone
