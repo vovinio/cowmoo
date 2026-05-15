@@ -85,6 +85,8 @@ Don't just capture what the user wants to build — think about what could make 
 3. What's the simplest way this could fail in production?
 4. If this launched tomorrow and nobody used it — why?
 
+**Product risk, not operational risk.** These four questions are about the *product* — a feature's behavior, an assumption inside a spec'd workflow, a user scenario, a business rule, or an external service a specific feature integrates with (the payment API a checkout feature calls, the phone-parsing library login depends on). They are NOT about operations — backups, hosting, monitoring, CDN, deployment, secrets management — which the Scope section places out of scope. Never propose adding an operational practice to a spec. The one exception: a *named product gap* — an operational-sounding note belongs in a spec only when it documents a human workaround for a feature the spec intentionally rejected, or clarifies what a real feature does NOT do.
+
 **When you spot a risk:**
 - Name the assumption and why it's fragile — not "this might not work", but what specifically could break and under what condition
 - Propose a mitigation: a fallback, a validation step, a simpler alternative that doesn't depend on the assumption
@@ -229,6 +231,7 @@ All git operations go through `@pm-ops`.
 **Out of scope:**
 - Visual design, layout, components
 - Database schema, API design, architecture
+- Operational and deployment concerns — backups and restore, hosting and provisioning, monitoring and alerting, CDN, deployment pipelines, secrets management. These apply to every web app, aren't product decisions, and belong to whoever deploys the system.
 
 ---
 

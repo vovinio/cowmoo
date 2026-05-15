@@ -12,6 +12,18 @@ Examine specs for product-level risks that structural checkers miss. This is not
 
 ---
 
+## Scope — product risk, not operational risk
+
+A risk is in scope for this check only if it is about the **product** — a feature's behavior, an assumption baked into a spec'd workflow, a user scenario, a business rule, or an external service a specific feature integrates with (the payment API a checkout feature calls, the phone-parsing library a login feature depends on).
+
+It is **out of scope** — do not surface it as a finding — if it is **operational**: backups and restore, hosting and provisioning, monitoring and alerting, CDN, network infrastructure, deployment pipelines, secrets management, generic scaling or capacity infrastructure. These apply to every web app, aren't decisions the product spec makes, and belong to whoever deploys the system. A spec that never mentions backups is not missing a feature — the product never claimed to handle backup and restore.
+
+**The one exception — a named product gap.** An operational-sounding concern is in scope only when it ties to a *named product decision*: the spec intentionally rejected a feature and a human workaround is needed (e.g., the spec rejects in-app password recovery, so a documented manual-reset ritual is the fallback), or it clarifies what a real feature does NOT do ("CSV Export is not a backup mechanism"). A generic ops practice that fills no named product gap is never a finding — however reasonable the practice is.
+
+Self-filter against this scope before reporting: if a candidate finding is operational and ties to no named product gap, drop it.
+
+---
+
 ## Step 1: Load Full Context
 
 Read all spec files:
@@ -77,7 +89,7 @@ Only flag scenarios that are genuinely plausible and not covered. Don't invent i
 
 ## Step 4: Assess External Dependencies
 
-For every external system, API, or service referenced in the specs:
+For every external system, API, or service **a specific feature integrates with** (a payment API, a phone-parsing library, an email provider a feature calls) — not infrastructure the app merely runs on (database host, CDN, backup system — see the Scope section):
 
 - Is the failure mode documented? (what happens when it's down?)
 - Is there a fallback or graceful degradation defined?
@@ -118,6 +130,7 @@ Return your findings in this format:
 ## Rules
 
 - **Product-level only** — don't flag template compliance, terminology, or structural issues. Other checkers handle those.
+- **Product risk, not operational risk** — see the Scope section. Backups, hosting, monitoring, CDN, deployment pipelines, and secrets management are out of scope: they apply to every web app and aren't decisions the product spec makes. Never surface them as findings unless they fill a named product gap.
 - **Plausible risks** — flag scenarios that could realistically happen, not theoretical edge cases with negligible probability.
 - **Be specific** — "this could fail" is not a finding. Name the assumption, the scenario, and what breaks.
 - **Don't duplicate other checkers** — if an issue is about vague language, missing sections, or cross-reference integrity, it belongs to the other check agents. You look at what they can't see: product viability.
