@@ -86,7 +86,7 @@ State files are NOT hardcoded in this skill. They are discovered from the owning
 setopt NULL_GLOB 2>/dev/null || shopt -s nullglob 2>/dev/null || true  # zsh: unmatched globs → empty, not fatal
 # Files each agent writes (from CLAUDE.md tables)
 for agent in pm uxui planner builder; do
-  awk '/^## Files You Write/,/^## /' "herd/$agent/CLAUDE.md"
+  awk '/^## /{f=0} /^## Files You Write/{f=1} f' "herd/$agent/CLAUDE.md"
 done
 
 # File paths referenced in dev-tools.cjs
