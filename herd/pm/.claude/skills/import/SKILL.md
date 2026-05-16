@@ -15,11 +15,24 @@ Import existing documentation into the project. Everything lands in working note
 
 ---
 
-## Step 1: Ensure Project Exists
+## Step 1: Validate Argument
+
+If `$ARGUMENTS` is empty, or the folder it names does not exist:
+
+```
+/import needs a path to a folder of existing docs.
+Example: /import ./old-specs
+```
+
+Stop.
+
+---
+
+## Step 2: Ensure Project Exists
 
 Check if `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md` exists.
 
-- **If missing** — create the project structure. Use the Write tool with the exact content shown for each file (newlines as written — no escape shorthand). This content matches what `moo init` produces, so all three creation paths stay byte-identical:
+- **If missing** — create the project structure. Use the Write tool with the exact content shown for each file (newlines as written — no escape shorthand). This is the canonical initial PM file structure — `/import` and `/import-design` both create it, and the content below must be byte-identical between them:
 
   1. `$PROJECT_DIR/cowmoo/specs/PRODUCT.md`:
      ```
@@ -50,11 +63,12 @@ Check if `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md` exists.
 
 ---
 
-## Step 2: Read Source Material
+## Step 3: Read Source Material
 
 1. Find all `.md` files recursively in the source folder
-2. Read every file completely
-3. Build a mental map:
+2. If no `.md` files are found, tell the user the folder contains no markdown docs to import and stop.
+3. Read every file completely
+4. Build a mental map:
    - What does each file cover?
    - How do files relate to each other (shared entities, cross-references)?
    - What are the major domains/areas?
@@ -63,9 +77,9 @@ Check if `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md` exists.
 
 ---
 
-## Step 3: Present Understanding
+## Step 4: Present Understanding
 
-Share a scannable overview before the walk-through. One line per domain, named concepts, and ambiguities. Don't preview the full walk-through order — name only the first topic (dependency-rooted) so the user can confirm or redirect. The full walk-through unfolds topic by topic in Step 4.
+Share a scannable overview before the walk-through. One line per domain, named concepts, and ambiguities. Don't preview the full walk-through order — name only the first topic (dependency-rooted) so the user can confirm or redirect. The full walk-through unfolds topic by topic in Step 5.
 
 ```
 ## Import Overview
@@ -89,7 +103,7 @@ Different starting point?
 
 ---
 
-## Step 4: Guided Walk-Through
+## Step 5: Guided Walk-Through
 
 Walk through by **topic**, not by file. Group related content from multiple files together.
 
@@ -109,7 +123,7 @@ Agent leads — propose the next topic based on dependencies (foundational topic
 
 ---
 
-## Step 5: Report
+## Step 6: Report
 
 After walking through all topics:
 

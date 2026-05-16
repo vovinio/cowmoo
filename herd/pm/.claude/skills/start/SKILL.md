@@ -15,6 +15,7 @@ Orient the session for the product specification project — greet a fresh proje
 Run `node "$AGENT_DIR/tools/dev-tools.cjs" check-files` and read all four lines (`working-notes:`, `backlog:`, `product:`, `domain-specs:`). Each reports a state: `not found`, `exists (empty)`, `exists (has content)`, or a numeric count for `domain-specs:`.
 
 - `working-notes: not found` → go to **NOT INITIALIZED** below
+- `product: not found` → go to **NOT INITIALIZED** below (PRODUCT.md and WORKING-NOTES.md are both required — either one missing is a partial or broken initialization)
 - `working-notes: exists (empty)` AND `domain-specs: 0` → go to **GREENFIELD** below (fresh project — working notes literally empty)
 - `domain-specs: 0` AND `working-notes: exists (has content)` → this *may* be a fresh project: a freshly set-up project carries placeholder content in working notes, backlog, and PRODUCT.md, all of which report as `exists (has content)`. Read `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md` and `$PROJECT_DIR/cowmoo/specs/PRODUCT.md` fully. If both hold only their initial placeholder text — no captured discussion in working notes, no glossary / roles / behaviors in PRODUCT.md — go to **GREENFIELD** below. Otherwise go to **EXISTING PROJECT** below, reusing these two reads (Step 2 needs them anyway).
 - anything else → go to **EXISTING PROJECT** below

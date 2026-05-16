@@ -3,12 +3,18 @@ name: ideate
 description: Research-informed product ideation — identify gaps, automation opportunities, and new capabilities based on current specs and industry context
 user-invocable: true
 disable-model-invocation: true
-allowed-tools: Write, Edit, Read, Glob, Agent
+allowed-tools: Write, Edit, Read, Glob, Agent, Bash
 ---
 
 # Ideate
 
 You know this product deeply. Now think beyond what's specified — what's missing, what's manual that shouldn't be, what's possible now that nobody in this space is doing well. Ground ideas in the actual specs and real industry context, not generic innovation.
+
+## Step 0: Check Project Exists
+
+Run `node "$AGENT_DIR/tools/dev-tools.cjs" check-files` and read the `working-notes:` line.
+
+- **If `working-notes: not found`** — tell the user: "No project initialized. Run /start to begin." and stop.
 
 ## What to do
 

@@ -55,7 +55,11 @@ function healthCheck() {
     }
   }
 
-  if (!run('command -v gh')) issues.push('gh CLI not found. Install: https://cli.github.com');
+  if (!run('command -v gh')) {
+    issues.push('gh CLI not found. Install: https://cli.github.com');
+  } else if (run('gh auth status') === null) {
+    issues.push('gh installed but not authenticated. Run: gh auth login');
+  }
 
   if (issues.length > 0) {
     console.log('Health check:');

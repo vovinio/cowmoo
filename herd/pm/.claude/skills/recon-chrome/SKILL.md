@@ -38,6 +38,8 @@ The platform URL is: `$ARGUMENTS`
 
 If no URL was provided, ask the user for it.
 
+**Precondition:** this skill drives a live browser through the Claude-in-Chrome browser integration. That integration must be enabled before running — if it is not, the scout in Phase 1 will fail because the browser tools are unavailable.
+
 Determine a kebab-case folder name from the URL (e.g., `https://app.acmeplatform.com` → `acmeplatform`).
 
 Set `FOLDER` = `$PROJECT_DIR/cowmoo/agent-files/pm/competitive/[platform-name]/chrome` for use throughout.
@@ -65,7 +67,7 @@ Spawn agent with `subagent_type: "recon-scout-chrome"`. In the prompt, provide:
 - The platform URL
 - Output instruction: `Write the scout report to [FOLDER]/_working/SCOUT.md`
 
-When the agent returns, verify `SCOUT.md` was written and has entity types and navigation. If the agent failed or the file is missing, tell the user what went wrong and stop.
+When the agent returns, verify `SCOUT.md` was written and has entity types and navigation. If the agent failed or the file is missing, tell the user what went wrong and stop — and if the scout reports the browser tools were unavailable, tell the user the likely cause is that the Claude-in-Chrome browser integration is not enabled.
 
 ---
 

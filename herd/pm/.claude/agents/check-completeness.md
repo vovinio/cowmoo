@@ -120,11 +120,11 @@ Beyond structure, check content quality:
 ## Step 5: Check Acceptance Criteria Coverage
 
 For each feature, compare:
-- Every validation error message should have a matching acceptance criterion: `Given [invalid input], When [action], Then [error message shown]`
+- Validations with **non-obvious behavior** (confirmations, side effects, cascading changes) should have a matching acceptance criterion: `Given [invalid input], When [action], Then [error message shown]`. Standard validation errors (required field, format, range) are covered by the Validations section and do NOT need individual AC lines — per the feature template's AC convention; do not flag them.
 - Key edge cases should have matching acceptance criteria
 - Permission denied scenarios should have acceptance criteria
 
-Flag features where validations or edge cases exist but have no corresponding acceptance criteria.
+Flag features where non-obvious-behavior validations, key edge cases, or permission-denied scenarios exist but have no corresponding acceptance criteria.
 
 ---
 
@@ -172,7 +172,7 @@ Return your findings in this format:
 - [file] > [Feature Name]: permissions say "[role] can [action]" but don't clarify access for other roles ([list roles])
 
 ### Acceptance Criteria Gaps
-- [file] > [Feature Name]: validation "[rule]" has no matching AC
+- [file] > [Feature Name]: non-obvious validation "[rule]" has no matching AC
 - [file] > [Feature Name]: edge case "[scenario]" has no matching AC
 - [file] > [Feature Name]: permission denied scenario has no matching AC
 

@@ -34,7 +34,7 @@ Stop.
 
 Check if `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md` exists.
 
-- **If missing** — create the project structure. Use the Write tool with the exact content shown for each file (newlines as written — no escape shorthand). This content matches what `moo init` produces, so all three creation paths stay byte-identical:
+- **If missing** — create the project structure. Use the Write tool with the exact content shown for each file (newlines as written — no escape shorthand). This is the canonical initial PM file structure — `/import` and `/import-design` both create it, and the content below must be byte-identical between them:
 
   1. `$PROJECT_DIR/cowmoo/specs/PRODUCT.md`:
      ```

@@ -3,12 +3,18 @@ name: copywrite
 description: Review and improve all user-facing text — terminology, messages, labels, descriptions — informed by domain research
 user-invocable: true
 disable-model-invocation: true
-allowed-tools: Write, Edit, Read, Glob, Agent
+allowed-tools: Write, Edit, Read, Glob, Agent, Bash
 ---
 
 # Copywrite
 
 Review all user-facing text in the specs and improve it — informed by how this domain actually talks. Use @research throughout to ground proposals in real industry patterns, not opinion.
+
+## Step 0: Check Project Exists
+
+Run `node "$AGENT_DIR/tools/dev-tools.cjs" check-files` and read the `working-notes:` line.
+
+- **If `working-notes: not found`** — tell the user: "No project initialized. Run /start to begin." and stop.
 
 ## What to do
 

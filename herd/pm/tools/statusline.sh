@@ -306,7 +306,11 @@ if [ -n "$PROJECT_DIR" ]; then
     if [ -n "$git_status" ]; then
         parts=""
         for dir in "cowmoo/specs" "cowmoo/agent-files/pm" "cowmoo/agent-files/pm/proposals"; do
-            n=$(echo "$git_status" | grep -c " ${dir}/" 2>/dev/null || echo 0)
+            if [ "$dir" = "cowmoo/agent-files/pm" ]; then
+                n=$(echo "$git_status" | grep " ${dir}/" 2>/dev/null | grep -vc "/proposals/" 2>/dev/null || echo 0)
+            else
+                n=$(echo "$git_status" | grep -c " ${dir}/" 2>/dev/null || echo 0)
+            fi
             [ "$n" -gt 0 ] 2>/dev/null && parts+="${parts:+ }${dim}${dir}:${reset}${orange}${n}${reset}"
         done
         if [ -n "$parts" ]; then

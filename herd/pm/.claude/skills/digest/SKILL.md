@@ -200,8 +200,8 @@ Before removing anything, **re-verify the reasoning gate:** for each item you're
 Once the reasoning gate is clear:
 
 Remove from `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md`:
-- Items successfully written to spec files (verified in 3b)
-- Items successfully moved to BACKLOG.md (verified in 3c)
+- Items successfully written to spec files (verified in 4b)
+- Items successfully moved to BACKLOG.md (verified in 4c)
 
 Keep in working notes:
 - Untagged items (still in discussion)

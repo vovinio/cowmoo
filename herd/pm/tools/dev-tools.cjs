@@ -69,7 +69,11 @@ function healthCheck() {
     if (!dirExists(path.join(PROJECT_DIR, 'cowmoo', 'agent-files', 'pm'))) issues.push(`cowmoo/agent-files/pm/ not found in ${PROJECT_DIR}`);
   }
 
-  if (!run('command -v gh')) issues.push('gh CLI not found. Install: https://cli.github.com');
+  if (!run('command -v gh')) {
+    issues.push('gh CLI not found. Install: https://cli.github.com');
+  } else if (run('gh auth status') === null) {
+    issues.push('gh installed but not authenticated. Run: gh auth login');
+  }
   if (!run('command -v jq')) issues.push('jq not found. Install: brew install jq');
 
   if (issues.length > 0) {

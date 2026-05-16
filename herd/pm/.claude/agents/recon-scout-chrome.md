@@ -44,9 +44,10 @@ The orchestrator will provide:
 ## Setup
 
 1. Load browser tools using ToolSearch: `select:mcp__claude-in-chrome__tabs_context_mcp,mcp__claude-in-chrome__computer,mcp__claude-in-chrome__navigate,mcp__claude-in-chrome__javascript_tool,mcp__claude-in-chrome__read_page`
-2. Call `mcp__claude-in-chrome__tabs_context_mcp` to get browser context
-3. Navigate to the platform URL (use existing tab if open, otherwise create new one)
-4. If the platform shows a login page, return immediately and tell the orchestrator the user must log in first
+2. If the `mcp__claude-in-chrome__*` browser tools are not available (the integration is not enabled), do not proceed — return immediately and tell the orchestrator that the Claude-in-Chrome browser integration is not enabled.
+3. Call `mcp__claude-in-chrome__tabs_context_mcp` to get browser context
+4. Navigate to the platform URL (use existing tab if open, otherwise create new one)
+5. If the platform shows a login page, return immediately and tell the orchestrator the user must log in first
 
 ## Quick Scout
 
