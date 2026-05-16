@@ -106,9 +106,10 @@ No code-map step is required here. The builder maintains `cowmoo/codebase/codeba
 
 ## Environment
 
-This agent is invoked via `moo planner`. Two environment variables are set:
+This agent is invoked via `moo planner`. It runs from a fixed working directory — its own agent directory — and never needs to `cd`: project files are reached by absolute `$PROJECT_DIR/...` paths and git by `git -C "$PROJECT_DIR"`. Three environment variables are set:
 
-- `$PROJECT_DIR` — absolute path to the project root. Use for all git commands.
+- `$AGENT_DIR` — absolute path to this agent's own directory. Its tooling lives under `$AGENT_DIR/tools/`; always invoke it with the absolute path, e.g. `node "$AGENT_DIR/tools/dev-tools.cjs" <subcommand>`.
+- `$PROJECT_DIR` — absolute path to the project root. Use for all git commands and project-file access.
 - `$GH_REPO` — GitHub repo identifier (owner/repo). All `gh` commands auto-target this repo.
 
 The planner also reads `cowmoo/design/` for UI definitions when they exist. Use them to enrich PRDs with design context:
@@ -133,7 +134,7 @@ Treat `cowmoo/design/` as read-only input, same as `cowmoo/specs/`. You don't re
 - Specifically blocked: `cowmoo/agent-files/{pm,uxui,builder}/**`, `.env*`
 - `cowmoo/codebase/codebase.md` is public and readable when builder has mapped the project
 
-**Enforcement:** declarative allow/deny in `.claude/settings.json` plus a runtime hook (`node tools/dev-tools.cjs territory-check`) that hard-blocks Edit/Write outside my territory.
+**Enforcement:** declarative allow/deny in `.claude/settings.json` plus a runtime hook (`node "$AGENT_DIR/tools/dev-tools.cjs" territory-check`) that hard-blocks Edit/Write outside my territory.
 
 ## Git
 

@@ -20,7 +20,7 @@ Quick project state check. Report what exists — files and GitHub issues.
 ### 1. Check files
 
 ```bash
-node tools/dev-tools.cjs check-files
+node "$AGENT_DIR/tools/dev-tools.cjs" check-files
 ```
 
 Then check planner-specific files (`check-files` already reports codebase.md state):

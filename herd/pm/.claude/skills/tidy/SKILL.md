@@ -16,7 +16,7 @@ Organize working notes for clarity. Run between sessions or before a /digest ses
 
 ### 0. Check Project Exists
 
-Run `node tools/dev-tools.cjs check-files` and read the `working-notes:` line.
+Run `node "$AGENT_DIR/tools/dev-tools.cjs" check-files` and read the `working-notes:` line.
 
 - **If `working-notes: not found`** — tell the user: "No project initialized. Run /start to begin." and stop.
 

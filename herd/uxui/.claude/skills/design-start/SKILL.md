@@ -16,7 +16,7 @@ This is the **thinking** phase. Nothing gets written. The output is a shared und
 
 ## Step 0: Verify UI definitions exist — bail if not
 
-Phase B can't propose design tasks without UI definitions to draw from. Run `node tools/dev-tools.cjs check-files` and read the `design-domains:` line — it reports the count of `*.md` files in `$PROJECT_DIR/cowmoo/design/domains/`.
+Phase B can't propose design tasks without UI definitions to draw from. Run `node "$AGENT_DIR/tools/dev-tools.cjs" check-files` and read the `design-domains:` line — it reports the count of `*.md` files in `$PROJECT_DIR/cowmoo/design/domains/`.
 
 **If `design-domains: 0`** — stop with:
 

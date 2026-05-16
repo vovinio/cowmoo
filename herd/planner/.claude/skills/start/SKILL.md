@@ -14,7 +14,7 @@ Load all context, understand where we are, and propose what to do next. Always l
 
 ## Step 0: Verify specs and tech stack exist — bail if not
 
-Run `node tools/dev-tools.cjs check-files` and read two lines:
+Run `node "$AGENT_DIR/tools/dev-tools.cjs" check-files` and read two lines:
 
 - `domain-specs:` — reports how many `*.md` files exist in `$PROJECT_DIR/cowmoo/specs/domains/`. Project initialization creates `$PROJECT_DIR/cowmoo/specs/PRODUCT.md` as a stub template, so its mere existence isn't evidence of real specs — domain files are. PM publishes at least one domain via `/digest` once there's enough to plan from.
 - `techstack.md:` — reports `not found`, `exists (empty)`, or `exists (has content)`. Project initialization does NOT create `techstack.md` — it is only written by `/tech-stack` at finalization. Treat `exists (empty)` the same as `not found` — empty content isn't a real decision to plan from.

@@ -16,7 +16,7 @@ Quick snapshot of UXUI project state. Read-only — no modifications.
 
 ### 1. Check Project Exists
 
-Run `node tools/dev-tools.cjs check-files` and read the `working-notes:` line.
+Run `node "$AGENT_DIR/tools/dev-tools.cjs" check-files` and read the `working-notes:` line.
 
 - **If `working-notes: not found`** — report "No project initialized. Run /start to begin." and stop.
 

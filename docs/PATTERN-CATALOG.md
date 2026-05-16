@@ -146,7 +146,7 @@ Required behavior:
 
 **Canonical shape.**
 
-- `permissions.allow` — tool allow-list including at minimum: `Read`, `Edit`, `Write`, `Glob`, `Grep`, `Bash(git *)`, `Bash(gh *)`, `Bash(node tools/*)` (or `Bash(node *)` for builder).
+- `permissions.allow` — tool allow-list including at minimum: `Read`, `Edit`, `Write`, `Glob`, `Grep`, `Bash(git *)`, `Bash(gh *)`, `Bash(node "$AGENT_DIR/tools/*)` — the open-quote-then-glob form matches each agent's `settings.json` verbatim (Claude Code permission globs are prefix matches; the unbalanced `"` is intentional) — or `Bash(node *)` for builder.
 - `permissions.deny` — denies `.env*` files and every other agent's scoped directories. Each agent denies what it cannot write.
 - `hooks` — see Pattern 5 (Hook Shape).
 - `env.CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD` — set to `"1"` so `CLAUDE.md` is read from `--add-dir` paths.
@@ -171,10 +171,10 @@ Required invariants:
 
 **Canonical shape.** Four hooks:
 
-- `SessionStart` → `node tools/dev-tools.cjs hook session-start` — health checks and orientation.
-- `PreToolUse` (Bash matcher) → `node tools/dev-tools.cjs git-check` — blocks bare `git`.
-- `PreToolUse` (Skill matcher) → `node tools/dev-tools.cjs workflow-check <skill>` — marks workflow step.
-- `PreToolUse` (Edit|Write matcher) → `node tools/dev-tools.cjs territory-check` — hard-blocks writes outside the agent's territory.
+- `SessionStart` → `node "$AGENT_DIR/tools/dev-tools.cjs" hook session-start` — health checks and orientation.
+- `PreToolUse` (Bash matcher) → `node "$AGENT_DIR/tools/dev-tools.cjs" git-check` — blocks bare `git`.
+- `PreToolUse` (Skill matcher) → `node "$AGENT_DIR/tools/dev-tools.cjs" workflow-check <skill>` — marks workflow step.
+- `PreToolUse` (Edit|Write matcher) → `node "$AGENT_DIR/tools/dev-tools.cjs" territory-check` — hard-blocks writes outside the agent's territory.
 
 Required conventions:
 - No `Stop` hook — persistent info lives in the statusline, not hook output.
@@ -215,9 +215,9 @@ Required conventions:
 - Every git call uses `git -C "$PROJECT_DIR"`; never bare `git`.
 - Explicit staging paths only; never `git add .` or `git add -A`.
 - Every operation verifies its effect before reporting success.
-- **Commit operations delegate to the `dev-tools.cjs commit` subcommand.** Any operation that commits (PM/planner/UXUI `COMMIT`, UXUI `COMMIT_ROLES` and `ATTACH_DESIGN`, builder's scoped `COMMIT`) is a thin wrapper: it invokes `node tools/dev-tools.cjs commit ...` with the operation's mode/scope and message, then relays the printed report **verbatim** (the `✓` / `✗` / `Nothing to commit` markers and exit code drive the caller skill). The ops agent never hand-rolls `git add` / `git commit` for a commit operation. The subcommand (`commitOp` in `dev-tools.cjs`, see Pattern 2) owns the canonical procedure: merge-state guard (refuse cleanly mid-merge/rebase/cherry-pick/revert), pathspec-restricted commit (pre-existing foreign staged content cannot be swept in), index-lock retry (a concurrent agent's `index.lock` contention recovers transparently), and a **hash-pinned content-verify** — verify `git show --name-only` against the captured commit hash, never `HEAD`, because a concurrent agent committing right after moves `HEAD`. Foreign content in the commit is a hard fail. The reference territory profiles live in each agent's `dev-tools.cjs`.
-- **The `PUSH` operation delegates to the `dev-tools.cjs push` subcommand.** A thin wrapper: invoke `node tools/dev-tools.cjs push`, relay the printed report **verbatim** (the `✓` / `skipped` / `✗` markers drive the caller skill). The ops agent never hand-rolls `git push`. The subcommand (`pushOp` in `dev-tools.cjs`) owns the origin pre-check, the idempotent `push -u origin HEAD`, an extended network timeout, and the `[ahead N]` verify.
-- **Issue-creation operations delegate project-board linkage to the `dev-tools.cjs board-add` subcommand.** After `gh issue create`, the operation runs `node tools/dev-tools.cjs board-add <number>` and splices the printed `Project: ...` line into its report (non-blocking — the subcommand always exits 0). The `gh project list` + `gh project item-add` CLI pattern stays forbidden, and an inline `addProjectV2ItemById` mutation in an ops-agent file is a violation (the mutation belongs in `boardAddOp`). See Pattern 14. Operations that create nested issues (story ↔ task) additionally use Pattern 14's sub-issue-linkage shape, which remains inline.
+- **Commit operations delegate to the `dev-tools.cjs commit` subcommand.** Any operation that commits (PM/planner/UXUI `COMMIT`, UXUI `COMMIT_ROLES` and `ATTACH_DESIGN`, builder's scoped `COMMIT`) is a thin wrapper: it invokes `node "$AGENT_DIR/tools/dev-tools.cjs" commit ...` with the operation's mode/scope and message, then relays the printed report **verbatim** (the `✓` / `✗` / `Nothing to commit` markers and exit code drive the caller skill). The ops agent never hand-rolls `git add` / `git commit` for a commit operation. The subcommand (`commitOp` in `dev-tools.cjs`, see Pattern 2) owns the canonical procedure: merge-state guard (refuse cleanly mid-merge/rebase/cherry-pick/revert), pathspec-restricted commit (pre-existing foreign staged content cannot be swept in), index-lock retry (a concurrent agent's `index.lock` contention recovers transparently), and a **hash-pinned content-verify** — verify `git show --name-only` against the captured commit hash, never `HEAD`, because a concurrent agent committing right after moves `HEAD`. Foreign content in the commit is a hard fail. The reference territory profiles live in each agent's `dev-tools.cjs`.
+- **The `PUSH` operation delegates to the `dev-tools.cjs push` subcommand.** A thin wrapper: invoke `node "$AGENT_DIR/tools/dev-tools.cjs" push`, relay the printed report **verbatim** (the `✓` / `skipped` / `✗` markers drive the caller skill). The ops agent never hand-rolls `git push`. The subcommand (`pushOp` in `dev-tools.cjs`) owns the origin pre-check, the idempotent `push -u origin HEAD`, an extended network timeout, and the `[ahead N]` verify.
+- **Issue-creation operations delegate project-board linkage to the `dev-tools.cjs board-add` subcommand.** After `gh issue create`, the operation runs `node "$AGENT_DIR/tools/dev-tools.cjs" board-add <number>` and splices the printed `Project: ...` line into its report (non-blocking — the subcommand always exits 0). The `gh project list` + `gh project item-add` CLI pattern stays forbidden, and an inline `addProjectV2ItemById` mutation in an ops-agent file is a violation (the mutation belongs in `boardAddOp`). See Pattern 14. Operations that create nested issues (story ↔ task) additionally use Pattern 14's sub-issue-linkage shape, which remains inline.
 - Comment bodies use identity prefix from Pattern 15.
 
 **Reference implementation.** `herd/pm/.claude/agents/pm-ops.md`
@@ -362,7 +362,7 @@ The statusline and `known`-list check don't care which bucket a skill is in — 
 
 **Reference implementation.** `inbox*` functions in `herd/pm/tools/dev-tools.cjs`.
 
-**Find instances.** `rg --hidden "dev-tools.cjs inbox" -g '**/.claude/skills/**' herd/`
+**Find instances.** `rg --hidden 'dev-tools\.cjs[^ ]* inbox' -g '**/.claude/skills/**' herd/` — `[^ ]*` skips the closing quote of the anchored `"$AGENT_DIR/tools/dev-tools.cjs"` path.
 
 **Declared exceptions.** Builder does not have an inbox tracker — its communication is task-comment-based (builder ↔ planner via task comments), not cross-agent labeled issues. See `.claude/asymmetries/builder.md`.
 
@@ -405,7 +405,7 @@ Used by every ops operation that creates a new issue: `CREATE_STORY`, `CREATE_TA
 
 The linkage is owned by the `board-add` subcommand in `dev-tools.cjs` (`boardAddOp`) — not inline bash in the ops-agent file. After creating the issue, the operation runs:
 ```bash
-node tools/dev-tools.cjs board-add <issue-number>
+node "$AGENT_DIR/tools/dev-tools.cjs" board-add <issue-number>
 ```
 The subcommand honors `$GH_PROJECT_ID` (explicit override) or else queries the repo's first linked `projectsV2`, then runs the `addProjectV2ItemById` mutation. It always exits 0 and prints exactly one line — `Project: added`, `Project: no board`, or `Project: add failed` — which the operation splices into its report. Non-blocking: the issue already exists, so a board miss never fails the operation. The `gh project list` + `gh project item-add` CLI pattern is still forbidden — it silently picks the owner's first project.
 
@@ -438,7 +438,7 @@ If linking fails but the issue was created, the task number is valid and the ope
 - Sub-issue linkage: `### CREATE_TASK` in `herd/planner/.claude/agents/plan-ops.md`.
 
 **Find instances.**
-- Project-board: `rg --hidden "gh issue create" -g '**/.claude/agents/*-ops.md' herd/` — every issue-creating operation must route to the `node tools/dev-tools.cjs board-add` subcommand, either directly or via the agent's `## Project Board` section. `gh project list` or `gh project item-add` is a violation, and so is an inline `addProjectV2ItemById` mutation in an ops-agent file (it belongs in `boardAddOp`).
+- Project-board: `rg --hidden "gh issue create" -g '**/.claude/agents/*-ops.md' herd/` — every issue-creating operation must route to the `node "$AGENT_DIR/tools/dev-tools.cjs" board-add` subcommand, either directly or via the agent's `## Project Board` section. `gh project list` or `gh project item-add` is a violation, and so is an inline `addProjectV2ItemById` mutation in an ops-agent file (it belongs in `boardAddOp`).
 - Sub-issue: `rg --hidden "addSubIssue" -g '**/.claude/agents/*-ops.md' herd/` — currently only planner's `@plan-ops`. If another agent later creates nested structures, it must use this mutation rather than `gh issue edit` or hand-rolled cross-references.
 
 **Declared exceptions.** Ops agents that don't create issues (`@uxui-git-ops`, `@uxui-bundle-ops`, `@uxui-journal-ops`) don't need either half of this pattern.

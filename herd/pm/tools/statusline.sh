@@ -284,8 +284,8 @@ fi
 
 line3=""
 
-if [ -n "$PROJECT_DIR" ] && [ -f tools/dev-tools.cjs ]; then
-    step_info=$(node tools/dev-tools.cjs next-step 2>/dev/null)
+if [ -n "$PROJECT_DIR" ] && [ -f "$AGENT_DIR/tools/dev-tools.cjs" ]; then
+    step_info=$(node "$AGENT_DIR/tools/dev-tools.cjs" next-step 2>/dev/null)
     if [ -n "$step_info" ]; then
         last=$(echo "$step_info" | sed 's/|.*//' | sed 's/last://')
         next=$(echo "$step_info" | sed 's/.*next://' | sed 's/|.*//')

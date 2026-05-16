@@ -5,7 +5,7 @@
   "outputStyle": "technical-planning",
   "statusLine": {
     "type": "command",
-    "command": "bash tools/statusline.sh"
+    "command": "bash \"$AGENT_DIR/tools/statusline.sh\""
   },
   "permissions": {
     "allow": [
@@ -18,7 +18,7 @@
       "Edit(**/cowmoo/agent-files/planner/**)",
       "Write(**/cowmoo/stack/**)",
       "Write(**/cowmoo/agent-files/planner/**)",
-      "Bash(node tools/*)",
+      "Bash(node \"$AGENT_DIR/tools/*)",
       "Bash(git *)",
       "Bash(gh *)"
     ],
@@ -53,7 +53,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node tools/dev-tools.cjs git-check"
+            "command": "node \"$AGENT_DIR/tools/dev-tools.cjs\" git-check"
           }
         ]
       },
@@ -62,7 +62,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node tools/dev-tools.cjs territory-check"
+            "command": "node \"$AGENT_DIR/tools/dev-tools.cjs\" territory-check"
           }
         ]
       },
@@ -71,7 +71,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "SKILL=$(printf '%s\\n' \"$TOOL_INPUT\" | jq -r '.skill // empty'); [ -n \"$SKILL\" ] && node tools/dev-tools.cjs workflow-check \"$SKILL\" || true"
+            "command": "SKILL=$(printf '%s\\n' \"$TOOL_INPUT\" | jq -r '.skill // empty'); [ -n \"$SKILL\" ] && node \"$AGENT_DIR/tools/dev-tools.cjs\" workflow-check \"$SKILL\" || true"
           }
         ]
       }
@@ -81,7 +81,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ -f tools/dev-tools.cjs ] && node tools/dev-tools.cjs hook session-start || echo 'tools/ not found.'"
+            "command": "[ -f \"$AGENT_DIR/tools/dev-tools.cjs\" ] && node \"$AGENT_DIR/tools/dev-tools.cjs\" hook session-start || echo 'tools/ not found.'"
           }
         ]
       }

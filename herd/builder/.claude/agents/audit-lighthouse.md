@@ -42,7 +42,7 @@ The builder provides:
 
 If no URL was provided:
 ```bash
-node tools/dev-tools.cjs detect-dev-servers
+node "$AGENT_DIR/tools/dev-tools.cjs" detect-dev-servers
 ```
 
 If no server detected → report SKIP.

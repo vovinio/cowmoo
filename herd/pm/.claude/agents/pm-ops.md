@@ -35,7 +35,7 @@ Stage PM files and commit, via the canonical `commit` subcommand in `dev-tools.c
 
 **Execute:**
 ```bash
-node tools/dev-tools.cjs commit "$(cat <<'EOF'
+node "$AGENT_DIR/tools/dev-tools.cjs" commit "$(cat <<'EOF'
 <message>
 EOF
 )"
@@ -52,7 +52,7 @@ EOF
 **Report:** Relay the subcommand's output **verbatim** to PM — every line, including any `Note:` or recovery line. Do not paraphrase: the `✓` / `✗` / `Nothing to commit` markers are what the `/publish` skill keys on.
 
 **Rules:**
-- **The subcommand is the implementation.** Never hand-roll `git add` / `git commit` in this operation — `node tools/dev-tools.cjs commit` owns the canonical procedure (pathspec restriction, merge guard, index-lock retry, hash-pinned verify). If the procedure needs to change, change `dev-tools.cjs`, not this file.
+- **The subcommand is the implementation.** Never hand-roll `git add` / `git commit` in this operation — `node "$AGENT_DIR/tools/dev-tools.cjs" commit` owns the canonical procedure (pathspec restriction, merge guard, index-lock retry, hash-pinned verify). If the procedure needs to change, change `dev-tools.cjs`, not this file.
 - **Relay verbatim.** The exit code and the report line drive the caller's flow; don't reword them.
 - **Foreign content in commit is a hard fail.** If the subcommand reports `COMMIT: ✗ commit contains paths outside territory`, the commit was created but the publish flow stops. Do not push.
 
@@ -64,7 +64,7 @@ Push the current branch to the configured remote, via the canonical `push` subco
 
 **Execute:**
 ```bash
-node tools/dev-tools.cjs push
+node "$AGENT_DIR/tools/dev-tools.cjs" push
 ```
 
 **Interpret the output** — the subcommand prints exactly one report and sets the exit code:
@@ -78,7 +78,7 @@ node tools/dev-tools.cjs push
 **Report:** Relay the subcommand's output **verbatim** — the `✓` / `skipped` / `✗` markers are what the `/publish` skill keys on. Do not paraphrase.
 
 **Rules:**
-- **The subcommand is the implementation.** Never hand-roll `git push` here — `node tools/dev-tools.cjs push` owns the canonical procedure. If it needs to change, change `dev-tools.cjs`, not this file.
+- **The subcommand is the implementation.** Never hand-roll `git push` here — `node "$AGENT_DIR/tools/dev-tools.cjs" push` owns the canonical procedure. If it needs to change, change `dev-tools.cjs`, not this file.
 - **Push failure does NOT roll back the commit.** The local commit is correct; only the remote sync failed. Surface the `✗` report and continue with the rest of the publish flow.
 - **Relay verbatim.** The exit code and report line drive the caller's flow; don't reword them.
 
@@ -180,7 +180,7 @@ Issue-creation operations add their created issue to the project board as a fina
 
 **Execute** (with the number of the just-created issue):
 ```bash
-node tools/dev-tools.cjs board-add <number>
+node "$AGENT_DIR/tools/dev-tools.cjs" board-add <number>
 ```
 
 The subcommand always exits 0 and prints exactly one line:

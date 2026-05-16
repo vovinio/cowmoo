@@ -164,7 +164,7 @@ Confirmed and deferred items in working notes get a tag. Untagged items are impl
 
 - `@inbox-reader` — Read for-pm GitHub issues with full context and categorize them.
 - `@pm-ops` — Execute GitHub and git write operations (commits, comments, labels, CREATE_FOR_PLANNER / CREATE_FOR_UXUI). Verifies every step.
-- `@pm-bundle-ops` — Download a Claude Designer share URL into a transient `/tmp/pm-import-<timestamp>/` directory for `/import-design` to read. No project artifacts, no git. Wraps `node tools/dev-tools.cjs design-fetch`.
+- `@pm-bundle-ops` — Download a Claude Designer share URL into a transient `/tmp/pm-import-<timestamp>/` directory for `/import-design` to read. No project artifacts, no git. Wraps `node "$AGENT_DIR/tools/dev-tools.cjs" design-fetch`.
 - `@research` — Research external topics, industry standards, competitor approaches. Saves findings to `cowmoo/agent-files/pm/RESEARCH.md`.
 - `@check-terms` — Terminology consistency against glossary.
 - `@check-refs` — Cross-reference integrity between files.
@@ -193,9 +193,10 @@ Both produce the same output structure. Run both on the same platform to compare
 
 ## Environment
 
-This agent is invoked via `moo pm`. Two environment variables are set:
+This agent is invoked via `moo pm`. It runs from a fixed working directory — its own agent directory — and never needs to `cd`: project files are reached by absolute `$PROJECT_DIR/...` paths and git by `git -C "$PROJECT_DIR"`. Three environment variables are set:
 
-- `$PROJECT_DIR` — absolute path to the project root. Use for all git commands.
+- `$AGENT_DIR` — absolute path to this agent's own directory. Its tooling lives under `$AGENT_DIR/tools/`; always invoke it with the absolute path, e.g. `node "$AGENT_DIR/tools/dev-tools.cjs" <subcommand>`.
+- `$PROJECT_DIR` — absolute path to the project root. Use for all git commands and project-file access.
 - `$GH_REPO` — GitHub repo identifier (owner/repo). All `gh` commands auto-target this repo.
 
 ## Access
@@ -208,7 +209,7 @@ This agent is invoked via `moo pm`. Two environment variables are set:
 - Anywhere in the project EXCEPT other agents' private scratch
 - Specifically blocked: `cowmoo/agent-files/{planner,uxui,builder}/**`, `.env*`
 
-**Enforcement:** declarative allow/deny in `.claude/settings.json` plus a runtime hook (`node tools/dev-tools.cjs territory-check`) that hard-blocks Edit/Write outside my territory.
+**Enforcement:** declarative allow/deny in `.claude/settings.json` plus a runtime hook (`node "$AGENT_DIR/tools/dev-tools.cjs" territory-check`) that hard-blocks Edit/Write outside my territory.
 
 ## Git
 

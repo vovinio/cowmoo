@@ -14,7 +14,7 @@ Load all context, understand what UI work exists and what's needed, propose what
 
 ## Step 0: Check Project Exists
 
-Run `node tools/dev-tools.cjs check-files` and read the output.
+Run `node "$AGENT_DIR/tools/dev-tools.cjs" check-files` and read the output.
 
 - **If `working-notes: not found`** — tell the user: "No project initialized at $PROJECT_DIR. Initialize first, then return to /start." and stop.
 - **If `spec-domains: 0`** — tell the user: "No specs found in cowmoo/specs/domains/. PM needs to produce specs before UXUI can define UI. Run PM first." and stop.

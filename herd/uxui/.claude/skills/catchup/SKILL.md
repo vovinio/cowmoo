@@ -84,7 +84,7 @@ Specs were updated. Read the message to understand what changed:
 4. **Small fix** (quick update, no cross-screen impact) → discuss changes with user, update cowmoo/design/ files, self-verify, then close the issue via `@uxui-gh-ops RESOLVE_ISSUE`.
 5. **Extended work** (multi-screen redesign, spans sessions) → track the issue for later resolution and transition to discussion mode:
    ```bash
-   node tools/dev-tools.cjs inbox add <number> "<title>"
+   node "$AGENT_DIR/tools/dev-tools.cjs" inbox add <number> "<title>"
    ```
    Do NOT close the issue. The user will run `/draft` → `/define` → `/publish` → `/notify planner` in normal flow; `/notify` will see the tracked issue and close it.
 
@@ -98,12 +98,12 @@ A task needs a UI state or definition that isn't in `cowmoo/design/` files.
    - Quick update (one screen, one state) → run `/publish`, then close the issue via `@uxui-gh-ops RESOLVE_ISSUE`.
    - Extended update (multi-screen, spans sessions) → track the issue for later:
      ```bash
-     node tools/dev-tools.cjs inbox add <number> "<title>"
+     node "$AGENT_DIR/tools/dev-tools.cjs" inbox add <number> "<title>"
      ```
      Do NOT close. `/notify planner` later closes it after `/publish`.
 4. **Misunderstanding** (task scope is wrong) → UXUI's response requires planner action, not a cowmoo/design/ file change. Track the issue for later:
    ```bash
-   node tools/dev-tools.cjs inbox add <number> "<title>"
+   node "$AGENT_DIR/tools/dev-tools.cjs" inbox add <number> "<title>"
    ```
    The user will run `/ask planner` to send a response with the finding. `/ask` will see the tracked issue and close it as part of sending the response.
 

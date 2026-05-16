@@ -73,7 +73,7 @@ Spawn `@pm-bundle-ops`:
 @pm-bundle-ops FETCH_DESIGN url=<share-url>
 ```
 
-The agent invokes `node tools/dev-tools.cjs design-fetch <url>`, which downloads the tarball and extracts it into `/tmp/pm-import-<timestamp>/`. No git commit, no project files. The bundle is transient — PM throws it away when this skill finishes.
+The agent invokes `node "$AGENT_DIR/tools/dev-tools.cjs" design-fetch <url>`, which downloads the tarball and extracts it into `/tmp/pm-import-<timestamp>/`. No git commit, no project files. The bundle is transient — PM throws it away when this skill finishes.
 
 **Result handling:**
 

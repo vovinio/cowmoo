@@ -89,7 +89,7 @@ Iterative, small-batch flow with three phases of thinking:
 3. `/design-publish` — Pure ship: preview + confirm + create N independent `uxui:todo` tasks via `@uxui-gh-ops CREATE_DESIGN_TASK`.
 4. Designer picks up a `uxui:todo`, iterates in `claude.ai/design`, exports share URL, comments on issue, relabels `uxui:review`.
 5. `/catchup` notices `uxui:review` and dispatches `/review-bundle <issue>`.
-6. `/review-bundle` — Fetches the bundle (`@uxui-bundle-ops` runs `node tools/dev-tools.cjs bundle-fetch`), runs `@design-evaluator`, triages with you, then approves (`ATTACH_DESIGN` commits the domain-file edit + `APPROVE_DESIGN` flips to `uxui:done` and closes) or rejects (`REJECT_DESIGN` flips back to `uxui:todo`).
+6. `/review-bundle` — Fetches the bundle (`@uxui-bundle-ops` runs `node "$AGENT_DIR/tools/dev-tools.cjs" bundle-fetch`), runs `@design-evaluator`, triages with you, then approves (`ATTACH_DESIGN` commits the domain-file edit + `APPROVE_DESIGN` flips to `uxui:done` and closes) or rejects (`REJECT_DESIGN` flips back to `uxui:todo`).
 7. When a meaningful chunk of related screens has reached `uxui:done`, suggest `/notify planner` — judgment call, never automatic.
 
 ### Messages Flow
@@ -122,7 +122,7 @@ Iterative, small-batch flow with three phases of thinking:
 - `@design-evaluator` — Evaluate a designer's submitted Claude Design bundle against task brief, specs, and roles. Returns classified findings (GAPS, CONCERNS, OBSERVATIONS, ROLE_ADDITIONS). Used by `/review-bundle`.
 - `@uxui-gh-ops` — Execute GitHub write operations only — create issues (for-pm, for-planner, design tasks), post comments, change labels (APPROVE_DESIGN flips to uxui:done; REJECT_DESIGN flips back to uxui:todo), close issues. Verifies every step.
 - `@uxui-git-ops` — Execute git write operations only — `COMMIT` (Phase A general commit), `COMMIT_ROLES` (scoped commit for `roles.md` only, used on bundle approval with ROLE_ADDITIONS), and `ATTACH_DESIGN` (specialized commit for bundle approval — stages BOTH the domain file and `VISUAL-JOURNAL.md` together). Verifies every step.
-- `@uxui-bundle-ops` — Download a Claude Design share URL, extract the tarball into `cowmoo/design/bundles/<ticket>/`, write `meta.json`, and commit. Wraps `node tools/dev-tools.cjs bundle-fetch`.
+- `@uxui-bundle-ops` — Download a Claude Design share URL, extract the tarball into `cowmoo/design/bundles/<ticket>/`, write `meta.json`, and commit. Wraps `node "$AGENT_DIR/tools/dev-tools.cjs" bundle-fetch`.
 - `@uxui-journal-ops` — Update the visual journal for an approved bundle — write/replace the entry in `cowmoo/design/VISUAL-JOURNAL.md` (latest-only per ticket) AND post the same summary as a new GH comment (chronological). Does not commit (ATTACH_DESIGN does). Used by `/review-bundle`.
 - `@proposal-writer` — Write proposal files (background, used by /propose).
 
@@ -130,9 +130,10 @@ Iterative, small-batch flow with three phases of thinking:
 
 ## Environment
 
-This agent is invoked via `moo uxui`. Two environment variables are set:
+This agent is invoked via `moo uxui`. It runs from a fixed working directory — its own agent directory — and never needs to `cd`: project files are reached by absolute `$PROJECT_DIR/...` paths and git by `git -C "$PROJECT_DIR"`. Three environment variables are set:
 
-- `$PROJECT_DIR` — absolute path to the project root. Use for all git commands.
+- `$AGENT_DIR` — absolute path to this agent's own directory. Its tooling lives under `$AGENT_DIR/tools/`; always invoke it with the absolute path, e.g. `node "$AGENT_DIR/tools/dev-tools.cjs" <subcommand>`.
+- `$PROJECT_DIR` — absolute path to the project root. Use for all git commands and project-file access.
 - `$GH_REPO` — GitHub repo identifier (owner/repo). All `gh` commands auto-target this repo.
 
 ## Access
@@ -145,7 +146,7 @@ This agent is invoked via `moo uxui`. Two environment variables are set:
 - Anywhere in the project EXCEPT other agents' private scratch
 - Specifically blocked: `cowmoo/agent-files/{pm,planner,builder}/**`, `.env*`
 
-**Enforcement:** declarative allow/deny in `.claude/settings.json` plus a runtime hook (`node tools/dev-tools.cjs territory-check`) that hard-blocks Edit/Write outside my territory.
+**Enforcement:** declarative allow/deny in `.claude/settings.json` plus a runtime hook (`node "$AGENT_DIR/tools/dev-tools.cjs" territory-check`) that hard-blocks Edit/Write outside my territory.
 
 ## Git
 

@@ -75,14 +75,14 @@ For each message the user picks, handle by type:
 2. **Diagnose within your scope.** The message is observational; you decide what it means and how to resolve it. Classify the issue into one of three categories:
    - **PRD clarity issue** → The PRD itself is ambiguous, contradictory, incomplete, or assumes preconditions that don't hold in the project (e.g., missing test framework, missing build tooling, missing dev dependency). Two remediations depending on shape:
      - **Rewrite the PRD in place** when the fix lives inside the same task — clarify wording, fix a contradiction, or fold a small bit of setup into the task. Use `@plan-ops` **UPDATE_TASK**, then `POST_COMMENT` with "**[Planner]** Changes needed: [what changed in PRD]", then `RELABEL` to `todo`.
-     - **Add a prerequisite task** when the missing scaffolding is substantial enough to deserve its own task (installing and configuring a test framework, adding a CI pipeline, setting up a dev-tooling dependency). This needs planning work, not a quick fix — track via `node tools/dev-tools.cjs inbox add <number> "<title>"` and tell the user "Needs `/start` to plan the prerequisite task before this one can proceed."
+     - **Add a prerequisite task** when the missing scaffolding is substantial enough to deserve its own task (installing and configuring a test framework, adding a CI pipeline, setting up a dev-tooling dependency). This needs planning work, not a quick fix — track via `node "$AGENT_DIR/tools/dev-tools.cjs" inbox add <number> "<title>"` and tell the user "Needs `/start` to plan the prerequisite task before this one can proceed."
    - **Spec issue** → The underlying spec is missing, wrong, or contradictory. "This needs PM. Run `/ask pm` to escalate." Track the issue so `/ask pm` sees it and clears it when the escalation is created:
      ```bash
-     node tools/dev-tools.cjs inbox add <number> "<title>"
+     node "$AGENT_DIR/tools/dev-tools.cjs" inbox add <number> "<title>"
      ```
    - **UI definition issue** → The `cowmoo/design/` file is missing a screen or a state that the builder's observation revealed. "This needs UXUI. Run `/ask uxui` to escalate." Track the issue so `/ask uxui` sees it and clears it when the escalation is created:
      ```bash
-     node tools/dev-tools.cjs inbox add <number> "<title>"
+     node "$AGENT_DIR/tools/dev-tools.cjs" inbox add <number> "<title>"
      ```
 
 **Examples of routing:**
@@ -113,7 +113,7 @@ The message didn't fit the five named categories — e.g., a builder out-of-scop
 1. Read the full body and comments aloud to the user: "This message doesn't match the standard message types. Here's what it says: [...]"
 2. **Render the routing choice via `AskUserQuestion`** (single-select). Recommended option first with `(Recommended)` suffix; each option's `description` carries the consequence in planning terms. Per CLAUDE.md's picker rule. Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker. Typical options:
    - **Identify as a named type** — re-route to the matching handler (Spec update / Deviation report / Blocked task / UI definition update / UI response). Pick the type after asking the user.
-   - **Track for later planning** — substantial item that needs `/start` work. Adds to the inbox via `node tools/dev-tools.cjs inbox add <number> "<title>"`.
+   - **Track for later planning** — substantial item that needs `/start` work. Adds to the inbox via `node "$AGENT_DIR/tools/dev-tools.cjs" inbox add <number> "<title>"`.
    - **Close as noise** — no action needed. `@plan-ops` **POST_COMMENT** + **CLOSE_ISSUE** with the user's wording.
 3. Never auto-close or silently acknowledge an `other` message — the user confirms the resolution.
 
@@ -124,7 +124,7 @@ The message didn't fit the five named categories — e.g., a builder out-of-scop
 If a message can't be quick-fixed and needs planning work:
 
 ```bash
-node tools/dev-tools.cjs inbox add <number> "<title>"
+node "$AGENT_DIR/tools/dev-tools.cjs" inbox add <number> "<title>"
 ```
 
 This is read by `/publish` (to resolve tracked issues when shipping) and `/ask` (to link related messages and clear the entry after escalation). Full context (type, summary) lives in conversation — only `number\ttitle` persists across sessions.
@@ -154,7 +154,7 @@ This is read by `/publish` (to resolve tracked issues when shipping) and `/ask` 
 - [ ] Each message presented with category and recommendation
 - [ ] User confirmed each resolution
 - [ ] Quick fixes executed (comments, closes, PRD updates)
-- [ ] Complex items tracked via `node tools/dev-tools.cjs inbox add`
+- [ ] Complex items tracked via `node "$AGENT_DIR/tools/dev-tools.cjs" inbox add`
 - [ ] Report presented with next action
 
 ---

@@ -26,7 +26,7 @@ If no argument is provided, scan the session and propose:
 - **Spec gap / spec question / spec issue** (what's missing from specs, business logic unclear) → PM.
 - **Response to a tracked for-uxui inbox item** (planner asked about a ui-gap / ui-question and UXUI's finding requires planner action) → planner.
 
-Check `node tools/dev-tools.cjs inbox list` — if there's an active tracked `for-uxui` item from the planner and the current session diagnosed it as "not a real gap / task scope wrong", `planner` is the natural target.
+Check `node "$AGENT_DIR/tools/dev-tools.cjs" inbox list` — if there's an active tracked `for-uxui` item from the planner and the current session diagnosed it as "not a real gap / task scope wrong", `planner` is the natural target.
 
 **Render the target choice via `AskUserQuestion`** (single-select). Recommended option first with `(Recommended)` suffix — pick PM when the discussion concerns a spec gap, contradiction, or business-logic question; pick planner when the session diagnosed a tracked `for-uxui` item and the response requires planner action. Each option's `description` carries the consequence ("creates a `for-pm` issue addressed to PM" vs "creates a `for-planner` issue responding to the tracked `for-uxui` item"). Per CLAUDE.md's picker rule. Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker.
 
@@ -36,7 +36,7 @@ The target determines which label and which `@uxui-gh-ops` operation to use.
 
 ## Step 2: Check Context
 
-Check `$PROJECT_DIR/cowmoo/agent-files/uxui/.inbox-context` (via `node tools/dev-tools.cjs inbox list`) — we may be responding to an incoming message that led to this escalation. Note which tracked issue(s), if any, this ask will resolve.
+Check `$PROJECT_DIR/cowmoo/agent-files/uxui/.inbox-context` (via `node "$AGENT_DIR/tools/dev-tools.cjs" inbox list`) — we may be responding to an incoming message that led to this escalation. Note which tracked issue(s), if any, this ask will resolve.
 
 ---
 
@@ -112,11 +112,11 @@ Wait for confirmation that the issue was created and verified.
 
 ## Step 5: Resolve Tracked Inbox Items
 
-If the current session is in response to a tracked `for-uxui` issue (check `node tools/dev-tools.cjs inbox list`), present each tracked item to the user:
+If the current session is in response to a tracked `for-uxui` issue (check `node "$AGENT_DIR/tools/dev-tools.cjs" inbox list`), present each tracked item to the user:
 
 - "Tracked issue #N: [title]. Did this `/ask` address it?"
 - If yes → spawn `@uxui-gh-ops` with **RESOLVE_ISSUE** — issue number, resolution summary (a short note pointing at the new `for-planner` or `for-pm` issue). RESOLVE_ISSUE always closes the issue.
-- After resolving, remove from tracking: `node tools/dev-tools.cjs inbox remove <number>`.
+- After resolving, remove from tracking: `node "$AGENT_DIR/tools/dev-tools.cjs" inbox remove <number>`.
 - If no → leave tracked for future.
 
 ---

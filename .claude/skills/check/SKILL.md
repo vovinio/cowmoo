@@ -242,10 +242,12 @@ for agent in pm uxui planner builder; do
   # Extract all case labels (top-level and nested alike)
   grep -oE "case '[a-z-]+':" "$dt" | sed "s/case '//; s/'://" | sort -u | while read sub; do
     [ "$sub" = "default" ] && continue
-    # Match `dev-tools.cjs [outer [inner …]] <sub>` with $sub followed by
-    # a non-word (space, quote, eol, etc.) so `inbox` does NOT spuriously
-    # match `inbox-foo` and `clear` does NOT match `clearSession`.
-    if ! grep -qE "dev-tools\.cjs( [a-zA-Z0-9_-]+)* $sub([^a-zA-Z0-9_-]|\$)" \
+    # Match `dev-tools.cjs" [outer [inner …]] <sub>` — `[^ ]*` skips the
+    # closing quote of the anchored `"$AGENT_DIR/tools/dev-tools.cjs"` path
+    # (plain `"` in skills/agents, `\"` in settings.json). $sub is followed
+    # by a non-word (space, quote, eol) so `inbox` does NOT match
+    # `inbox-foo` and `clear` does NOT match `clearSession`.
+    if ! grep -qE "dev-tools\.cjs[^ ]*( [a-zA-Z0-9_-]+)* $sub([^a-zA-Z0-9_-]|\$)" \
          "herd/$agent/.claude/settings.json" \
          "herd/$agent/tools/statusline.sh" \
          herd/$agent/.claude/skills/*/SKILL.md \

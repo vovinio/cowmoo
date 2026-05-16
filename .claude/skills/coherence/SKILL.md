@@ -77,7 +77,7 @@ For each agent with browser capability, identify which tool family its declared 
 ### Checks
 
 - **A — Browser command mismatch.** An agent on Playwright CLI whose instructions reference Chrome-in-Chrome tools (`read_page`, `computer`, `navigate`, `javascript_tool`, `find`), or vice versa. CRITICAL.
-- **B — dev-tools.cjs subcommand mismatch.** Every `node tools/dev-tools.cjs <sub>` in a skill or agent file references a subcommand that exists in that agent's `dev-tools.cjs`. This is the reverse of `/check` Step 6 — that one checks "does every case have a caller?"; this one checks "does every call have a case?".
+- **B — dev-tools.cjs subcommand mismatch.** Every `node "$AGENT_DIR/tools/dev-tools.cjs" <sub>` in a skill or agent file references a subcommand that exists in that agent's `dev-tools.cjs`. This is the reverse of `/check` Step 6 — that one checks "does every case have a caller?"; this one checks "does every call have a case?".
 
 ---
 

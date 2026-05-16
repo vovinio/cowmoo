@@ -112,9 +112,10 @@ For auth on the dev server, use Playwright's `state-save`/`state-load` pattern. 
 
 ## Environment
 
-This agent is invoked via `moo builder`. Two environment variables are set:
+This agent is invoked via `moo builder`. It runs from a fixed working directory — its own agent directory — and never needs to `cd`: project files are reached by absolute `$PROJECT_DIR/...` paths and git by `git -C "$PROJECT_DIR"`. Three environment variables are set:
 
-- `$PROJECT_DIR` — absolute path to the project root. Use for all git commands.
+- `$AGENT_DIR` — absolute path to this agent's own directory. Its tooling lives under `$AGENT_DIR/tools/`; always invoke it with the absolute path, e.g. `node "$AGENT_DIR/tools/dev-tools.cjs" <subcommand>`.
+- `$PROJECT_DIR` — absolute path to the project root. Use for all git commands and project-file access.
 - `$GH_REPO` — GitHub repo identifier (owner/repo). All `gh` commands auto-target this repo.
 
 ## Access
@@ -130,7 +131,7 @@ This agent is invoked via `moo builder`. Two environment variables are set:
 - Anywhere in the project EXCEPT other agents' private scratch
 - Specifically blocked: `cowmoo/agent-files/{pm,planner,uxui}/**`, `.env*`
 
-**Enforcement:** declarative allow/deny in `.claude/settings.json` plus a runtime hook (`node tools/dev-tools.cjs territory-check`). Because my territory is defined by exclusion, `dev-tools.cjs` uses a `FORBIDDEN` constant (paths I cannot write into) rather than a positive TERRITORY list.
+**Enforcement:** declarative allow/deny in `.claude/settings.json` plus a runtime hook (`node "$AGENT_DIR/tools/dev-tools.cjs" territory-check`). Because my territory is defined by exclusion, `dev-tools.cjs` uses a `FORBIDDEN` constant (paths I cannot write into) rather than a positive TERRITORY list.
 
 ## Git
 

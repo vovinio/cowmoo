@@ -372,7 +372,7 @@ function downstreamEngaged() {
 // Replaces inline bash in @pm-ops COMMIT with one tested implementation:
 // merge-state guard, pathspec-restricted commit, index-lock retry, and a
 // hash-pinned content-verify. The ops agent invokes:
-//   node tools/dev-tools.cjs commit "<message>"
+//   node "$AGENT_DIR/tools/dev-tools.cjs" commit "<message>"
 // and relays the printed report verbatim.
 //
 // Output markers (the ops agent and /publish skill match on these):
@@ -671,5 +671,5 @@ switch (command) {
     boardAddOp(process.argv[3]);
     break;
   default:
-    console.log('Usage: node tools/dev-tools.cjs <hook|git-check|territory-check|check-files|inbox|workflow-check|next-step|design-fetch|downstream-engaged|commit|push|board-add>');
+    console.log('Usage: node "$AGENT_DIR/tools/dev-tools.cjs" <hook|git-check|territory-check|check-files|inbox|workflow-check|next-step|design-fetch|downstream-engaged|commit|push|board-add>');
 }

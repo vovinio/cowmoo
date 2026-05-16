@@ -12,7 +12,7 @@ Initialize or resume the product specification project.
 
 ## Step 1: Check Project State
 
-Run `node tools/dev-tools.cjs check-files` and read all four lines (`working-notes:`, `backlog:`, `product:`, `domain-specs:`). Each reports a state: `not found`, `exists (empty)`, `exists (has content)`, or a numeric count for `domain-specs:`.
+Run `node "$AGENT_DIR/tools/dev-tools.cjs" check-files` and read all four lines (`working-notes:`, `backlog:`, `product:`, `domain-specs:`). Each reports a state: `not found`, `exists (empty)`, `exists (has content)`, or a numeric count for `domain-specs:`.
 
 - `working-notes: not found` → go to **NOT INITIALIZED** below
 - `working-notes: exists (empty)` AND `domain-specs: 0` → go to **GREENFIELD** below (fresh project with no content yet)

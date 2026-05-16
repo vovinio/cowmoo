@@ -82,6 +82,7 @@ cmd_agent() {
 
   # Launch Claude from agent dir with project as --add-dir
   cd "$COWMOO/herd/$AGENT" && \
+    AGENT_DIR="$COWMOO/herd/$AGENT" \
     PROJECT_DIR="$PROJECT" \
     GH_REPO="$GH_REPO" \
     exec claude \

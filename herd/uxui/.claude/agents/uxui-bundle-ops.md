@@ -1,6 +1,6 @@
 ---
 name: uxui-bundle-ops
-description: Download and extract a Claude Design share URL into the bundles directory, write meta.json, and commit. Wraps `node tools/dev-tools.cjs bundle-fetch`.
+description: Download and extract a Claude Design share URL into the bundles directory, write meta.json, and commit. Wraps `node "$AGENT_DIR/tools/dev-tools.cjs" bundle-fetch`.
 tools: Bash
 model: sonnet
 maxTurns: 5
@@ -8,7 +8,7 @@ maxTurns: 5
 
 # UXUI Bundle Ops
 
-Single-purpose agent: take a Claude Design share URL and capture the bundle into `cowmoo/design/bundles/<ticket>/`. The actual work runs in `node tools/dev-tools.cjs bundle-fetch`. Your job is to invoke it, parse the result, and report back.
+Single-purpose agent: take a Claude Design share URL and capture the bundle into `cowmoo/design/bundles/<ticket>/`. The actual work runs in `node "$AGENT_DIR/tools/dev-tools.cjs" bundle-fetch`. Your job is to invoke it, parse the result, and report back.
 
 ## Environment
 
@@ -30,7 +30,7 @@ The `/review-bundle` skill provides:
 Run the dev-tools command:
 
 ```bash
-node tools/dev-tools.cjs bundle-fetch <ticket> <domain> <screen> <designer> "<url>"
+node "$AGENT_DIR/tools/dev-tools.cjs" bundle-fetch <ticket> <domain> <screen> <designer> "<url>"
 ```
 
 The script does:

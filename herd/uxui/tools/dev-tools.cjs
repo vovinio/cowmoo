@@ -436,9 +436,9 @@ function territoryCheck() {
 // One tested implementation of the canonical commit procedure: merge-state
 // guard, pathspec-restricted commit, index-lock retry, hash-pinned
 // content-verify. The ops agent invokes one of:
-//   node tools/dev-tools.cjs commit general "<message>"
-//   node tools/dev-tools.cjs commit roles "<message>"
-//   node tools/dev-tools.cjs commit attach-design <domain> "<message>"
+//   node "$AGENT_DIR/tools/dev-tools.cjs" commit general "<message>"
+//   node "$AGENT_DIR/tools/dev-tools.cjs" commit roles "<message>"
+//   node "$AGENT_DIR/tools/dev-tools.cjs" commit attach-design <domain> "<message>"
 // and relays the printed report verbatim.
 //
 // Output markers (the ops agent and its caller skills match on these — the
@@ -777,5 +777,5 @@ switch (command) {
     boardAddOp(process.argv[3]);
     break;
   default:
-    console.log('Usage: node tools/dev-tools.cjs <hook|git-check|territory-check|check-files|inbox|design-draft|workflow-check|next-step|bundle-fetch|commit|push|board-add>');
+    console.log('Usage: node "$AGENT_DIR/tools/dev-tools.cjs" <hook|git-check|territory-check|check-files|inbox|design-draft|workflow-check|next-step|bundle-fetch|commit|push|board-add>');
 }

@@ -17,7 +17,7 @@ Preview all pending changes, get user confirmation, then execute. This is the ON
 ### 1. Check what needs publishing
 
 - Check if `$PROJECT_DIR/cowmoo/agent-files/planner/draft.md` exists
-- Check tracked inbox issues: `node tools/dev-tools.cjs inbox list`
+- Check tracked inbox issues: `node "$AGENT_DIR/tools/dev-tools.cjs" inbox list`
 - Review what was done this session (files written, decisions made)
 
 If nothing was done this session, no draft.md, and no tracked inbox issues — "Nothing to publish." Stop.
@@ -62,7 +62,7 @@ If draft.md exists and has an Updates section:
 
 ### 4. Clean up draft.md
 
-If draft.md exists — delete it via `node tools/dev-tools.cjs clear-draft` (allowed through the `Bash(node tools/*)` allow-list; plain `rm` is not permitted). draft.md is untracked in git, so this is disk-only cleanup — it removes the "Draft: exists from previous session" indicator from the next session's statusline and hooks. The next step's commit captures only the knowledge.md append.
+If draft.md exists — delete it via `node "$AGENT_DIR/tools/dev-tools.cjs" clear-draft` (allowed through the `Bash(node tools/*)` allow-list; plain `rm` is not permitted). draft.md is untracked in git, so this is disk-only cleanup — it removes the "Draft: exists from previous session" indicator from the next session's statusline and hooks. The next step's commit captures only the knowledge.md append.
 
 ### 5. Commit and Push
 
@@ -115,14 +115,14 @@ Skip this step if no tasks have dependencies or all dependencies are "None".
 ### 8. Resolve tracked inbox issues
 
 ```bash
-node tools/dev-tools.cjs inbox list
+node "$AGENT_DIR/tools/dev-tools.cjs" inbox list
 ```
 
 For each tracked issue, ask the user: "Tracked issue #N: [title]. Has this been resolved by the work published in this session?"
 
 - If yes → spawn `@plan-ops` with **POST_COMMENT** on that issue with the resolution summary, then `@plan-ops` with **CLOSE_ISSUE** (two-op pattern matches `/catchup`'s deviation-report and spec-update resolutions). Then remove from the inbox:
   ```bash
-  node tools/dev-tools.cjs inbox remove <number>
+  node "$AGENT_DIR/tools/dev-tools.cjs" inbox remove <number>
   ```
 - If no → leave it tracked for a future session.
 

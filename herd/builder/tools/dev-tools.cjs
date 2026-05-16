@@ -220,7 +220,7 @@ function detectDevServers() {
 //
 // One tested implementation of the canonical commit procedure: merge-state
 // guard, pathspec-restricted commit, index-lock retry, hash-pinned
-// content-verify. The ops agent invokes `node tools/dev-tools.cjs commit
+// content-verify. The ops agent invokes `node "$AGENT_DIR/tools/dev-tools.cjs" commit
 // <code|working> "<message>"` and relays the printed report verbatim.
 //
 // Output markers (the ops agent and /publish skill match on these):
@@ -526,5 +526,5 @@ switch (command) {
     boardAddOp(process.argv[3]);
     break;
   default:
-    console.log('Usage: node tools/dev-tools.cjs <hook|git-check|territory-check|workflow-check|next-step|detect-dev-servers|commit|push|board-add>');
+    console.log('Usage: node "$AGENT_DIR/tools/dev-tools.cjs" <hook|git-check|territory-check|workflow-check|next-step|detect-dev-servers|commit|push|board-add>');
 }

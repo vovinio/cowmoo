@@ -69,7 +69,7 @@ Spawn `@uxui-bundle-ops`:
   designer=<designer>
 ```
 
-The agent invokes `node tools/dev-tools.cjs bundle-fetch ...`, which downloads the tarball, extracts it into `cowmoo/design/bundles/<issue>/`, writes `meta.json`, and commits.
+The agent invokes `node "$AGENT_DIR/tools/dev-tools.cjs" bundle-fetch ...`, which downloads the tarball, extracts it into `cowmoo/design/bundles/<issue>/`, writes `meta.json`, and commits.
 
 **If FETCH_BUNDLE fails (URL expired):**
 

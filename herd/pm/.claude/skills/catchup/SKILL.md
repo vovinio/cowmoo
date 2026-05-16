@@ -75,7 +75,7 @@ When an issue needs real spec work:
 1. Tell the user: "Issue #N needs spec work. Transitioning to a discussion session about [topic]."
 2. Track the issue for later resolution:
    ```bash
-   node tools/dev-tools.cjs inbox add <number> "<title>"
+   node "$AGENT_DIR/tools/dev-tools.cjs" inbox add <number> "<title>"
    ```
 3. Read the relevant spec files and working notes for context
 4. The conversation continues as a normal discussion about that topic

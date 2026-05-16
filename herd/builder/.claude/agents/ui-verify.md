@@ -27,7 +27,7 @@ The builder provides:
 ### 1. Detect Dev Server
 
 ```bash
-node tools/dev-tools.cjs detect-dev-servers
+node "$AGENT_DIR/tools/dev-tools.cjs" detect-dev-servers
 ```
 
 - If no server detected → report SKIP: "No dev server detected on ports 3000/3001/4000/4200/4321/5000/5173/5174/8000/8080/8888"

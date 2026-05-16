@@ -30,7 +30,7 @@ The target determines which label and which `@plan-ops` operation to use.
 ## Step 2: Check Context
 
 ```bash
-node tools/dev-tools.cjs inbox list
+node "$AGENT_DIR/tools/dev-tools.cjs" inbox list
 ```
 
 If tracked issues exist, we may be responding to an incoming message (e.g., a builder RETURN) that led to this escalation. Note which tracked issue(s) this ask will resolve — they get cleared in Step 4 after the escalation is created.
@@ -114,7 +114,7 @@ If the current session is responding to one or more inbox-tracked issues (check 
   2. Spawn `@plan-ops` with **CLOSE_ISSUE** on the tracked issue — the escalation issue now owns the lifecycle; the eventual answer arrives as a new `for-planner` message.
   3. Remove the tracked issue from the inbox:
      ```bash
-     node tools/dev-tools.cjs inbox remove <tracked-number>
+     node "$AGENT_DIR/tools/dev-tools.cjs" inbox remove <tracked-number>
      ```
 - For each declined: leave it tracked and open for a future `/publish` or `/ask`.
 
@@ -138,7 +138,7 @@ Each confirmed tracked issue is closed at escalation time — the escalation iss
 ## Completion Checklist
 
 - [ ] Target determined (pm or uxui)
-- [ ] Inbox context checked (`node tools/dev-tools.cjs inbox list`)
+- [ ] Inbox context checked (`node "$AGENT_DIR/tools/dev-tools.cjs" inbox list`)
 - [ ] Message includes necessary content for the target
 - [ ] Observations are factual, not prescriptive
 - [ ] User approved the message

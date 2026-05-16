@@ -87,7 +87,7 @@ Wait for confirmation that the issue was created and verified.
 ## Step 5: Resolve Tracked Inbox Issues
 
 ```bash
-node tools/dev-tools.cjs inbox list
+node "$AGENT_DIR/tools/dev-tools.cjs" inbox list
 ```
 
 If no tracked issues — skip to report.
@@ -97,7 +97,7 @@ If tracked issues exist, present each to the user:
 - If user confirms → spawn `@uxui-gh-ops` with operation **RESOLVE_ISSUE** — issue number, resolution summary (reference the new `for-planner` issue number). RESOLVE_ISSUE always closes the issue.
 - After resolving, remove from tracking:
   ```bash
-  node tools/dev-tools.cjs inbox remove <number>
+  node "$AGENT_DIR/tools/dev-tools.cjs" inbox remove <number>
   ```
 - If user declines → leave the issue tracked for future
 

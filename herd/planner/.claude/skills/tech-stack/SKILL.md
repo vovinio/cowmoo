@@ -14,14 +14,14 @@ The skill's job is **leading a structured conversation**: read the specs, ask th
 
 ## Session Detection
 
-Before starting, run `node tools/dev-tools.cjs check-files` and read the `techstack.md:` and `techstack-notes.md:` lines. `cowmoo/stack/techstack.md` is only ever written by this skill itself (Step 7 finalization) — project initialization does not create it — so its existence signals real content.
+Before starting, run `node "$AGENT_DIR/tools/dev-tools.cjs" check-files` and read the `techstack.md:` and `techstack-notes.md:` lines. `cowmoo/stack/techstack.md` is only ever written by this skill itself (Step 7 finalization) — project initialization does not create it — so its existence signals real content.
 
 Treat `exists (empty)` the same as `not found` in the matrix below — an empty file carries no resumable content.
 
 | `techstack-notes.md` | `techstack.md` | Action |
 |-----|-----|--------|
 | `exists` | `not found` | Resume the conversation. Read the notes, summarize where we left off, continue from there. |
-| `exists` | `exists` | Finalization was interrupted. Read `cowmoo/stack/techstack.md` — if it looks complete, confirm with user and delete `cowmoo/agent-files/planner/techstack-notes.md` via `node tools/dev-tools.cjs clear-techstack-notes` (plain `rm` is not in the Bash allow-list). If incomplete, resume from the notes. |
+| `exists` | `exists` | Finalization was interrupted. Read `cowmoo/stack/techstack.md` — if it looks complete, confirm with user and delete `cowmoo/agent-files/planner/techstack-notes.md` via `node "$AGENT_DIR/tools/dev-tools.cjs" clear-techstack-notes` (plain `rm` is not in the Bash allow-list). If incomplete, resume from the notes. |
 | `not found` | `exists` | Tech stack already decided. Show current decisions and ask if they want to amend. Amendments update the existing file — add/change specific decisions without restarting the whole process. |
 | `not found` | `not found` | Fresh start. Begin at step 1. |
 
@@ -29,7 +29,7 @@ Treat `exists (empty)` the same as `not found` in the matrix below — an empty 
 
 ### 0. Verify specs exist — bail if not
 
-Run `node tools/dev-tools.cjs check-files` and read the `domain-specs:` line. It reports how many `*.md` files exist in `$PROJECT_DIR/cowmoo/specs/domains/`. Project initialization creates `$PROJECT_DIR/cowmoo/specs/PRODUCT.md` as a stub template, so its mere existence isn't evidence of real specs — domain files are. PM publishes at least one domain via `/digest` once there's enough to plan from.
+Run `node "$AGENT_DIR/tools/dev-tools.cjs" check-files` and read the `domain-specs:` line. It reports how many `*.md` files exist in `$PROJECT_DIR/cowmoo/specs/domains/`. Project initialization creates `$PROJECT_DIR/cowmoo/specs/PRODUCT.md` as a stub template, so its mere existence isn't evidence of real specs — domain files are. PM publishes at least one domain via `/digest` once there's enough to plan from.
 
 **If `domain-specs: 0`:** stop immediately and tell the user:
 
@@ -112,7 +112,7 @@ Don't present generic pros/cons. Connect every tradeoff to the actual product re
 When all decisions are made:
 1. Read `references/techstack-template.md`, then write `cowmoo/stack/techstack.md` using its structure — clean, structured, permanent
 2. **Self-verify the write.** Re-read `cowmoo/stack/techstack.md` and confirm every decision from `cowmoo/agent-files/planner/techstack-notes.md` is present. If anything is missing or corrupted, re-write before proceeding — do NOT delete the notes yet.
-3. After verification passes, delete `cowmoo/agent-files/planner/techstack-notes.md` via `node tools/dev-tools.cjs clear-techstack-notes` (allowed through the `Bash(node tools/*)` allow-list; plain `rm` is not permitted). This ensures session detection correctly hits "already decided" next time.
+3. After verification passes, delete `cowmoo/agent-files/planner/techstack-notes.md` via `node "$AGENT_DIR/tools/dev-tools.cjs" clear-techstack-notes` (allowed through the `Bash(node tools/*)` allow-list; plain `rm` is not permitted). This ensures session detection correctly hits "already decided" next time.
 4. Suggest running `/publish` to commit and push, then `/start` to begin planning
 
 ## Technology Evaluation Criteria

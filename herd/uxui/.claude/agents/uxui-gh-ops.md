@@ -244,7 +244,7 @@ Issue-creation operations add their created issue to the project board as a fina
 
 **Execute** (with the number of the just-created issue):
 ```bash
-node tools/dev-tools.cjs board-add <number>
+node "$AGENT_DIR/tools/dev-tools.cjs" board-add <number>
 ```
 
 The subcommand always exits 0 and prints exactly one line:

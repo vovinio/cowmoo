@@ -68,7 +68,7 @@ If PUSH fails (network, auth, conflict), surface the error to the user. The loca
 If spec files were committed, decide whether to suggest `/notify` based on project lifecycle. Run:
 
 ```bash
-node tools/dev-tools.cjs downstream-engaged
+node "$AGENT_DIR/tools/dev-tools.cjs" downstream-engaged
 ```
 
 The helper checks two file-artifact signals — both are paths PM is denied from writing, so any content there is proof the downstream agent itself has run: `cowmoo/stack/techstack.md` has content (planner ran `/tech-stack`) or `cowmoo/design/domains/` has files (UXUI has written domains). Exit 0 = engaged, exit 1 = greenfield.

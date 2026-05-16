@@ -90,7 +90,7 @@ Wait for confirmation that the issue was created and verified.
 ## Step 5: Check Tracked Inbox Issues
 
 ```bash
-node tools/dev-tools.cjs inbox list
+node "$AGENT_DIR/tools/dev-tools.cjs" inbox list
 ```
 
 If no tracked issues — skip to report.
@@ -103,7 +103,7 @@ If tracked issues exist, the `inbox list` output is `<number>\t<title>` per line
    - **If no announcement was created** (Step 1 target was `none`, OR Step 2 found no spec changes) → resolve with action **close** and a plain resolution comment. The originator will see the closed issue with PM's comment but no fresh inbox notification — flag this trade-off to the user.
 3. After resolving, remove from tracking:
    ```bash
-   node tools/dev-tools.cjs inbox remove <number>
+   node "$AGENT_DIR/tools/dev-tools.cjs" inbox remove <number>
    ```
 4. If user declines → leave the issue tracked for a future `/notify`.
 

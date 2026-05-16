@@ -131,7 +131,7 @@ The human designer can now pick up any uxui:todo task. When they submit
 Then clear the draft automatically — the GitHub issues are now the source of truth; the draft has served its purpose:
 
 ```bash
-node tools/dev-tools.cjs design-draft clear
+node "$AGENT_DIR/tools/dev-tools.cjs" design-draft clear
 ```
 
 Rationale: the draft is a pre-publish scratch per `CLAUDE.md` scope table; after a full publish, re-running `/design-draft` rebuilds from the live conversation if the user wants another batch. Keeping the draft on disk post-publish is what used to cause silent duplicate-issue creation on re-runs.

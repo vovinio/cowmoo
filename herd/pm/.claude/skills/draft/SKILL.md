@@ -16,7 +16,7 @@ Extract everything discussed in this session and save it to working notes.
 
 ### 0. Check Project Exists
 
-Run `node tools/dev-tools.cjs check-files` and read the `working-notes:` line.
+Run `node "$AGENT_DIR/tools/dev-tools.cjs" check-files` and read the `working-notes:` line.
 
 - **If `working-notes: not found`** — tell the user: "No project initialized. Run /start to begin." and stop.
 

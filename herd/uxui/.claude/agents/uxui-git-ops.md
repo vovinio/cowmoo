@@ -30,7 +30,7 @@ General Phase A commit — stages all UXUI-territory changes (UI definitions, wo
 
 **Execute:**
 ```bash
-node tools/dev-tools.cjs commit general "$(cat <<'EOF'
+node "$AGENT_DIR/tools/dev-tools.cjs" commit general "$(cat <<'EOF'
 <message>
 EOF
 )"
@@ -47,7 +47,7 @@ EOF
 **Report:** Relay the subcommand's output **verbatim** to UXUI — every line, including any `Note:` or recovery line. Do not paraphrase: the `✓` / `✗` / `Nothing to commit` markers are what the `/publish` skill keys on.
 
 **Rules:**
-- **The subcommand is the implementation.** Never hand-roll `git add` / `git commit` in this operation — `node tools/dev-tools.cjs commit general` owns the canonical procedure (pathspec restriction, merge guard, index-lock retry, hash-pinned verify). If the procedure needs to change, change `dev-tools.cjs`, not this file.
+- **The subcommand is the implementation.** Never hand-roll `git add` / `git commit` in this operation — `node "$AGENT_DIR/tools/dev-tools.cjs" commit general` owns the canonical procedure (pathspec restriction, merge guard, index-lock retry, hash-pinned verify). If the procedure needs to change, change `dev-tools.cjs`, not this file.
 - **Relay verbatim.** The exit code and the report line drive the caller's flow; don't reword them.
 - **Foreign content in commit is a hard fail.** If the subcommand reports `COMMIT: ✗ commit contains paths outside territory`, the commit was created but the publish flow stops. Do not push.
 
@@ -59,7 +59,7 @@ Push the current branch to the configured remote, via the canonical `push` subco
 
 **Execute:**
 ```bash
-node tools/dev-tools.cjs push
+node "$AGENT_DIR/tools/dev-tools.cjs" push
 ```
 
 **Interpret the output** — the subcommand prints exactly one report and sets the exit code:
@@ -73,7 +73,7 @@ node tools/dev-tools.cjs push
 **Report:** Relay the subcommand's output **verbatim** — the `✓` / `skipped` / `✗` markers are what the calling skill keys on. Do not paraphrase.
 
 **Rules:**
-- **The subcommand is the implementation.** Never hand-roll `git push` here — `node tools/dev-tools.cjs push` owns the canonical procedure. If it needs to change, change `dev-tools.cjs`, not this file.
+- **The subcommand is the implementation.** Never hand-roll `git push` here — `node "$AGENT_DIR/tools/dev-tools.cjs" push` owns the canonical procedure. If it needs to change, change `dev-tools.cjs`, not this file.
 - **Push failure does NOT roll back the commit.** The local commit is correct; only the remote sync failed. Surface the `✗` report and continue with the rest of the calling skill (e.g., `/review-bundle` still flips the label after `ATTACH_DESIGN`).
 - **Relay verbatim.** The exit code and report line drive the caller's flow; don't reword them.
 
@@ -87,7 +87,7 @@ Scoped commit for role-vocabulary additions, via the canonical `commit` subcomma
 
 **Execute:**
 ```bash
-node tools/dev-tools.cjs commit roles "$(cat <<'EOF'
+node "$AGENT_DIR/tools/dev-tools.cjs" commit roles "$(cat <<'EOF'
 <message>
 EOF
 )"
@@ -104,7 +104,7 @@ EOF
 **Report:** Relay the subcommand's output **verbatim** to UXUI — every line, including any `Note:` or recovery line. Do not paraphrase: the `✓` / `✗` / `Nothing to commit` markers are what `/review-bundle` keys on.
 
 **Rules:**
-- **The subcommand is the implementation.** Never hand-roll `git add` / `git commit` — `node tools/dev-tools.cjs commit roles` owns the canonical procedure. If it needs to change, change `dev-tools.cjs`.
+- **The subcommand is the implementation.** Never hand-roll `git add` / `git commit` — `node "$AGENT_DIR/tools/dev-tools.cjs" commit roles` owns the canonical procedure. If it needs to change, change `dev-tools.cjs`.
 - **`roles` mode is strict.** The subcommand's `roles` profile commits and verifies `cowmoo/design/roles.md` ONLY — broader scope is what mode `general` (the COMMIT op) is for.
 - **Relay verbatim.** The exit code and the report line drive the caller's flow; don't reword them.
 
@@ -118,7 +118,7 @@ Specialized commit for attaching a bundle reference to a domain file AND the cor
 
 **Execute:** Build the commit message `design(<domain>): attach bundle + journal for <screen> (ticket #<ticket>)`, then:
 ```bash
-node tools/dev-tools.cjs commit attach-design <domain> "design(<domain>): attach bundle + journal for <screen> (ticket #<ticket>)"
+node "$AGENT_DIR/tools/dev-tools.cjs" commit attach-design <domain> "design(<domain>): attach bundle + journal for <screen> (ticket #<ticket>)"
 ```
 
 If either target path has no changes, the subcommand simply commits the one that does (or reports `Nothing to commit.` if neither changed) — an idempotent re-run where only the journal needs a refresh is fine.
@@ -134,7 +134,7 @@ If either target path has no changes, the subcommand simply commits the one that
 **Report:** Relay the subcommand's output **verbatim** to UXUI — every line, including any `Note:` or recovery line. Do not paraphrase: the `✓` / `✗` / `Nothing to commit` markers are what `/review-bundle` keys on.
 
 **Rules:**
-- **The subcommand is the implementation.** Never hand-roll `git add` / `git commit` — `node tools/dev-tools.cjs commit attach-design` owns the canonical procedure. If it needs to change, change `dev-tools.cjs`.
+- **The subcommand is the implementation.** Never hand-roll `git add` / `git commit` — `node "$AGENT_DIR/tools/dev-tools.cjs" commit attach-design` owns the canonical procedure. If it needs to change, change `dev-tools.cjs`.
 - **`attach-design` mode is scoped to the two paths.** The subcommand's `attach-design` profile commits and verifies a `cowmoo/design/domains/*.md` file plus `cowmoo/design/VISUAL-JOURNAL.md` — nothing else, not even other UXUI-territory files.
 - **Relay verbatim.** The exit code and the report line drive the caller's flow; don't reword them.
 

@@ -1,6 +1,6 @@
 ---
 name: pm-bundle-ops
-description: Download a Claude Designer share URL and extract it to a transient temp directory for PM to read. No project files, no git. Wraps `node tools/dev-tools.cjs design-fetch`.
+description: Download a Claude Designer share URL and extract it to a transient temp directory for PM to read. No project files, no git. Wraps `node "$AGENT_DIR/tools/dev-tools.cjs" design-fetch`.
 tools: Bash
 model: sonnet
 maxTurns: 5
@@ -8,11 +8,12 @@ maxTurns: 5
 
 # PM Bundle Ops
 
-Single-purpose agent: take a Claude Designer share URL and extract the bundle to `/tmp/pm-import-<timestamp>/` so PM's `/import-design` can read it. The bundle is transient — there is no commit, no `meta.json`, no project artifact. The actual work runs in `node tools/dev-tools.cjs design-fetch`. Your job is to invoke it, parse the result, and report back.
+Single-purpose agent: take a Claude Designer share URL and extract the bundle to `/tmp/pm-import-<timestamp>/` so PM's `/import-design` can read it. The bundle is transient — there is no commit, no `meta.json`, no project artifact. The actual work runs in `node "$AGENT_DIR/tools/dev-tools.cjs" design-fetch`. Your job is to invoke it, parse the result, and report back.
 
 ## Environment
 
-- `$PROJECT_DIR` — absolute path to the project root. (Not used for the fetch itself, but the dev-tools script lives at `$PROJECT_DIR/tools/dev-tools.cjs` once the agent is launched from the cowmoo repo; you call it with the working dir already set.)
+- `$AGENT_DIR` — absolute path to the agent directory. The dev-tools script lives at `$AGENT_DIR/tools/dev-tools.cjs`; invoke it with that absolute path.
+- `$PROJECT_DIR` — absolute path to the project root. Not used by the fetch itself — the bundle extracts to a transient `/tmp/` directory.
 
 ## Input from PM
 
@@ -26,7 +27,7 @@ The `/import-design` skill provides:
 Run the dev-tools command:
 
 ```bash
-node tools/dev-tools.cjs design-fetch "<url>"
+node "$AGENT_DIR/tools/dev-tools.cjs" design-fetch "<url>"
 ```
 
 The script does:
