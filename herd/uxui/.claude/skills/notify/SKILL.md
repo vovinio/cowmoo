@@ -49,7 +49,7 @@ git -C "$PROJECT_DIR" diff "${PUBLISH_SHA}^" "$PUBLISH_SHA" -- cowmoo/design/rol
 
 If `PUBLISH_SHA` is the very first commit in the repo, `${PUBLISH_SHA}^` does not resolve. In that case, skip the role-diff and treat all roles in `cowmoo/design/roles.md` as added — by the same "added roles have no in-flight consumers" rule, no role-based notification is needed.
 
-**For each role name appearing in the diff as modified or removed (added roles have no in-flight consumers and can be ignored), match PRDs whose body mentions that role name anywhere. Removals matter as much as in-place edits — `/review` can delete unused-by-domain-files roles that an in-flight PRD still references, and the planner needs to know. Role names are unique hyphenated tokens (`primary-action`, `destructive`, `muted-text`, `tight-spacing` — see `.claude/rules/ui-vocabulary.md`), so substring matching on the name is safe.** Collect the matching task numbers.
+**For each role name appearing in the diff as modified or removed (added roles have no in-flight consumers and can be ignored), match PRDs whose body mentions that role name anywhere. Removals matter as much as in-place edits — `/review` can delete unused-by-domain-files roles that an in-flight PRD still references, and the planner needs to know. Role names are unique hyphenated tokens (`primary-action`, `destructive-action`, `text-muted`, `space-tight` — see `.claude/rules/ui-vocabulary.md`), so substring matching on the name is safe.** Collect the matching task numbers.
 
 - **No matching tasks and no tracked inbox items** — report "Nothing to notify about." and stop.
 - **Matching tasks exist OR tracked inbox items exist** — proceed.
@@ -150,7 +150,7 @@ Before finishing, confirm:
 ## Rules
 
 - **Scope to actual consumers** — only notify the planner when active tasks reference the changed files. Fresh-domain updates with no downstream tasks don't need a notification; the planner reads cowmoo/design/ fresh when drafting.
-- **roles.md matches by role name, not path.** PRDs don't contain the string `cowmoo/design/roles.md` — they cite roles by name (`primary-action`, `muted-text`). When roles.md changes, diff the commit to extract role names that were modified or removed and match any PRD that mentions them. Added roles have no in-flight consumers and can be skipped; modifications and removals both need notification.
+- **roles.md matches by role name, not path.** PRDs don't contain the string `cowmoo/design/roles.md` — they cite roles by name (`primary-action`, `text-muted`). When roles.md changes, diff the commit to extract role names that were modified or removed and match any PRD that mentions them. Added roles have no in-flight consumers and can be skipped; modifications and removals both need notification.
 - **Observational, not prescriptive** — the impact description states facts about what changed, not instructions for what the recipient should do.
 - **User decides** — present your recommendation, let the user confirm or adjust.
 - **Inbox resolution belongs here** — `/catchup` tracks items; `/notify` closes them when the cowmoo/design/ work that addresses them ships.

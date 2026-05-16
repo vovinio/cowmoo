@@ -246,12 +246,15 @@ If any `[future]` items remain in working notes that weren't associated with a p
 
 ### Remaining in Working Notes
 - [N] untagged items (still in discussion)
+- [N] ready items in domain(s) not processed this run — re-run /digest to handle them
 
 ### Proposed & Confirmed
 - [What you proposed that user confirmed]
 
 **Next:** Run /review to verify spec integrity, then /publish to ship.
 ```
+
+Include the "ready items in domain(s) not processed" line only when Step 4 processed one of multiple domains that had `[ready]` items, leaving at least one domain's ready items behind; omit it otherwise (single-domain runs leave no ready items behind).
 
 **Heavy-digest companion (HTML).** When this digest wrote **substantial** content — multiple items or sections across one or more spec files, or a new entity or feature — also deliver the report as an HTML companion the user can review before shipping:
 

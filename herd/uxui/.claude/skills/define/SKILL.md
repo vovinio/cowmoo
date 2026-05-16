@@ -152,9 +152,12 @@ Remove items successfully written to `cowmoo/design/` files. Keep untagged and o
 
 ### Remaining in Working Notes
 - [N] untagged items (still in discussion)
+- [N] ready items in domain(s) not processed this run — re-run /define to handle them
 
 **Next:** Run /review to verify spec coverage, then /publish to commit and push.
 ```
+
+Include the "ready items in domain(s) not processed" line only when Step 3d's picker was used and at least one non-selected domain still has `[ready]` items; omit it otherwise (single-domain runs leave no ready items behind).
 
 ---
 

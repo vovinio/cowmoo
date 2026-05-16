@@ -19,7 +19,7 @@ Work this task by pasting the **Claude Design Prompt** below into [claude.ai/des
 
 **Pay attention to:**
 - [bullet specific to this screen — e.g. "the empty state copy must match the spec's onboarding tone"]
-- [bullet — e.g. "submit button uses the primary-action role; cancel uses muted-text"]
+- [bullet — e.g. "submit button uses the primary-action role; cancel uses text-muted"]
 - [bullet — e.g. "form validation runs on blur, not on submit"]
 
 **Acceptance:**

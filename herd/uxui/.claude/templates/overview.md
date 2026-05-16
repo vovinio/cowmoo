@@ -50,7 +50,7 @@ Example:
 Read these sibling files for the rest of the UX picture:
 
 - **`cowmoo/design/journeys.md`** — end-to-end user arcs (onboarding, daily-use loop, admin configuration, etc.)
-- **`cowmoo/design/roles.md`** — role vocabulary that domain files reference (primary-action, destructive, muted-text, tight-spacing, etc.)
+- **`cowmoo/design/roles.md`** — role vocabulary that domain files reference (primary-action, destructive-action, text-muted, space-tight, etc.)
 - **`cowmoo/design/screen-index.md`** — master list of every screen organized by domain
 - **`cowmoo/design/domains/*.md`** — per-domain screens, flows, states, interactions
 

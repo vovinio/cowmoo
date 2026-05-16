@@ -41,7 +41,7 @@ For every button, link, and interactive control:
 
 Domain files reference roles from `cowmoo/design/roles.md` by name — never raw values.
 
-- `primary-action`, `destructive`, `muted-text`, `tight-spacing` — role names
+- `primary-action`, `destructive-action`, `text-muted`, `space-tight` — role names
 - `bg-primary-600`, `#F59E0B`, `8px`, `font-weight: 600` — raw values (never in cowmoo/design/ files)
 
 Concrete values are resolved downstream: `src/` after build, `cowmoo/agent-files/builder/BUILD-NOTES.md` for builder rules, framework defaults otherwise.

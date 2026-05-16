@@ -1,6 +1,6 @@
 ---
 name: uxui-gh-ops
-description: Execute GitHub operations only — create issues (for-pm, for-planner, design stories, design tasks), post comments, change labels, close issues. Always verifies each step.
+description: Execute GitHub operations only — create issues (for-pm, for-planner, design tasks), post comments, change labels, close issues. Always verifies each step.
 tools: Bash
 model: sonnet
 maxTurns: 20
@@ -57,7 +57,7 @@ Confirm issue created with `for-pm` label.
 
 ### CREATE_FOR_PLANNER
 
-Send a message to the planner. Used by `/notify planner` (announce cowmoo/design/ changes) and `/ask planner` (respond to a planner `ui-*` message with a finding).
+Send a message to the planner. Used by `/notify planner` (announce cowmoo/design/ changes) and `/ask planner` (respond to a `for-uxui` message with a finding).
 
 **Input from UXUI:** title, body
 

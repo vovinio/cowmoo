@@ -29,7 +29,7 @@ Go through the current conversation and extract:
 - **Design intent signals** — density/formality/mood decisions or observations about the product's character (feeds OVERVIEW.md Design Intent)
 - **Navigation decisions** — top-level shape, primary/secondary nav, entry points (feeds OVERVIEW.md Navigation)
 - **User journeys** — end-to-end arcs that span multiple screens or domains (feeds journeys.md)
-- **Role vocabulary** — new role names that emerged during discussion (primary-action, destructive, tight-spacing, etc. — feeds roles.md)
+- **Role vocabulary** — new role names that emerged during discussion (primary-action, destructive-action, space-tight, etc. — feeds roles.md)
 - **Screen definitions** — layout decisions, component choices, information hierarchy (feeds domains/*.md)
 - **State definitions** — states applicable to each screen per `.claude/rules/ui-vocabulary.md` (data states for data-fetching screens, form states for forms)
 - **Interaction patterns** — how users interact (inline editing, modals, wizards, etc.)
