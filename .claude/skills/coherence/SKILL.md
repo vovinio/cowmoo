@@ -20,6 +20,7 @@ Every MCP tool an agent declares (in sub-agent `tools:` frontmatter, skill `allo
 ### Discovery
 
 ```bash
+setopt NULL_GLOB 2>/dev/null || shopt -s nullglob 2>/dev/null || true  # zsh: unmatched globs → empty, not fatal
 # MCP servers configured at project level (gitignored; may be absent)
 for f in herd/*/.mcp.json; do [ -f "$f" ] && echo "$f:"; [ -f "$f" ] && jq -r '.mcpServers | keys[]' "$f" 2>/dev/null; done
 
@@ -47,6 +48,7 @@ Skills and agents that assume environment state (headless/headed browser, auth f
 ### Discovery
 
 ```bash
+setopt NULL_GLOB 2>/dev/null || shopt -s nullglob 2>/dev/null || true  # zsh: unmatched globs → empty, not fatal
 rg -n "(--headless|--headed|--persistent|state-load|state-save|\.auth/|detect-dev-servers|localhost:[0-9]+|--chrome)" \
    herd/*/.claude/agents/*.md herd/*/.claude/skills/*/SKILL.md
 ```
@@ -89,6 +91,7 @@ Semi-automated: this section requires the LLM to read each skill's prose and rea
 
 1. Find skills with numbered steps:
    ```bash
+   setopt NULL_GLOB 2>/dev/null || shopt -s nullglob 2>/dev/null || true  # zsh: unmatched globs → empty, not fatal
    grep -rnE '^## (Step|Phase) [0-9]' herd/*/.claude/skills/*/SKILL.md
    ```
 2. For each, build a mental model: what each step needs as input, what it produces as output.

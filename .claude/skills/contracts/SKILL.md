@@ -29,6 +29,7 @@ Every `@<agent>-ops OPERATION` invocation in a skill must pass only parameters t
 ### Discovery
 
 ```bash
+setopt NULL_GLOB 2>/dev/null || shopt -s nullglob 2>/dev/null || true  # zsh: unmatched globs → empty, not fatal
 # Invocations across all skills
 grep -rnE '@[a-z-]+-ops[^)]* [A-Z][A-Z_]{2,}' herd/*/.claude/skills/*/SKILL.md
 
@@ -54,6 +55,7 @@ Every message category a `/catchup` (or reader sub-agent) handles must have at l
 ### Discovery
 
 ```bash
+setopt NULL_GLOB 2>/dev/null || shopt -s nullglob 2>/dev/null || true  # zsh: unmatched globs → empty, not fatal
 # Categories handled in each /catchup
 grep -rnE '^### ' herd/*/.claude/skills/catchup/SKILL.md
 
@@ -81,6 +83,7 @@ Every persistent state file should have a complete write → read → remove cha
 State files are NOT hardcoded in this skill. They are discovered from the owning agent's CLAUDE.md "Files You Write" table and from dev-tools.cjs references.
 
 ```bash
+setopt NULL_GLOB 2>/dev/null || shopt -s nullglob 2>/dev/null || true  # zsh: unmatched globs → empty, not fatal
 # Files each agent writes (from CLAUDE.md tables)
 for agent in pm uxui planner builder; do
   awk '/^## Files You Write/,/^## /' "herd/$agent/CLAUDE.md"
@@ -131,6 +134,7 @@ Skill argument values must name real agents AND must not name the skill's own ow
 ### Discovery
 
 ```bash
+setopt NULL_GLOB 2>/dev/null || shopt -s nullglob 2>/dev/null || true  # zsh: unmatched globs → empty, not fatal
 grep -rnE '^argument-hint: ' herd/*/.claude/skills/*/SKILL.md
 ```
 
@@ -203,6 +207,7 @@ Every sub-agent listed in an agent's CLAUDE.md "Available Agents" must be spawne
 ### Discovery
 
 ```bash
+setopt NULL_GLOB 2>/dev/null || shopt -s nullglob 2>/dev/null || true  # zsh: unmatched globs → empty, not fatal
 # Declared sub-agents
 rg "^- \`@[a-z-]+\`" herd/*/CLAUDE.md
 

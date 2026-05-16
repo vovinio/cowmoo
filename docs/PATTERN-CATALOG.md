@@ -9,7 +9,7 @@ Every pattern has five fields:
 - **Purpose** — why the pattern exists (the invariant it enforces).
 - **Canonical shape** — what every instance MUST have. The actual check content.
 - **Reference implementation** — one file to read to see the shape in situ. Not a comprehensive list.
-- **Find instances** — a grep/glob recipe to enumerate all current instances in the repo. Discovery-based; no hand-maintained list.
+- **Find instances** — a shell recipe (`find` / `rg`) to enumerate all current instances in the repo. Discovery-based; no hand-maintained list. Recipes avoid bare `herd/*/…` shell globs — an unmatched glob aborts under zsh — letting `find`/`rg` do the path matching internally instead.
 - **Declared exceptions** — pointer to `.claude/asymmetries/<agent>.md` if an agent deliberately diverges. Each exception lives exactly once, owned by the agent, not reduplicated across skills.
 
 What this file does NOT contain:
@@ -77,7 +77,7 @@ Patterns that constrain the structure of each herd agent.
 
 **Reference implementation.** `herd/pm/`
 
-**Find instances.** `ls -d herd/*/`
+**Find instances.** `find herd -mindepth 1 -maxdepth 1 -type d`
 
 **Declared exceptions.** None expected — every herd agent follows this shape.
 
@@ -110,7 +110,7 @@ Optional (agent-specific): `checkFiles`, `inbox` subcommand, `detectDevServers`,
 
 **Reference implementation.** `herd/pm/tools/dev-tools.cjs` (for TERRITORY-style allow-list) and `herd/builder/tools/dev-tools.cjs` (for FORBIDDEN-style deny-list).
 
-**Find instances.** `ls herd/*/tools/dev-tools.cjs`
+**Find instances.** `find herd -path '*/tools/dev-tools.cjs'`
 
 **Declared exceptions.** Builder's use of `FORBIDDEN` instead of `TERRITORY` is deliberate (its territory is defined by exclusion — everything outside `cowmoo/` is code). See `.claude/asymmetries/builder.md`.
 
@@ -134,7 +134,7 @@ Required behavior:
 
 **Reference implementation.** `herd/pm/tools/statusline.sh`
 
-**Find instances.** `ls herd/*/tools/statusline.sh`
+**Find instances.** `find herd -path '*/tools/statusline.sh'`
 
 **Declared exceptions.** Agent-specific content on line 2 differs by design (PM shows `for-pm` counts; planner shows task counts; etc.). This is instance variation, not a pattern exception.
 
@@ -159,7 +159,7 @@ Required invariants:
 
 **Reference implementation.** `herd/pm/.claude/settings.json`
 
-**Find instances.** `ls herd/*/.claude/settings.json`
+**Find instances.** `find herd -path '*/.claude/settings.json'`
 
 **Declared exceptions.** Per-agent additional allows (WebSearch/WebFetch for PM/UXUI/planner; build tools for builder; `Bash(open *)` for PM) are instance variation, not pattern exceptions — captured in the agent's own settings.json.
 
@@ -183,7 +183,7 @@ Required conventions:
 
 **Reference implementation.** The `hooks` block in `herd/pm/.claude/settings.json`.
 
-**Find instances.** `jq .hooks herd/*/.claude/settings.json`
+**Find instances.** `find herd -path '*/.claude/settings.json' -exec jq .hooks {} +`
 
 **Declared exceptions.** None — all four hooks appear in all four agents.
 
@@ -222,7 +222,7 @@ Required conventions:
 
 **Reference implementation.** `herd/pm/.claude/agents/pm-ops.md`
 
-**Find instances.** `ls herd/*/.claude/agents/*-ops.md`
+**Find instances.** `find herd -path '*/.claude/agents/*-ops.md'`
 
 **Declared exceptions.** None — count is per-agent. Planner and builder currently have one ops sub-agent each; PM has two (`@pm-ops` for GitHub/git, `@pm-bundle-ops` for transient Claude Designer share-URL fetch); UXUI has four (`@uxui-gh-ops`, `@uxui-git-ops`, `@uxui-bundle-ops`, `@uxui-journal-ops`). Each instance is checked against the canonical shape regardless of its agent's count.
 
@@ -243,7 +243,7 @@ Required conventions:
 
 **Reference implementation.** `herd/builder/.claude/agents/check-security.md`
 
-**Find instances.** `rg -l "rules/[a-z-]+\.md" herd/*/.claude/agents/` — any sub-agent referencing a rule file MUST apply this pattern.
+**Find instances.** `rg -l --hidden "rules/[a-z-]+\.md" -g '**/.claude/agents/**' herd/` — any sub-agent referencing a rule file MUST apply this pattern.
 
 **Declared exceptions.** None. This pattern is mandatory for every sub-agent that references a rule file.
 
@@ -263,7 +263,7 @@ Required conventions:
 
 **Reference implementation.** `herd/pm/.claude/agents/proposal-writer.md`
 
-**Find instances.** `ls herd/*/.claude/agents/proposal-writer.md`
+**Find instances.** `find herd -path '*/.claude/agents/proposal-writer.md'`
 
 **Declared exceptions.** None. The four instances should differ only in the hard-coded agent name and target path.
 
@@ -292,7 +292,7 @@ Spawning convention:
 
 **Reference implementation.** `herd/builder/.claude/agents/check-security.md` + `herd/builder/.claude/agents/check-verify.md`
 
-**Find instances.** `ls herd/*/.claude/agents/check-*.md`
+**Find instances.** `find herd -path '*/.claude/agents/check-*.md'`
 
 **Declared exceptions.** Only builder currently runs the full pattern end-to-end (parallel check agents + `@check-verify` opus verifier) — see `.claude/asymmetries/builder.md`. PM, UXUI, and planner use the detection-only half of the pattern: one or more parallel check agents whose findings are presented directly to the user. Verifier absence is an intentional choice — prose-domain checks (PM specs, planner PRDs, UXUI coverage) have lower false-positive rates than code-domain checks, and the user can eyeball findings directly.
 
@@ -362,7 +362,7 @@ The statusline and `known`-list check don't care which bucket a skill is in — 
 
 **Reference implementation.** `inbox*` functions in `herd/pm/tools/dev-tools.cjs`.
 
-**Find instances.** `rg "dev-tools.cjs inbox" herd/*/.claude/skills/`
+**Find instances.** `rg --hidden "dev-tools.cjs inbox" -g '**/.claude/skills/**' herd/`
 
 **Declared exceptions.** Builder does not have an inbox tracker — its communication is task-comment-based (builder ↔ planner via task comments), not cross-agent labeled issues. See `.claude/asymmetries/builder.md`.
 
@@ -438,8 +438,8 @@ If linking fails but the issue was created, the task number is valid and the ope
 - Sub-issue linkage: `### CREATE_TASK` in `herd/planner/.claude/agents/plan-ops.md`.
 
 **Find instances.**
-- Project-board: `rg "gh issue create" herd/*/.claude/agents/*-ops.md` — every issue-creating operation must route to the `node tools/dev-tools.cjs board-add` subcommand, either directly or via the agent's `## Project Board` section. `gh project list` or `gh project item-add` is a violation, and so is an inline `addProjectV2ItemById` mutation in an ops-agent file (it belongs in `boardAddOp`).
-- Sub-issue: `rg "addSubIssue" herd/*/.claude/agents/*-ops.md` — currently only planner's `@plan-ops`. If another agent later creates nested structures, it must use this mutation rather than `gh issue edit` or hand-rolled cross-references.
+- Project-board: `rg --hidden "gh issue create" -g '**/.claude/agents/*-ops.md' herd/` — every issue-creating operation must route to the `node tools/dev-tools.cjs board-add` subcommand, either directly or via the agent's `## Project Board` section. `gh project list` or `gh project item-add` is a violation, and so is an inline `addProjectV2ItemById` mutation in an ops-agent file (it belongs in `boardAddOp`).
+- Sub-issue: `rg --hidden "addSubIssue" -g '**/.claude/agents/*-ops.md' herd/` — currently only planner's `@plan-ops`. If another agent later creates nested structures, it must use this mutation rather than `gh issue edit` or hand-rolled cross-references.
 
 **Declared exceptions.** Ops agents that don't create issues (`@uxui-git-ops`, `@uxui-bundle-ops`, `@uxui-journal-ops`) don't need either half of this pattern.
 
@@ -458,7 +458,7 @@ If linking fails but the issue was created, the task number is valid and the ope
 
 **Reference implementation.** `## Identity` section in `herd/pm/.claude/rules/github-workflow.md`.
 
-**Find instances.** `rg "^## Identity" herd/*/.claude/rules/github-workflow.md`
+**Find instances.** `rg --hidden "^## Identity" -g '**/.claude/rules/github-workflow.md' herd/`
 
 **Declared exceptions.** None. Every agent uses an identity prefix.
 
@@ -488,7 +488,7 @@ Optional:
 
 **Reference implementation.** `herd/builder/.claude/skills/start/SKILL.md` frontmatter.
 
-**Find instances.** `rg -A1 "^---$" herd/*/.claude/skills/*/SKILL.md | head -30` — every skill's frontmatter.
+**Find instances.** `rg -A1 --hidden "^---$" -g '**/.claude/skills/*/SKILL.md' herd/ | head -30` — every skill's frontmatter.
 
 **Declared exceptions.** Installed third-party skills (e.g., `playwright-cli` installed via its own CLI) use upstream frontmatter conventions and are not checked against the required-keys list. Detected by presence of `allowed-tools:` **combined with absence of `user-invocable:` and `disable-model-invocation:`**. Authored skills that additionally use `allowed-tools:` for defense-in-depth still fall under the canonical shape and are checked normally.
 
@@ -512,7 +512,7 @@ If a rule would only be useful inside one specific skill, it's skill content —
 
 **Reference implementation.** `herd/builder/.claude/rules/github-workflow.md` (short + always-needed + Read by multiple sub-agents — earns its place on both criteria).
 
-**Find instances.** `ls herd/*/.claude/rules/*.md`
+**Find instances.** `find herd -path '*/.claude/rules/*.md'`
 
 **Declared exceptions.** The only `paths:`-scoped rule in the repo is `.claude/rules/agent-files.md` at the curator root, scoped to `herd/**` for curator editing sessions. Herd rules themselves are always unconstrained.
 
@@ -539,7 +539,7 @@ Applies to any skill whose body invokes N > 1 side-effecting operations in seque
 - `herd/planner/.claude/skills/publish/SKILL.md` "Partial-failure recovery" section (clear-draft / commit / GitHub issue creation failure modes).
 - `herd/builder/.claude/skills/publish/SKILL.md` Step 4 "If any step fails" guidance.
 
-**Find instances.** Any skill whose body invokes ≥ 2 ops operations, spawns ≥ 2 sub-agents with side effects, or writes files AND creates issues. `rg -l "partial.failure|recovery|roll back" herd/*/.claude/skills/*/SKILL.md` surfaces the explicitly-documented ones; inspect the rest to confirm they don't need recovery guidance.
+**Find instances.** Any skill whose body invokes ≥ 2 ops operations, spawns ≥ 2 sub-agents with side effects, or writes files AND creates issues. `rg -l --hidden "partial.failure|recovery|roll back" -g '**/.claude/skills/*/SKILL.md' herd/` surfaces the explicitly-documented ones; inspect the rest to confirm they don't need recovery guidance.
 
 **Declared exceptions.** Skills with a single side-effecting operation (e.g., `/notify` creates one issue, `/draft` writes one file) don't need a recovery section — a retry is either idempotent or the user sees the failure immediately and knows what to do. The pattern applies when N > 1.
 
@@ -563,7 +563,7 @@ Applies to any skill whose body invokes N > 1 side-effecting operations in seque
 - `herd/planner/.claude/skills/draft/SKILL.md` Step 5 "HARD GATE" (before `/review` consumes the draft).
 - `herd/builder/.claude/skills/publish/SKILL.md` Step 3 "Preview" (before code commit + Record post + task close).
 
-**Find instances.** `rg -l "HARD GATE|before executing|Preview before|Wait for.*confirmation|user confirms|user approv" herd/*/.claude/skills/*/SKILL.md` surfaces most instances. The pattern also applies to any skill whose body commits to git or creates a GitHub issue — the preview step must precede the side effect.
+**Find instances.** `rg -l --hidden "HARD GATE|before executing|Preview before|Wait for.*confirmation|user confirms|user approv" -g '**/.claude/skills/*/SKILL.md' herd/` surfaces most instances. The pattern also applies to any skill whose body commits to git or creates a GitHub issue — the preview step must precede the side effect.
 
 **Declared exceptions.** Quick-capture drafts that just extract conversation and save to scratch files (PM's `/draft`, UXUI's `/draft`, `/tidy`) don't need a hard gate — the user can inspect the saved file before the next skill runs. Compile-and-synthesize drafts that produce substantive output the user needs to validate (planner's `/draft` compiling PRDs, UXUI's `/design-draft` composing task bodies) DO use the pattern — they gate on the synthesis step before it feeds downstream phases that will commit or ship. The distinguishing question is whether a user would want to review the output before advancing, not only whether this skill itself commits or creates issues.
 
@@ -588,7 +588,7 @@ An unbounded loop is always a violation. A cap without an explicit stop-rational
 - `herd/uxui/.claude/skills/design-draft/SKILL.md` Step 7 triage — "Validation runs twice max" with explicit stop-condition prose.
 - `herd/builder/.claude/skills/review/SKILL.md` Step 8 "Re-verify (if needed)" — cap at 2 re-verification rounds with explicit triggers (structural change, 5+ quick fixes across 3+ files, scope expansion). Also runs cheaper `@build-verify` first before LLM re-runs.
 
-**Find instances.** `rg -l "cap at|max.*round|once more|re-verif|re-spawn|regression check" herd/*/.claude/skills/*/SKILL.md` surfaces skills with explicit iteration control. Any skill that spawns a validator sub-agent after fixes (worded as "re-check", "re-verify", or "regression check") must declare the cap.
+**Find instances.** `rg -l --hidden "cap at|max.*round|once more|re-verif|re-spawn|regression check" -g '**/.claude/skills/*/SKILL.md' herd/` surfaces skills with explicit iteration control. Any skill that spawns a validator sub-agent after fixes (worded as "re-check", "re-verify", or "regression check") must declare the cap.
 
 **Declared exceptions.** The pattern applies only to iterative feedback loops (validator → fix → re-validator → fix → …) that could run indefinitely without discipline. Two shapes are NOT iterative loops and don't need the pattern:
 

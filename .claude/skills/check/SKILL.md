@@ -20,6 +20,7 @@ This skill does not read `docs/PATTERN-CATALOG.md`. Pattern-level checks live in
 ### Step 1 — Syntax
 
 ```bash
+setopt NULL_GLOB 2>/dev/null || shopt -s nullglob 2>/dev/null || true  # zsh: unmatched globs → empty, not fatal
 # JavaScript
 for f in herd/*/tools/*.cjs tools/*.cjs; do
   [ -f "$f" ] && (node -c "$f" && echo "  OK: $f" || echo "  FAIL: $f")
@@ -41,6 +42,7 @@ Any FAIL stops the skill immediately — broken syntax cascades into everything 
 Hook commands run on macOS with BSD/POSIX tools. PCRE shorthand doesn't work.
 
 ```bash
+setopt NULL_GLOB 2>/dev/null || shopt -s nullglob 2>/dev/null || true  # zsh: unmatched globs → empty, not fatal
 for f in herd/*/.claude/settings.json .claude/settings.json; do
   [ -f "$f" ] && grep -q '\\s\|\\d\|\\w' "$f" 2>/dev/null && echo "  WARN: $f uses non-POSIX regex (\\s, \\d, or \\w). Use [[:space:]], [[:digit:]], [[:alnum:]_]."
 done
@@ -68,6 +70,7 @@ A broken reference is a broken reference regardless of how it got there — rena
 A real slash-command is one preceded by start-of-line, whitespace, or a backtick AND not followed by `/` or another name character (which would make it a path fragment like `/tmp/foo`). Path segments like `cowmoo/specs/`, `.claude/settings.json`, or `$PROJECT_DIR/agent-files/` are NOT slash-commands. The trailing `(?![a-z0-9/-])` lookahead is what distinguishes them — without the full character class, the greedy `*` backtracks one char at a time and produces nonsense partial matches (e.g., `/tmp/foo` would match as `/tm`).
 
 ```bash
+setopt NULL_GLOB 2>/dev/null || shopt -s nullglob 2>/dev/null || true  # zsh: unmatched globs → empty, not fatal
 for agent in pm uxui planner builder; do
   # Forward: each /<skill> mentioned in CLAUDE.md must resolve to a skill
   # directory — in THIS agent, or (legitimate cross-agent workflow
@@ -120,6 +123,7 @@ Two rg flags are required here: `--hidden` so rg descends into `.claude/` (a hid
 Installed third-party skills (Pattern 16 carveout — detected by `allowed-tools:` present AND both `user-invocable:` and `disable-model-invocation:` absent) often contain `@token` references that aren't sub-agent invocations (NPM package names like `@playwright`, dist-tag refs like `@latest`). Their dirs are excluded from the `@<name>` scan via `--glob`. If a new installed third-party skill is added, extend the exclude list.
 
 ```bash
+setopt NULL_GLOB 2>/dev/null || shopt -s nullglob 2>/dev/null || true  # zsh: unmatched globs → empty, not fatal
 # Build --glob excludes for installed third-party skill dirs.
 # Detection per Pattern 16: allowed-tools present AND neither of the two required keys.
 mk_excludes() {
@@ -200,6 +204,7 @@ For every `@<agent>-ops OPERATION` spawn in a skill body, the operation must exi
 The trailing `(?!-)` rejects hyphenated words like `BUILD-NOTES` (a filename, not an op).
 
 ```bash
+setopt NULL_GLOB 2>/dev/null || shopt -s nullglob 2>/dev/null || true  # zsh: unmatched globs → empty, not fatal
 # Extract (agent, op) pairs from adjacent invocations only.
 # -P enables PCRE2 (needed for the negative lookahead (?!-)).
 rg -N -P -o '@[a-z-]+-ops`?[[:space:]]+[A-Z][A-Z_]{2,}\b(?!-)' \
@@ -230,6 +235,7 @@ Every `case '<x>':` in an agent's `dev-tools.cjs` — whether at the top level o
 **Nested-dispatch aware.** `grep` on `dev-tools.cjs <sub>` alone misses nested calls like `dev-tools.cjs inbox add`. The regex below matches `dev-tools.cjs` followed by any number of intermediate tokens, then the subcommand, then a non-word boundary. This treats both top-level and nested-inner case labels as "called" when any invocation chain ends in that name.
 
 ```bash
+setopt NULL_GLOB 2>/dev/null || shopt -s nullglob 2>/dev/null || true  # zsh: unmatched globs → empty, not fatal
 for agent in pm uxui planner builder; do
   dt="herd/$agent/tools/dev-tools.cjs"
   [ -f "$dt" ] || continue
@@ -280,6 +286,7 @@ rg --hidden "herd/(pm|uxui|planner|builder)/" herd/ && echo "  FAIL: herd/ direc
 For every sub-agent that references a rule file, the Read must live inside a `## Prerequisite` section. This is the same invariant `tools/pattern-check.cjs` enforces at write time; checking here too catches cases where files existed before the hook was wired.
 
 ```bash
+setopt NULL_GLOB 2>/dev/null || shopt -s nullglob 2>/dev/null || true  # zsh: unmatched globs → empty, not fatal
 for f in herd/*/.claude/agents/*.md; do
   rules=$(rg -oN "\.claude/rules/([a-z-]+)\.md" "$f" 2>/dev/null | sed 's|.*/rules/||; s|\.md||' | sort -u)
   [ -z "$rules" ] && continue
