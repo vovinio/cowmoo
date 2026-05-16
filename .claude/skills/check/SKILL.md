@@ -69,7 +69,14 @@ A real slash-command is one preceded by start-of-line, whitespace, or a backtick
 
 ```bash
 for agent in pm uxui planner builder; do
-  # Forward: each /<skill> mentioned in CLAUDE.md must exist on disk.
+  # Forward: each /<skill> mentioned in CLAUDE.md must resolve to a skill
+  # directory — in THIS agent, or (legitimate cross-agent workflow
+  # reference) in another herd agent. Herd agents reference each other's
+  # skills by design: planner names builder's /map-codebase, planner tells
+  # the user to "ask PM to run /digest", builder's /return points at
+  # planner's /catchup. Only a /<skill> that exists in NO herd agent is a
+  # broken reference. (Curator skills like /check live outside herd/ and
+  # are caught by Step 7, not here.)
   # --pcre2 is required for lookbehind; without it rg silently errors out
   # and the check reports a false PASS. The trailing (?![a-z0-9/-]) rejects
   # path fragments like `/tmp/foo`. The full character class is required:
@@ -78,8 +85,14 @@ for agent in pm uxui planner builder; do
   rg -N --pcre2 -o '(?:^|(?<=[\s`]))/[a-z][a-z0-9-]*(?![a-z0-9/-])' "herd/$agent/CLAUDE.md" 2>/dev/null \
     | sed 's|^/||' | sort -u | while read name; do
     [ "$name" = "propose" ] && continue
-    [ -d "herd/$agent/.claude/skills/$name" ] \
-      || echo "  FAIL: herd/$agent/CLAUDE.md mentions /$name but herd/$agent/.claude/skills/$name/ doesn't exist"
+    [ -d "herd/$agent/.claude/skills/$name" ] && continue
+    # Not this agent's skill — legitimate if another herd agent owns it.
+    in_herd=""
+    for other in pm uxui planner builder; do
+      [ -d "herd/$other/.claude/skills/$name" ] && in_herd=1
+    done
+    [ -n "$in_herd" ] && continue
+    echo "  FAIL: herd/$agent/CLAUDE.md mentions /$name but no herd agent has a skills/$name/ directory"
   done
 
   # Reverse: each disk skill is referenced
@@ -150,7 +163,7 @@ done
 
 **4c — Within-agent slash-command references.**
 
-Every `/<skill>` mentioned in a skill or sub-agent body must either (a) be a skill of the same agent, (b) be the universal `/propose`, or (c) be caught by Step 7's de-curation check (curator skills aren't allowed in herd files anyway).
+Every `/<skill>` mentioned in a skill or sub-agent body must either (a) be a skill of the same agent, (b) be a skill of another herd agent (legitimate cross-agent workflow references — see 4a), (c) be the universal `/propose`, or (d) be caught by Step 7's de-curation check (curator skills aren't allowed in herd files anyway).
 
 ```bash
 for agent in pm uxui planner builder; do
@@ -163,8 +176,15 @@ for agent in pm uxui planner builder; do
     | sed 's|^.*:||; s|^/||' | sort -u | while read name; do
     [ -z "$name" ] && continue
     [ "$name" = "propose" ] && continue
-    [ -d "$base/.claude/skills/$name" ] \
-      || echo "  WARN: $agent body references /$name but herd/$agent/.claude/skills/$name/ doesn't exist (may be a curator skill — caught by Step 7, or may be stale)"
+    [ -d "$base/.claude/skills/$name" ] && continue
+    # Cross-agent skill reference is legitimate (see 4a) — only flag a
+    # /<skill> that exists in no herd agent at all.
+    in_herd=""
+    for other in pm uxui planner builder; do
+      [ -d "herd/$other/.claude/skills/$name" ] && in_herd=1
+    done
+    [ -n "$in_herd" ] && continue
+    echo "  WARN: $agent body references /$name but no herd agent has a skills/$name/ directory (may be a curator skill — caught by Step 7, or may be stale)"
   done
 done
 ```

@@ -209,7 +209,7 @@ Body structure:
 - `## Prerequisite` — **required for GitHub-touching ops.** Reads `.claude/rules/github-workflow.md` for canonical identity prefix and label definitions. Omitted for ops agents that don't touch GitHub or labels.
 - `## Operations` — introduces the per-op sections.
 - `### <OP_NAME>` — one section per operation, UPPER_SNAKE_CASE.
-- Each operation has `**Input from <agent>:**` listing accepted parameters (omit the line when the operation takes none), plus Execute and Report subsections. **Non-delegated** operations additionally carry Pre-check / Verify subsections. **Delegated** operations — those invoking a `dev-tools.cjs` subcommand, per the delegation bullets below — replace Pre-check/Verify with an Interpret-output table, since the subcommand owns the pre-checks and verification.
+- Each operation has `**Input from <agent>:**` listing accepted parameters (omit the line when the operation takes none), plus Execute and Report subsections. **Non-delegated** operations additionally carry Pre-check / Verify subsections. **Delegated** operations — those invoking a `dev-tools.cjs` subcommand, per the delegation bullets below — replace Pre-check/Verify with an Interpret-output table, since the subcommand owns the pre-checks and verification. **Single-operation exception:** an ops agent with exactly one operation may hoist its input declaration to a `## Input from <agent>` section between `## Environment` and `## Operations`, instead of the inline `**Input from <agent>:**` line — with one operation there is no per-op disambiguation to preserve. `@pm-bundle-ops` and `@uxui-bundle-ops` use this form.
 
 Required conventions:
 - Every git call uses `git -C "$PROJECT_DIR"`; never bare `git`.

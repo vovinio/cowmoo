@@ -24,7 +24,7 @@ Read:
 
 ## Section 1 — Op parameter contracts
 
-Every `@<agent>-ops OPERATION` invocation in a skill must pass only parameters the operation declares in its `**Input from <agent>:**` line.
+Every `@<agent>-ops OPERATION` invocation in a skill must pass only parameters the operation declares in its `Input from <agent>` declaration.
 
 ### Discovery
 
@@ -32,15 +32,17 @@ Every `@<agent>-ops OPERATION` invocation in a skill must pass only parameters t
 # Invocations across all skills
 grep -rnE '@[a-z-]+-ops[^)]* [A-Z][A-Z_]{2,}' herd/*/.claude/skills/*/SKILL.md
 
-# Operations and their Input declarations
+# Operations and their Input declarations — two shapes (see Check B):
+# the inline `**Input from <agent>:**` line, and the single-op-agent
+# `## Input from <agent>` section heading (Pattern 6).
 grep -rnE '^### [A-Z_]+$' herd/*/.claude/agents/*-ops.md
-grep -rnE '\*\*Input from [A-Za-z]+:\*\*' herd/*/.claude/agents/*-ops.md
+grep -rnE '(\*\*Input from [A-Za-z]+:\*\*|^## Input from [A-Za-z]+)' herd/*/.claude/agents/*-ops.md
 ```
 
 ### Checks
 
 - **A — Missing operation.** Every invocation's operation name must exist as a `### OP_NAME` header in the referenced ops agent file. Missing = CRITICAL.
-- **B — Extra parameter.** Every parameter the invocation passes must appear in the op's Input line. An invocation passing `action: close` to an op whose Input line is `issue number, resolution summary` is a bug.
+- **B — Extra parameter.** Every parameter the invocation passes must appear in the op's declared inputs. An invocation passing `action: close` to an op whose inputs are `issue number, resolution summary` is a bug. The declared inputs come in two shapes (Pattern 6): the inline `**Input from <agent>:**` line, where the params are the rest of that line; and — for an ops agent with exactly one operation — a `## Input from <agent>` section, where the params are the bullets listed under that heading. Read whichever shape the ops file uses.
 - **C — Unused operation (advisory).** Ops defined in an ops agent but never invoked by any skill. Might be dead code; might be recently added.
 
 ---
