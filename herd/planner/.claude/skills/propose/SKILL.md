@@ -4,6 +4,7 @@ description: Propose a change to the shared agent system. Auto-triggered when th
 user-invocable: true
 disable-model-invocation: false
 argument-hint: [idea]
+allowed-tools: Agent
 ---
 
 # Propose Agent System Change
