@@ -1,21 +1,22 @@
 ---
 name: start
-description: Initialize new project or resume existing project
+description: Load the project and orient the session — greet a fresh project, or resume an existing one
 user-invocable: true
 disable-model-invocation: true
-allowed-tools: Write, Read, Glob, Bash
+allowed-tools: Read, Glob, Bash
 ---
 
 # Start
 
-Initialize or resume the product specification project.
+Orient the session for the product specification project — greet a fresh project, or resume an existing one.
 
 ## Step 1: Check Project State
 
 Run `node "$AGENT_DIR/tools/dev-tools.cjs" check-files` and read all four lines (`working-notes:`, `backlog:`, `product:`, `domain-specs:`). Each reports a state: `not found`, `exists (empty)`, `exists (has content)`, or a numeric count for `domain-specs:`.
 
 - `working-notes: not found` → go to **NOT INITIALIZED** below
-- `working-notes: exists (empty)` AND `domain-specs: 0` → go to **GREENFIELD** below (fresh project with no content yet)
+- `working-notes: exists (empty)` → go to **GREENFIELD** below (fresh project — working notes literally empty)
+- `domain-specs: 0` AND `working-notes: exists (has content)` → this *may* be a fresh project: a freshly set-up project carries placeholder content in working notes, backlog, and PRODUCT.md, all of which report as `exists (has content)`. Read `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md` and `$PROJECT_DIR/cowmoo/specs/PRODUCT.md` fully. If both hold only their initial placeholder text — no captured discussion in working notes, no glossary / roles / behaviors in PRODUCT.md — go to **GREENFIELD** below. Otherwise go to **EXISTING PROJECT** below, reusing these two reads (Step 2 needs them anyway).
 - anything else → go to **EXISTING PROJECT** below
 
 ---
@@ -95,9 +96,9 @@ This gives the user (and you) a head start — no mid-conversation surprises whe
 
 ---
 
-## If Empty → GREENFIELD
+## If Fresh → GREENFIELD
 
-The project is initialized but no product content exists yet — no working-notes items and no domain specs. There's nothing to assess and nothing to read in full beyond confirming the state.
+The project is set up but no product content exists yet — no working-notes items and no domain specs. There's nothing more to assess: Step 1 already confirmed the files hold only placeholder content (or working notes is literally empty).
 
 Present this greeting:
 
@@ -117,9 +118,24 @@ Wait for the user. Do not read any further files — there is nothing to read.
 
 ## If File Missing → NOT INITIALIZED
 
-Tell the user: "Project not initialized — required PM files are missing (e.g., `cowmoo/specs/PRODUCT.md`, `cowmoo/agent-files/pm/WORKING-NOTES.md`). Initialize the project before continuing."
+Required PM files are missing (e.g., `cowmoo/specs/PRODUCT.md`, `cowmoo/agent-files/pm/WORKING-NOTES.md`). The PM file structure must be in place before discussion or formalization can begin.
 
-Stop.
+Tell the user the files are missing and give them an actionable recovery path — do not stop at a dead end:
+
+```
+Required PM files are missing — `cowmoo/specs/PRODUCT.md` and
+`cowmoo/agent-files/pm/WORKING-NOTES.md` are not present.
+
+To create the PM file structure, run one of these:
+- /import <folder>      — recreates the structure and walks through existing docs
+- /import-design <url>  — recreates the structure and extracts specs from a
+                          Claude Designer bundle
+
+If you expected these files to already exist, they may have been deleted —
+check version control to restore them.
+```
+
+Stop after showing this — the user runs the chosen skill, then re-runs `/start`.
 
 ---
 
@@ -132,6 +148,6 @@ Before finishing, confirm:
 - [ ] For existing: working-notes assessed inline — ready / future / open counts plus raw-vs-active gap when notable
 - [ ] For existing: session focus proposed with specific reasoning, rendered through picker when 2–4+ candidates; a fan-out focus closes with a starting-unit picker, not prose
 - [ ] For existing: after focus picked, the relevant domain file(s) loaded fully at Step 5 (typically one per session per Rule 3)
-- [ ] For greenfield: greeting shown with /draft and /import options; no file reads beyond state check
-- [ ] For not initialized: user told which required files are missing
+- [ ] For greenfield: greeting shown with /draft and /import options; no file reads beyond the Step 1 state check and its placeholder-confirmation read of WORKING-NOTES.md + PRODUCT.md
+- [ ] For not initialized: user told which files are missing AND given the `/import` / `/import-design` recovery path — no dead-end stop
 - [ ] User has full context to start working — main agent holds the ground truth, not a sub-agent's summary

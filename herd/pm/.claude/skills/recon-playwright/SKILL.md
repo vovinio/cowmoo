@@ -4,7 +4,7 @@ description: "Reverse-engineer a live web platform using Playwright CLI. Token-e
 user-invocable: true
 disable-model-invocation: true
 argument-hint: [url]
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent, TaskCreate, TaskUpdate, TaskGet, TaskList
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent
 ---
 
 # Platform Reverse Engineering (Playwright CLI)

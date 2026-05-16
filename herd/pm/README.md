@@ -25,7 +25,7 @@ Once inside, run:
 /start
 ```
 
-This initializes the project structure (`cowmoo/specs/` for shared specs and `cowmoo/agent-files/pm/` for private working files). Then start describing your product.
+`/start` loads the project and orients the session — on a fresh project it greets you so you can start describing your product idea right away.
 
 **Returning to an existing project:**
 
@@ -97,7 +97,7 @@ Reverse-engineer competitor platforms to inform product decisions.
 
 ### Starting a New Product
 
-1. **`/start`** — Initialize the project
+1. **`/start`** — Load the project and begin the session
 2. **Describe your product** — What problem does it solve? Who uses it? The agent will guide you through the core concepts
 3. **`/draft`** — Persist decisions to working notes
 
@@ -189,7 +189,7 @@ The specs are written in business language, not technical language. A developer 
 
 | Command | What It Does |
 |---------|-------------|
-| `/start` | Initialize a new project or resume an existing one. Assesses notes condition and suggests focus area. |
+| `/start` | Load the project and orient the session — greet a fresh project, or resume an existing one (assesses notes condition, suggests focus area). |
 | `/draft` | Extract decisions from the current conversation and save to working notes. |
 | `/digest` | Formalize confirmed working notes into spec files. Run as a dedicated session. |
 | `/review` | Verify spec integrity — terminology, references, scope, completeness, structure. Run after digest. |
