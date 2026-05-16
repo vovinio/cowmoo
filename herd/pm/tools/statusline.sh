@@ -227,14 +227,9 @@ if [ -n "$files_dir" ]; then
         # bullets. The accurate "open" assessment lives in /start, which Reads
         # the file in full and classifies semantically.
         eval $(awk '
-            /^## / {
-                if (/\[ready\]/) tag="ready"
-                else if (/\[future\]/) tag="future"
-                else tag=""
-            }
             /^- / {
-                if (/\[ready\]/ || tag=="ready") r++
-                else if (/\[future\]/ || tag=="future") f++
+                if (/\[ready\]/) r++
+                else if (/\[future\]/) f++
             }
             END { printf "nr=%d nf=%d", r+0, f+0 }
         ' "$notes_file" 2>/dev/null)

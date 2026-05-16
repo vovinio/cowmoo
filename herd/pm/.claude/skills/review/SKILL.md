@@ -14,6 +14,14 @@ Like the builder's `/review` verifies code against acceptance criteria, this ver
 
 ---
 
+## Step 0: Check Project Exists
+
+Run `node "$AGENT_DIR/tools/dev-tools.cjs" check-files` and read the `working-notes:` line.
+
+- **If `working-notes: not found`** — tell the user: "No project initialized. Run /start to begin." and stop.
+
+---
+
 ## Step 1: Load Context
 
 Read all spec files so you have full product context for understanding agent findings, deduplicating, and applying fixes:

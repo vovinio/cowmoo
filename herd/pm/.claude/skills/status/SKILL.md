@@ -30,8 +30,8 @@ For the working-notes count, use a quick grep — counting only TAGGED items, wh
 
 ```bash
 notes="$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md"
-ready_count=$(grep -cE '^- .*\[ready\]|^## .*\[ready\]' "$notes" 2>/dev/null)
-future_count=$(grep -cE '^- .*\[future\]|^## .*\[future\]' "$notes" 2>/dev/null)
+ready_count=$(grep -cE '^- .*\[ready\]' "$notes" 2>/dev/null)
+future_count=$(grep -cE '^- .*\[future\]' "$notes" 2>/dev/null)
 ```
 
 For the backlog count: number of top-level entries (top-level `##` headers under the `# Backlog` heading).

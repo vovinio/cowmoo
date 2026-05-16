@@ -72,7 +72,7 @@ This is where working notes become formal specs. Run this as a **dedicated sessi
 
 ### Inbox Phase
 
-When other agents (planner, builder) have questions or escalations, they create `for-pm` labeled GitHub issues. Process them with:
+When other agents (planner, UXUI) have questions or escalations, they create `for-pm` labeled GitHub issues. Process them with:
 
 ```
 /catchup

@@ -53,8 +53,10 @@ Most platforms require authentication. Connect to the user's existing Chrome ses
 Tell the user: "I'll connect Playwright to your Chrome browser for authenticated access. Make sure you're logged into the platform."
 
 ```bash
-playwright-cli attach --extension
+playwright-cli -s=recon attach --extension
 ```
+
+The `-s=recon` flag is required — it places the attached browser in the `recon` session that auth verification and Phases 1-4 all target. Without it, the attach lands in the default session while everything downstream reads an empty `recon` session.
 
 - If successful → connected to user's Chrome. Verify by taking a snapshot and checking for logged-in indicators.
 - If extension not installed or connection failed → fall back to manual login (below).
