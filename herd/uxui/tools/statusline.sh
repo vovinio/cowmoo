@@ -144,16 +144,20 @@ iso_to_local() {
     esac
 }
 
-# Usage cache in /tmp (per-project, avoids polluting project files)
-usage_cache=""
-if [ -n "$PROJECT_DIR" ]; then
-    proj_hash=$(echo "$PROJECT_DIR" | md5 2>/dev/null || echo "$PROJECT_DIR" | md5sum 2>/dev/null | cut -d' ' -f1)
-    usage_cache="/tmp/${agent_name}-usage-${proj_hash}"
-fi
+# Shared OAuth usage cache. The usage payload is account-global (same OAuth
+# account → same numbers regardless of agent or project), so a single file —
+# rather than one cache per agent per project — collapses every refresh into
+# one 60s loop, which is what keeps the /api/oauth/usage endpoint from
+# rate-limiting.
+usage_cache="/tmp/claude-code-oauth-usage.json"
+
+# proj_hash keys the per-project inbox/design caches further down.
+proj_hash=""
+[ -n "$PROJECT_DIR" ] && proj_hash=$(echo "$PROJECT_DIR" | md5 2>/dev/null || echo "$PROJECT_DIR" | md5sum 2>/dev/null | cut -d' ' -f1)
 
 needs_refresh=true
 usage_data=""
-if [ -n "$usage_cache" ] && [ -f "$usage_cache" ]; then
+if [ -f "$usage_cache" ]; then
     mt=$(stat -c %Y "$usage_cache" 2>/dev/null || stat -f %m "$usage_cache" 2>/dev/null)
     [ $(( $(date +%s) - mt )) -lt 60 ] && { needs_refresh=false; usage_data=$(cat "$usage_cache"); }
 fi
@@ -168,12 +172,17 @@ if $needs_refresh; then
             -H "anthropic-beta: oauth-2025-04-20" \
             -H "User-Agent: claude-code" \
             "https://api.anthropic.com/api/oauth/usage" 2>/dev/null)
-        if [ -n "$resp" ] && echo "$resp" | jq . >/dev/null 2>&1; then
+        # Accept only a real usage payload. A rate-limit error is valid JSON
+        # too, so checking that `.five_hour.utilization` exists is what rejects
+        # it — and a rejected error is never cached, which would otherwise
+        # poison the shared cache for the full 60s TTL.
+        if [ -n "$resp" ] && echo "$resp" | jq -e '.five_hour.utilization' >/dev/null 2>&1; then
             usage_data="$resp"
-            [ -n "$usage_cache" ] && echo "$resp" > "$usage_cache" 2>/dev/null
+            echo "$resp" > "$usage_cache" 2>/dev/null
         fi
     fi
-    [ -z "$usage_data" ] && [ -n "$usage_cache" ] && [ -f "$usage_cache" ] && usage_data=$(cat "$usage_cache")
+    # Fetch failed or was rejected — fall back to the last good cached payload.
+    [ -z "$usage_data" ] && [ -f "$usage_cache" ] && usage_data=$(cat "$usage_cache")
 fi
 
 if [ -n "$usage_data" ] && echo "$usage_data" | jq -e . >/dev/null 2>&1; then

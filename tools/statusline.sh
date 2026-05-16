@@ -135,7 +135,12 @@ iso_to_local() {
     esac
 }
 
-cache_file="/tmp/cowmoo-usage-curator"
+# Shared OAuth usage cache. The usage payload is account-global (same OAuth
+# account → same numbers regardless of agent or project), so all cowmoo agents
+# read and write this one file — collapsing every refresh into a single 60s
+# loop instead of one cache per agent, which is what keeps the
+# /api/oauth/usage endpoint from rate-limiting.
+cache_file="/tmp/claude-code-oauth-usage.json"
 
 needs_refresh=true
 usage_data=""
@@ -154,11 +159,16 @@ if $needs_refresh; then
             -H "anthropic-beta: oauth-2025-04-20" \
             -H "User-Agent: claude-code" \
             "https://api.anthropic.com/api/oauth/usage" 2>/dev/null)
-        if [ -n "$resp" ] && echo "$resp" | jq . >/dev/null 2>&1; then
+        # Accept only a real usage payload. A rate-limit error is valid JSON
+        # too, so checking that `.five_hour.utilization` exists is what rejects
+        # it — and a rejected error is never cached, which would otherwise
+        # poison the shared cache for the full 60s TTL.
+        if [ -n "$resp" ] && echo "$resp" | jq -e '.five_hour.utilization' >/dev/null 2>&1; then
             usage_data="$resp"
             echo "$resp" > "$cache_file" 2>/dev/null
         fi
     fi
+    # Fetch failed or was rejected — fall back to the last good cached payload.
     [ -z "$usage_data" ] && [ -f "$cache_file" ] && usage_data=$(cat "$cache_file")
 fi
 
