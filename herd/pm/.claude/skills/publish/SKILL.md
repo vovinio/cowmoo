@@ -76,7 +76,9 @@ The helper checks two file-artifact signals — both are paths PM is denied from
 GitHub labels (`for-planner`, `for-uxui`) are deliberately NOT used as signals — those labels can be created entirely by PM itself via `/notify` or `/catchup`, so their presence is not proof that the downstream agent ever ran.
 
 - **If exit 0 (engaged)** — suggest: `"Specs changed — run /notify to announce to planner and/or UXUI (inference will propose targets)."`
-- **If exit 1 (greenfield)** — skip the suggestion. Downstream agents haven't been launched on this project yet; the user is still in PM-only formalization. The `/notify` prompt would land as noise.
+- **If exit 1 (greenfield)** — `/notify` would land as noise (no downstream agent has run). Check one more thing before deciding: Glob `$PROJECT_DIR/cowmoo/specs/domains/*.md`.
+  - **Spec domain files exist** — the project has formalized specs but no design work has started. Suggest: `"Specs are taking shape and no design work has started yet — when you're ready, launch the UXUI agent (\`moo uxui\`) to begin UI definitions."`
+  - **No spec domain files yet** — skip the suggestion entirely. The user is still in PM-only formalization with nothing for UXUI to consume.
 
 ---
 
@@ -100,8 +102,9 @@ Before finishing, confirm:
 - **Commit succeeds with foreign staged content** — report includes a `Note:` line; surface it so the user knows pre-existing staged paths remained in the index.
 - **Commit fails (any other reason)** — report the failure to user; stop the publish flow.
 - **Specs changed AND `downstream-engaged` exits 0** — suggest `/notify` after committing.
-- **Specs changed but `downstream-engaged` exits 1 (greenfield project)** — skip the `/notify` suggestion entirely. The user is still in PM-only formalization; downstream agents haven't been engaged yet.
-- **Only working notes changed** — no `/notify` suggestion needed.
+- **Specs changed, `downstream-engaged` exits 1, and `cowmoo/specs/domains/*.md` is non-empty** — skip the `/notify` suggestion; instead suggest launching the UXUI agent (`moo uxui`) for a first design pass.
+- **Specs changed, `downstream-engaged` exits 1, and no spec domain files exist yet** — skip both suggestions. PM-only formalization; nothing for UXUI to consume.
+- **Only working notes changed** — no `/notify` or UXUI suggestion needed.
 
 ---
 
