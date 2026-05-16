@@ -294,3 +294,15 @@ Before finishing, confirm:
 - **Reasoning travels with the decision.** Deleting a working-notes item is acceptable ONLY after its embedded reasoning (trade-offs, rejected alternatives, threshold rationale, cause-and-effect history) has been preserved in the spec. The spec is the durable record of "what AND why." If reasoning gets dropped during digest, future readers (planner, builder, future-PM) re-litigate settled decisions because the "why" is missing. The Step 4a extraction table is non-negotiable.
 - **One file per write** — batch all items for a target file into a single write, then verify the whole file. This minimizes read-verify cycles and reduces the risk of partial writes leaving a file in an inconsistent state.
 - **Specs can move back to backlog** — if the user decides a fully specified feature should be deferred, move it from the domain file to BACKLOG.md preserving the complete spec. Note which domain file it came from so it can be restored later.
+
+---
+
+## Partial-failure recovery
+
+`/digest` mutates several files in sequence (4b spec write, 4c/Step 5 BACKLOG.md append, 4d/Step 5 notes removal). A crash partway leaves mixed state — **don't blindly re-run.** Three mechanisms already in the skill make recovery safe: the Step 4e `## In-progress` checkpoint, the Step 2 stale-detector that offers Resume/Discard on the next run, and Step 4b's read-and-compare that prevents duplicate spec content.
+
+- **Crash at or after Step 4b, notes not yet cleaned** — the spec is fully old or fully new (whole-file write + self-verify). Re-running is safe: 4b's read-and-compare skips already-written items, 4d then cleans notes. Verify nothing landed in the spec twice.
+- **Crash between a BACKLOG.md append (4c/Step 5) and the matching notes removal (4d/Step 5)** — the `[future]` item sits in BOTH files, and the append is NOT idempotent. Before re-running, hand-remove the item from WORKING-NOTES.md so the re-run skips it (or re-run, then delete the duplicate backlog entry).
+- **A `## In-progress` checkpoint is on disk** — don't touch anything; re-run `/digest` and let Step 2 walk Resume/Discard.
+
+Nothing commits until `/publish`, so `git -C "$PROJECT_DIR" restore <file>` reverts any bad spec or BACKLOG.md write.

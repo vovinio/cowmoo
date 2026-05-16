@@ -203,9 +203,11 @@ Write them to a single section: `## Gaps Found in /review (<date>)`. Do NOT crea
 
 ## Step 7: Outcome
 
-**All clean or all fixes applied:** "Review passed. Run `/publish` to save, then `/notify` to announce changes to planner or UXUI."
+**All clean or all fixes applied:** "Review passed. Run `/publish` to save."
 
-**Unresolved items remain:** "Review complete with [N] items routed to working notes. The shipped specs are consistent — structural improvements captured for a future session. Run `/publish` to save, then `/notify` to announce changes to planner or UXUI."
+**Unresolved items remain:** "Review complete with [N] items routed to working notes. The shipped specs are consistent — structural improvements captured for a future session. Run `/publish` to save."
+
+Do NOT suggest `/notify` here. `/publish` Step 4 owns that decision — it runs the `downstream-engaged` check and only suggests `/notify` when planner or UXUI has actually run. Suggesting it from `/review` would fire unconditionally, landing as noise on greenfield projects where no downstream agent exists yet.
 
 ---
 

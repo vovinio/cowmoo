@@ -69,16 +69,18 @@ Project loaded.
   - "Define `<glossary-term>` as first domain" — *creates `domains/<term>.md`; already named in PRODUCT.md glossary*
   - "Capture workflows for role `<R>`" — *defines features for an already-named role; touches existing domains if any*
   - "Describe a different area" — *free-text fallback when none of the above fit*
-- **1 candidate** — prose: "Want to dig into [topic]?" or similar single-recommendation confirmation.
+- **1 candidate** — prose: "Want to dig into [topic]?" or similar single-recommendation confirmation. Exception: if that one focus is itself a multi-unit effort, see the fan-out note below — go straight to a starting-unit picker instead.
 - **2–4 candidates** — `AskUserQuestion` picker. Recommended candidate first with `(Recommended)` suffix; each option's `description` carries the tradeoff (what each candidate touches, what's affected). Per CLAUDE.md's picker rule and the `/start focus` example called out there.
 - **5+ candidates** — render the lineup as a brief table, then use `AskUserQuestion` to pick the next batch (top 2–4) or ask for an unlisted direction. Never end with bare prose like "walk through in order, or jump to a specific one, or do you have a different topic?" — that's a 3-option fork that the picker is for.
 ```
 
 Don't ask "what would you like to do?" generically — propose something specific based on what you see, AND render any 2–4-option fork through `AskUserQuestion` rather than prose, even when the user could in principle answer with free text. The picker enforces specificity at the response site, where it matters.
 
+**A focus that fans out is itself a fork.** The cases above count *focus candidates* — but one picked focus can be a multi-unit effort: a single review finding spanning many domain files, a cross-domain pass worked one domain at a time per Rule 3. Choosing the *starting* unit is a second fork and gets the same treatment as the cases above — 2–4 units → picker; 5+ units → a brief gap-ranked table then a picker of the top 2–4 plus a free-text fallback. When there is exactly one focus candidate AND it fans out this way, don't prose-confirm the focus and then ask about the unit separately — go straight to the starting-unit picker, where choosing a unit confirms the focus. Never close with bare prose like "start with groups.md, or pick a different domain": that two-option fork is exactly what the picker is for.
+
 ### Step 5: Load the Picked Domain + Scan for Related Content
 
-Once the user picks a focus (or brings their own topic), Read the relevant domain file(s) from `$PROJECT_DIR/cowmoo/specs/domains/` **fully**. Typically one domain per session per Rule 3; if the focus genuinely spans two adjacent domains, load both. Do NOT load domains unrelated to the picked focus.
+Once the user picks a focus (or brings their own topic) — and, if that focus fans out, a starting unit via the picker per Step 4's fan-out note — Read the relevant domain file(s) from `$PROJECT_DIR/cowmoo/specs/domains/` **fully**. Typically one domain per session per Rule 3; if the focus genuinely spans two adjacent domains, load both. Do NOT load domains unrelated to the picked focus.
 
 Then scan what you've loaded (PRODUCT.md + the picked domain(s) + BACKLOG.md, all already in context) for references to the session topic. Flag any existing spec content that might be affected by the upcoming discussion — entity fields, feature rules, glossary entries, etc.
 
@@ -128,7 +130,7 @@ Before finishing, confirm:
 - [ ] Project state checked (existing, greenfield, or not initialized)
 - [ ] For existing: WORKING-NOTES.md + BACKLOG.md + PRODUCT.md Read **in full** at Step 2 (no offset/limit on any read); domains/ listed by name only
 - [ ] For existing: working-notes assessed inline — ready / future / open counts plus raw-vs-active gap when notable
-- [ ] For existing: session focus proposed with specific reasoning, rendered through picker when 2–4+ candidates
+- [ ] For existing: session focus proposed with specific reasoning, rendered through picker when 2–4+ candidates; a fan-out focus closes with a starting-unit picker, not prose
 - [ ] For existing: after focus picked, the relevant domain file(s) loaded fully at Step 5 (typically one per session per Rule 3)
 - [ ] For greenfield: greeting shown with /draft and /import options; no file reads beyond state check
 - [ ] For not initialized: user told which required files are missing

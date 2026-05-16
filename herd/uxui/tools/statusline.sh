@@ -267,6 +267,14 @@ fi
 
 [ "${c_uxui:-0}" -gt 0 ] 2>/dev/null && { [ -n "$line2" ] && line2+="${sep}"; line2+="${orange}${c_uxui} for-uxui${reset}"; }
 
+# ── Tracked inbox issues ──
+
+c_tracked=0
+if [ -n "$files_dir" ] && [ -f "$files_dir/.inbox-context" ]; then
+    c_tracked=$(wc -l < "$files_dir/.inbox-context" | tr -d ' ')
+fi
+[ "${c_tracked:-0}" -gt 0 ] 2>/dev/null && { [ -n "$line2" ] && line2+="${sep}"; line2+="${cyan}${c_tracked} tracked${reset}"; }
+
 # ── Design task counts (uxui:todo, uxui:in-progress, uxui:review) ──
 
 if command -v gh >/dev/null 2>&1 && [ -n "$GH_REPO" ]; then
