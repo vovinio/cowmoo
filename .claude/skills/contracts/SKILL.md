@@ -103,7 +103,7 @@ For each discovered file, classify each reference:
 
 Distinguish three file kinds:
 
-- **Tracking files** (multi-entry, transient): `.inbox-context`, `draft.md`, `deviations.md`, `active-task.md`, `techstack-notes.md`, `design-draft.md`. The file accumulates work that completes and is cleaned up. Expect writer + reader + remover.
+- **Tracking files** (multi-entry, transient): `.inbox-context`, `draft.md`, `deviations.md`, `active-task.md`, `techstack-notes.md`, `design-draft.json`. The file accumulates work that completes and is cleaned up. Expect writer + reader + remover.
 - **Marker files** (single-value, overwrite-in-place): `.workflow-step`. A fresh write replaces old content; no explicit remover needed. Expect writer + reader only.
 - **Writer-owned lifecycle files** (multi-entry, self-managed): `RESEARCH.md`, `BUILD-NOTES.md`, `knowledge.md`, `VISUAL-JOURNAL.md`. No explicit remover because the writer handles entry lifecycle directly. Sub-behaviors:
   - *Append-only* — writer only ever adds (`RESEARCH.md`).

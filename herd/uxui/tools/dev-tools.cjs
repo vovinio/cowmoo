@@ -76,7 +76,7 @@ function checkFiles() {
     console.log(`working-notes: ${wn.state}`);
   }
   const fp = (rel) => path.join(PROJECT_DIR, rel);
-  console.log(`design-draft: ${fileStatus(fp('cowmoo/agent-files/uxui/design-draft.md'))}`);
+  console.log(`design-draft: ${fileStatus(fp('cowmoo/agent-files/uxui/design-draft.json'))}`);
   console.log(`overview: ${fileStatus(fp('cowmoo/design/OVERVIEW.md'))}`);
   console.log(`journeys: ${fileStatus(fp('cowmoo/design/journeys.md'))}`);
   console.log(`roles: ${fileStatus(fp('cowmoo/design/roles.md'))}`);
@@ -251,12 +251,18 @@ function inboxRemove() {
 // --- Design Draft (Phase B scratch lifecycle) ---
 
 function designDraftPath() {
-  return PROJECT_DIR ? path.join(PROJECT_DIR, 'cowmoo', 'agent-files', 'uxui', 'design-draft.md') : null;
+  return PROJECT_DIR ? path.join(PROJECT_DIR, 'cowmoo', 'agent-files', 'uxui', 'design-draft.json') : null;
 }
 
 function designDraftClear() {
   const p = designDraftPath();
   if (p && fs.existsSync(p)) fs.unlinkSync(p);
+  // One-time migration safety: also remove a legacy markdown draft left from
+  // before design-draft.json existed. Harmless once no .md drafts remain.
+  if (PROJECT_DIR) {
+    const legacy = path.join(PROJECT_DIR, 'cowmoo', 'agent-files', 'uxui', 'design-draft.md');
+    if (fs.existsSync(legacy)) fs.unlinkSync(legacy);
+  }
 }
 
 // --- Bundle Fetch (Claude Design export download + extract + commit) ---
@@ -482,6 +488,27 @@ function git(args, opts = {}) {
   }
 }
 
+// gh(args, opts) — run `gh <args...>` with no shell (execFileSync takes an
+// args array, so titles/labels/bodies need no quoting). Returns
+// { ok, out, err, code }. Mirrors git(); accepts { input } to feed stdin —
+// used to pass an issue body via `gh issue create --body-file -`, so the
+// body never transits a shell. 30s timeout — issue creation hits the network.
+function gh(args, opts = {}) {
+  try {
+    const out = execFileSync('gh', args, {
+      encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], timeout: 30000, ...opts,
+    });
+    return { ok: true, out: (out || '').trim(), err: '', code: 0 };
+  } catch (e) {
+    return {
+      ok: false,
+      out: (e.stdout ? e.stdout.toString() : '').trim(),
+      err: ((e.stderr ? e.stderr.toString() : '') + (e.stdout ? e.stdout.toString() : '')).trim(),
+      code: typeof e.status === 'number' ? e.status : -1,
+    };
+  }
+}
+
 function splitLines(s) {
   return (s || '').split('\n').map((x) => x.trim()).filter(Boolean);
 }
@@ -677,44 +704,239 @@ function pushOp() {
   process.exit(0);
 }
 
-// --- Project board (canonical issue→board linkage for the ops agents) ---
+// --- Project board (canonical label↔Status sync for the ops agents) ---
 //
-// Replaces the inline `## Project Board` bash block. Agent-independent —
-// verbatim copy across all four dev-tools.cjs files.
+// Agent-independent — verbatim copy across all four dev-tools.cjs files.
 //
-// NON-BLOCKING: final step of an issue-creation op. Always exits 0.
-//   Project: added         — issue added to the board
-//   Project: no board      — repo has no linked ProjectV2 (or $GH_REPO unset)
-//   Project: add failed    — board exists but the add did not complete
-function boardAddOp(issueNumber) {
-  const out = (line) => { console.log(line); process.exit(0); };  // always exit 0
+// The board mirrors issue labels: labels are the source of truth, the board's
+// Status field is kept in sync. LABEL_TO_COLUMN is the single definition of the
+// mapping. boardSyncCore ensures the issue is a board item and sets its Status
+// column; boardStatusOp is the `board-status` subcommand wrapper. NON-BLOCKING:
+// a board miss never fails the calling operation.
 
-  if (!issueNumber || !/^[0-9]+$/.test(String(issueNumber))) {
-    return out('Project: add failed');
-  }
+// LABEL_TO_COLUMN — canonical label/event → board-column mapping. The `closed`
+// key is the issue-closed event and overrides any label.
+const LABEL_TO_COLUMN = {
+  story: 'Stories',
+  todo: 'Todo',
+  'in-progress': 'In Progress',
+  'for-planner': 'Planner',
+  'for-pm': 'PM',
+  'for-uxui': 'UXUI',
+  'uxui:todo': 'UX: Todo',
+  'uxui:in-progress': 'UX: In Progress',
+  'uxui:review': 'UX: Review',
+  'uxui:done': 'Done',
+  closed: 'Done',
+};
 
+// resolveProjectId — $GH_PROJECT_ID override, else the repo's first linked
+// projectsV2. Returns the project node id, or null when there is no board.
+function resolveProjectId() {
+  const override = process.env.GH_PROJECT_ID && process.env.GH_PROJECT_ID.trim();
+  if (override) return override;
   const repo = process.env.GH_REPO || '';
   const slash = repo.indexOf('/');
-  if (slash < 1 || slash === repo.length - 1) {
-    return out('Project: no board');  // $GH_REPO unset/malformed
-  }
+  if (slash < 1 || slash === repo.length - 1) return null;
   const owner = repo.slice(0, slash);
   const name = repo.slice(slash + 1);
+  const q = `{ repository(owner:"${owner}",name:"${name}") { projectsV2(first:1) { nodes { id } } } }`;
+  const id = run(`gh api graphql -f query=${JSON.stringify(q)} --jq '.data.repository.projectsV2.nodes[0].id'`);
+  return (id && id !== 'null') ? id : null;
+}
 
-  // $GH_PROJECT_ID override honored first; else query first linked ProjectV2.
-  let projectId = process.env.GH_PROJECT_ID && process.env.GH_PROJECT_ID.trim();
-  if (!projectId) {
-    const q = `{ repository(owner:"${owner}",name:"${name}") { projectsV2(first:1) { nodes { id } } } }`;
-    projectId = run(`gh api graphql -f query=${JSON.stringify(q)} --jq '.data.repository.projectsV2.nodes[0].id'`);
-  }
-  if (!projectId || projectId === 'null') return out('Project: no board');
+// boardSyncCore — ensure the issue is a board item and set its Status column.
+// Returns exactly one line; no console output and no process.exit, so callers
+// (the board-status subcommand, issueCreate) can splice the result into their
+// own report:
+//   'Board: <column>'             — Status set
+//   'Board: no board'             — no linked ProjectV2 / $GH_REPO unset
+//   'Board: no such column "<x>"' — the board has no column with that name
+//   'Board: failed'               — a board exists but the sync did not complete
+function boardSyncCore(issueNumber, columnName) {
+  if (!issueNumber || !/^[0-9]+$/.test(String(issueNumber))) return 'Board: failed';
+  if (!columnName) return 'Board: failed';
 
+  const projectId = resolveProjectId();
+  if (!projectId) return 'Board: no board';
+
+  // Issue node id.
   const issueId = run(`gh issue view ${issueNumber} --json id --jq .id`);
-  if (!issueId || issueId === 'null') return out('Project: add failed');
+  if (!issueId || issueId === 'null') return 'Board: failed';
 
-  const mut = `mutation { addProjectV2ItemById(input: {projectId: "${projectId}", contentId: "${issueId}"}) { item { id } } }`;
-  const added = run(`gh api graphql -f query=${JSON.stringify(mut)}`);
-  return out(added === null ? 'Project: add failed' : 'Project: added');
+  // Add to the board — addProjectV2ItemById is idempotent: it returns the item
+  // id whether the issue was just added or was already on the board.
+  const addMut = `mutation { addProjectV2ItemById(input: {projectId: "${projectId}", contentId: "${issueId}"}) { item { id } } }`;
+  const itemId = run(`gh api graphql -f query=${JSON.stringify(addMut)} --jq '.data.addProjectV2ItemById.item.id'`);
+  if (!itemId || itemId === 'null') return 'Board: failed';
+
+  // Look up the Status single-select field — its id and option ids by name.
+  const fieldQ = `query { node(id: "${projectId}") { ... on ProjectV2 { field(name: "Status") { ... on ProjectV2SingleSelectField { id options { id name } } } } } }`;
+  const fieldRaw = run(`gh api graphql -f query=${JSON.stringify(fieldQ)}`);
+  if (!fieldRaw) return 'Board: failed';
+  let field;
+  try { field = JSON.parse(fieldRaw).data.node.field; } catch { return 'Board: failed'; }
+  if (!field || !field.id || !Array.isArray(field.options)) return 'Board: failed';
+  const option = field.options.find((o) => o.name === columnName);
+  if (!option) return `Board: no such column "${columnName}"`;
+
+  // Set the Status, retrying once on transient failure.
+  const setMut = `mutation { updateProjectV2ItemFieldValue(input: {projectId: "${projectId}", itemId: "${itemId}", fieldId: "${field.id}", value: {singleSelectOptionId: "${option.id}"}}) { projectV2Item { id } } }`;
+  let set = run(`gh api graphql -f query=${JSON.stringify(setMut)}`);
+  if (set === null) { sleepMs(2000); set = run(`gh api graphql -f query=${JSON.stringify(setMut)}`); }
+  return set === null ? 'Board: failed' : `Board: ${columnName}`;
+}
+
+// boardStatusOp — `board-status <issue#> <label|closed>` subcommand wrapper.
+// Maps the label/event to a column via LABEL_TO_COLUMN, syncs the board, and
+// prints one line. Always exits 0 — a board problem never fails the real op.
+function boardStatusOp(issueNumber, labelOrEvent) {
+  const column = LABEL_TO_COLUMN[labelOrEvent];
+  if (!column) { console.log(`Board: no mapping for "${labelOrEvent}"`); process.exit(0); }
+  console.log(boardSyncCore(issueNumber, column));
+  process.exit(0);
+}
+
+// boardDragsCore — find board cards a human dragged into <columnName>: cards
+// whose Status is <columnName> but whose labels do NOT include <expectedLabel>.
+// The board query fetches each card's labels too, so both the mismatch filter
+// AND the caller's relabel input are produced in one GraphQL call — read-sync
+// skills never pull a per-issue `gh issue view`. Returns an array of
+// `{ number, labels }`, or null when there is no board. items(first:100).
+function boardDragsCore(columnName, expectedLabel) {
+  const projectId = resolveProjectId();
+  if (!projectId) return null;
+  const q = `query { node(id: "${projectId}") { ... on ProjectV2 { items(first: 100) { nodes { content { ... on Issue { number labels(first: 20) { nodes { name } } } } fieldValueByName(name: "Status") { ... on ProjectV2ItemFieldSingleSelectValue { name } } } } } } }`;
+  const raw = run(`gh api graphql -f query=${JSON.stringify(q)}`);
+  if (!raw) return null;
+  let nodes;
+  try { nodes = JSON.parse(raw).data.node.items.nodes; } catch { return null; }
+  if (!Array.isArray(nodes)) return null;
+  return nodes
+    .filter((n) => n && n.content && typeof n.content.number === 'number'
+      && n.fieldValueByName && n.fieldValueByName.name === columnName)
+    .map((n) => ({
+      number: n.content.number,
+      labels: ((n.content.labels && n.content.labels.nodes) || []).map((l) => l.name),
+    }))
+    .filter((d) => !d.labels.includes(expectedLabel));
+}
+
+// boardDragsOp — `board-drags <column> <expected-label>` subcommand: print one
+// `<number>\t<comma-separated labels>` line per card a human dragged into
+// <column> — nothing when there are none. Prints `Board: no board` when there
+// is no project board. Always exits 0. The label list lets the caller relabel
+// without a per-issue `gh issue view`.
+function boardDragsOp(columnName, expectedLabel) {
+  if (!columnName || !expectedLabel) { console.log('Board: usage: board-drags <column> <expected-label>'); process.exit(0); }
+  const drags = boardDragsCore(columnName, expectedLabel);
+  if (drags === null) { console.log('Board: no board'); process.exit(0); }
+  drags.forEach((d) => console.log(`${d.number}\t${d.labels.join(',')}`));
+  process.exit(0);
+}
+
+// --- Issue creation (canonical delegated GitHub issue-create) ---
+//
+// issueCreate — create ONE GitHub issue from a task entry in a JSON draft,
+// verify it, link it to the project board, print exactly one report line, and
+// set the exit code. Replaces the inline `gh issue create` heredoc in the
+// @uxui-gh-ops CREATE_DESIGN_TASK operation; that operation becomes a thin
+// delegated wrapper that relays this report verbatim.
+//
+//   issue-create --from <design-draft.json> --index <i>
+//
+// The body travels file → JSON.parse → gh stdin (`--body-file -`); it never
+// transits a shell, so backticks / $() / quotes / a literal EOF line in a body
+// are inert text.
+//
+// Output — exactly one line. The <OP> token is CREATE_DESIGN_TASK so the
+// caller (@uxui-gh-ops / /design-publish) keys on the same marker as before:
+//   CREATE_DESIGN_TASK: ✓ #<n> — <title>. Label: <label>. Board: <column>.  exit 0
+//   CREATE_DESIGN_TASK: ✗ <reason>                                          exit 1
+// Create + verify are blocking (exit 1 on failure). The board sync is
+// non-blocking: its `Board: …` segment reports status, never the exit code.
+function issueCreate() {
+  const OP = 'CREATE_DESIGN_TASK';
+  const fail = (msg) => { console.log(`${OP}: ✗ ${msg}`); process.exit(1); };
+
+  if (!PROJECT_DIR) fail('PROJECT_DIR not set.');
+
+  // Parse --from / --index (order-independent; reject unknown arguments).
+  const argv = process.argv.slice(3);
+  let from = null, indexRaw = null;
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === '--from') from = argv[++i];
+    else if (argv[i] === '--index') indexRaw = argv[++i];
+    else fail(`unknown argument "${argv[i]}" — usage: issue-create --from <path> --index <i>`);
+  }
+  if (from == null || indexRaw == null) fail('usage: issue-create --from <path> --index <i>');
+  if (!/^[0-9]+$/.test(String(indexRaw))) fail(`--index must be a non-negative integer (got "${indexRaw}").`);
+  const index = Number(indexRaw);
+
+  // Resolve and load the draft.
+  const draftPath = path.isAbsolute(from) ? from : path.join(PROJECT_DIR, from);
+  if (!fs.existsSync(draftPath)) fail(`draft not found at ${draftPath}.`);
+  let raw;
+  try { raw = fs.readFileSync(draftPath, 'utf8'); } catch { fail('draft is empty or unreadable.'); }
+  if (!raw || !raw.trim()) fail('draft is empty or unreadable.');
+  let draft;
+  try { draft = JSON.parse(raw); } catch (e) { fail(`draft is not valid JSON: ${e.message}.`); }
+  if (!draft || !Array.isArray(draft.tasks)) fail('draft has no "tasks" array.');
+  if (draft.tasks.length === 0) fail('draft "tasks" array is empty.');
+  if (index >= draft.tasks.length) fail(`--index ${index} out of range (draft has ${draft.tasks.length} task(s)).`);
+
+  const task = draft.tasks[index];
+  if (!task || typeof task.title !== 'string' || !task.title.trim()) fail(`task[${index}] is malformed: missing title.`);
+  if (typeof task.body !== 'string' || !task.body.trim()) fail(`task[${index}] is malformed: missing body.`);
+  const label = (typeof task.label === 'string' && task.label.trim()) ? task.label.trim() : 'uxui:todo';
+
+  // [UXUI] title-prefix pre-check.
+  let title = task.title.trim();
+  if (!title.startsWith('[UXUI]')) title = `[UXUI] ${title}`;
+
+  // Create — body via stdin, never a shell.
+  const created = gh(
+    ['issue', 'create', '--title', title, '--label', label, '--body-file', '-'],
+    { input: task.body },
+  );
+  if (!created.ok) {
+    const e = created.err.toLowerCase();
+    let reason;
+    if (/gh auth|not logged|authentication/.test(e)) reason = 'not authenticated (run: gh auth login)';
+    else if (/could not resolve host|network|timeout|timed out/.test(e)) reason = 'network error reaching GitHub';
+    else if (/label|not found/.test(e)) reason = `could not create issue (check the "${label}" label exists in the repo)`;
+    else reason = splitLines(created.err)[0] || `gh exited ${created.code}`;
+    fail(`gh issue create failed: ${reason}`);
+  }
+
+  // Extract the issue number from the URL gh prints (last non-empty line).
+  const num = (splitLines(created.out).pop() || '').split('/').pop();
+  if (!num || !/^[0-9]+$/.test(num)) {
+    fail(`issue created but could not parse its number from "${created.out}".`);
+  }
+
+  // Verify title + label, with one retry for GitHub eventual-consistency lag.
+  const verifyOnce = () => {
+    const v = gh(['issue', 'view', num, '--json', 'title,labels',
+                  '--jq', '{title:.title,labels:[.labels[].name]}']);
+    if (!v.ok) return false;
+    try {
+      const got = JSON.parse(v.out);
+      return got.title === title && Array.isArray(got.labels) && got.labels.includes(label);
+    } catch { return false; }
+  };
+  if (!verifyOnce()) {
+    sleepMs(2000);
+    if (!verifyOnce()) {
+      fail(`#${num} created but verification failed (title/label mismatch or gh view error). The issue exists — investigate before re-publishing.`);
+    }
+  }
+
+  // Board sync — non-blocking; status spliced in, exit code unaffected.
+  const board = boardSyncCore(num, LABEL_TO_COLUMN[label] || 'UX: Todo');
+
+  console.log(`${OP}: ✓ #${num} — ${title}. Label: ${label}. ${board}.`);
+  process.exit(0);
 }
 
 // --- Main ---
@@ -777,9 +999,15 @@ switch (command) {
   case 'push':
     pushOp();
     break;
-  case 'board-add':
-    boardAddOp(process.argv[3]);
+  case 'board-status':
+    boardStatusOp(process.argv[3], process.argv[4]);
+    break;
+  case 'board-drags':
+    boardDragsOp(process.argv[3], process.argv[4]);
+    break;
+  case 'issue-create':
+    issueCreate();
     break;
   default:
-    console.log('Usage: node "$AGENT_DIR/tools/dev-tools.cjs" <hook|git-check|territory-check|check-files|inbox|design-draft|workflow-check|next-step|bundle-fetch|commit|push|board-add>');
+    console.log('Usage: node "$AGENT_DIR/tools/dev-tools.cjs" <hook|git-check|territory-check|check-files|inbox|design-draft|workflow-check|next-step|bundle-fetch|commit|push|board-status|board-drags|issue-create>');
 }

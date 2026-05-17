@@ -18,6 +18,25 @@ You pick what to handle next.
 
 ## Step 1: Load Inbox
 
+### 1a. Detect designer card-moves (board → label)
+
+A designer submits a finished task by posting the Claude Design share URL as an issue comment **and dragging the card from "UX: Todo" to "UX: Review"** on the project board. Detect those drags first and re-sync the label, so the card-moved submission shows up in the query below (and the statuslines stay correct):
+
+```bash
+node "$AGENT_DIR/tools/dev-tools.cjs" board-drags "UX: Review" uxui:review
+```
+
+This prints one `<number><TAB><current-labels>` line per card sitting in "UX: Review" that is **not** yet labelled `uxui:review` — designer card-moves the herd hasn't picked up — or `Board: no board` (then skip this sub-step). For each, confirm it's a genuine submission — a posted share-URL comment — with a `--jq`-filtered read (the filter keeps the comment bodies out of context; you get only `true` / `false`):
+
+```bash
+gh issue view <number> --json comments --jq '[.comments[].body] | map(test("https?://")) | any'
+```
+
+- **`true`** → a genuine submission (the card-move is the designer's submission ritual; it replaces the old `uxui:review` label-flip). Spawn `@uxui-gh-ops RELABEL` — remove the card's current `uxui:*` label (taken from the `board-drags` line), add `uxui:review`.
+- **`false`** → not a submission (designer mid-work, or a stray drag). Leave it; do not act.
+
+### 1b. Query the inbox
+
 Query both kinds in parallel:
 
 ```bash

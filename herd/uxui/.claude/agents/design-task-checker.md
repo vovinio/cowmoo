@@ -1,6 +1,6 @@
 ---
 name: design-task-checker
-description: Validate a design-draft.md file before publish — each task self-contained, all required states inlined, no file references in prompts, voice samples present. Returns classified findings.
+description: Validate a design-draft.json file before publish — each task self-contained, all required states inlined, no file references in prompts, voice samples present. Returns classified findings.
 tools: Read, Glob, Grep
 model: sonnet
 maxTurns: 10
@@ -8,7 +8,7 @@ maxTurns: 10
 
 # Design Task Checker
 
-Pre-publish validation of `design-draft.md`. Verifies each task body is ready to become a GitHub issue and that the Claude Design Prompt sections are fully self-contained. Returns classified findings — does not edit anything.
+Pre-publish validation of `design-draft.json`. Verifies each task body is ready to become a GitHub issue and that the Claude Design Prompt sections are fully self-contained. Returns classified findings — does not edit anything.
 
 ## Environment
 
@@ -24,22 +24,24 @@ Read `.claude/templates/design-task.md` — the structure each composed task bod
 
 ### Step 1: Load the draft
 
-Read `$PROJECT_DIR/cowmoo/agent-files/uxui/design-draft.md`. The draft contains:
-- A "Batch context" section (coherence reason, inherits, sets-up — informational, not a published artifact)
-- N task bodies (each will become a `uxui:todo` issue body)
+Read `$PROJECT_DIR/cowmoo/agent-files/uxui/design-draft.json` and parse it as JSON. The draft is a single object:
+- `batch` — `{ why, inherits, setsUp }` (informational framing, not a published artifact)
+- `tasks` — an array of `{ title, label, body }` objects. Each `body` becomes a `uxui:todo` issue body.
 
-### Step 2: Validate the batch context section
+If the file is missing or does not parse as JSON, report that as the single finding and stop — there is nothing to validate.
 
-Check:
-- Coherence reason present ("why these screens together")
-- Inherits section present (specific prior visual decisions, or "None yet" for first batch)
-- Sets-up section present (what this batch establishes for downstream)
+### Step 2: Validate the batch context
+
+Check the `batch` object:
+- `why` present and non-empty ("why these screens together")
+- `inherits` present (specific prior visual decisions, or "None yet" for first batch)
+- `setsUp` present (what this batch establishes for downstream)
 
 These are informational — not part of any published artifact — but their presence indicates the draft has the framing needed for downstream skills to use.
 
 ### Step 3: Validate each task body
 
-For every task in the draft, check:
+For every entry in the `tasks` array, check its `body`:
 
 **Structure compliance:**
 - Has both **Instructions** and **Claude Design Prompt** sections
@@ -82,7 +84,7 @@ For every task in the draft, check:
 ## Return Format
 
 ```
-## Design Task Check — Draft at design-draft.md
+## Design Task Check — Draft at design-draft.json
 
 **Tasks in draft:** [N]
 
@@ -91,11 +93,11 @@ For every task in the draft, check:
 - [issue]: [what's missing or wrong]
 - ...
 
-### Task: [name]
+### Task [index] — [title]
 **Status:** <pass | issues found>
 
 **Self-containment violations:**
-- Line X: "[quoted text]" — references `<file>`; inline the relevant content instead
+- task[X]: "[quoted snippet]" — references `<file>`; inline the relevant content instead
 - ...
 
 **Missing states:**
@@ -103,13 +105,13 @@ For every task in the draft, check:
 - ...
 
 **Raw values (should be roles):**
-- Line X: "[quoted text]" — use a role name from roles.md instead
+- task[X]: "[quoted snippet]" — use a role name from roles.md instead
 - ...
 
 **Other:**
 - [other finding]
 
-### Task: [name]
+### Task [index] — [title]
 ...
 
 ## Summary
@@ -121,8 +123,8 @@ For every task in the draft, check:
 
 ## Rules
 
-- **Read only.** Never edit `design-draft.md`. Findings only — the calling skill (`/design-draft`) triages with the user.
-- **Reference lines.** When flagging a violation, cite the line in the draft.
-- **Be specific.** "Vague" is not a finding; "Line 42: 'see auth.md'" is.
+- **Read only.** Never edit `design-draft.json`. Findings only — the calling skill (`/design-draft`) triages with the user.
+- **Cite by task and snippet.** When flagging a violation, name the task as `task[<index>] "<title>"` and quote the offending text from its `body`. The body is a JSON string field — physical file line numbers don't map to body content, so cite the task index and a verbatim snippet instead.
+- **Be specific.** "Vague" is not a finding; `task[1]: "see auth.md"` is.
 - **Don't judge content quality.** "The screen def could be richer" isn't your job — verify structure and self-containment, not depth.
 - **Your final response is the complete findings report.**

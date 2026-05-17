@@ -14,6 +14,18 @@ Triage pending for-pm GitHub issues. Quick questions get resolved here. Issues t
 
 ## Step 1: Load Inbox
 
+### 1a. Detect board card-moves (board → label)
+
+A human can route an issue to PM by dragging its card into the "PM" column. Detect those drags first and re-sync the label, so `@inbox-reader` sees them:
+
+```bash
+node "$AGENT_DIR/tools/dev-tools.cjs" board-drags "PM" for-pm
+```
+
+This prints one `<number><TAB><current-labels>` line per card a human dragged into the "PM" column (cards there not already labelled `for-pm`) — or `Board: no board` (then skip this sub-step). For each, spawn `@pm-ops` **RELABEL** — remove its current label (taken from the `board-drags` line), add `for-pm`. Do this before spawning `@inbox-reader` below.
+
+### 1b. Load the inbox
+
 Spawn `@inbox-reader` with operation **GET_INBOX**.
 
 If inbox is empty — report "No for-pm issues." and stop.

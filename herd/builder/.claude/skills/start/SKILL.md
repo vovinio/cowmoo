@@ -4,7 +4,7 @@ description: Find task, load context, present approach, discuss. The entry point
 user-invocable: true
 disable-model-invocation: true
 argument-hint: [issue-number]
-allowed-tools: Read, Write, Glob, Agent
+allowed-tools: Read, Write, Glob, Agent, Bash
 ---
 
 # Start
@@ -23,6 +23,11 @@ Spawn `@task-check` to check for in-progress task.
 
 **If no in-progress task:**
 - If argument provided (issue number), use that.
+- Otherwise check the board for a human-queued task — a card a human dragged into the "In Progress" column to say "build this next":
+  ```bash
+  node "$AGENT_DIR/tools/dev-tools.cjs" board-drags "In Progress" in-progress
+  ```
+  This prints one `<number><TAB><current-labels>` line per card sitting in "In Progress" that isn't labelled `in-progress` yet. If it prints exactly one, prefer that issue as the task to load. If it prints several, mention them to the user and let them pick; if none or `Board: no board`, fall through.
 - Otherwise spawn `@task-reader` FIND_TASK for the next available todo task.
 - If no todo tasks: "No tasks available." Spawn `@task-reader` GET_STATUS for overview. Stop.
 - Spawn `@task-reader` GET_TASK_CONTEXT with the found task.

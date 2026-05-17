@@ -16,7 +16,7 @@ This skill is the commit step. By the time you type `/design-publish`, the draft
 
 ## Step 1: Prerequisite
 
-Read `$PROJECT_DIR/cowmoo/agent-files/uxui/design-draft.md`. If it doesn't exist:
+Read `$PROJECT_DIR/cowmoo/agent-files/uxui/design-draft.json`. If it doesn't exist:
 
 ```
 No design draft found. Run /design-draft first to compose tasks
@@ -25,20 +25,28 @@ No design draft found. Run /design-draft first to compose tasks
 
 Stop.
 
+Parse it as JSON. If it exists but does not parse, or has an empty `tasks` array:
+
+```
+Design draft is malformed — re-run /design-draft to recompose it.
+```
+
+Stop.
+
 ---
 
 ## Step 2: Preview
 
-Parse the draft. Show the user what will be created:
+From the parsed draft (Step 1), show the user what will be created — `batch.why` as the batch line, each `tasks[].title` as a numbered entry:
 
 ```
 ## Ready to publish
 
-**Batch:** <coherence reason from draft's Batch context>
+**Batch:** <batch.why from the draft>
 
 **Tasks (N):**
-1. [UXUI] <domain>: <screen 1>
-2. [UXUI] <domain>: <screen 2>
+1. <tasks[0].title>
+2. <tasks[1].title>
 ...
 
 This will create N independent `uxui:todo` tasks on GitHub.
@@ -56,7 +64,7 @@ Before asking for the final confirmation, check whether any draft titles already
 gh issue list --label "uxui:todo" --state open --json number,title --limit 100
 ```
 
-Exact-match each draft title against the returned titles. If any collide, surface them BEFORE proceeding:
+Exact-match each `tasks[].title` from the draft against the returned titles. If any collide, surface them BEFORE proceeding:
 
 ```
 ## Title collision — open uxui:todo issues already exist with these titles:
@@ -82,20 +90,24 @@ If no collisions, flow silently into Step 3.
 
 ## Step 3: Create each task
 
-For each task in the draft, spawn `@uxui-gh-ops`:
+Spawn `@uxui-gh-ops` **once** for the whole batch. The ops agent runs the delegated `CREATE_DESIGN_TASK` operation once per task index, against `design-draft.json` — the task body never passes through the prompt or a shell:
 
 ```
-@uxui-gh-ops CREATE_DESIGN_TASK
-  title=[UXUI] <domain>: <screen>
-  body=<full task body from draft>
+@uxui-gh-ops
+  For i in 0..N-1, run CREATE_DESIGN_TASK with:
+    --from $PROJECT_DIR/cowmoo/agent-files/uxui/design-draft.json --index i
+  Execute in index order. Relay each operation's report line verbatim.
+  On the first ✗, stop and report which index failed.
 ```
 
-Execute sequentially. **Track which tasks have been created** — this matters if we hit a mid-batch failure. Keep a running list of (title, issue#) pairs.
+N is the length of the `tasks` array from Step 1. Pass the absolute draft path.
 
-If a task creation fails:
-- Report which task failed and why
+Read the ops agent's relayed report lines: each `CREATE_DESIGN_TASK: ✓ #<n> — <title>. …` is a created task; the first `CREATE_DESIGN_TASK: ✗ …` line marks a mid-batch failure.
+
+If a task creation fails (`✗`):
+- Report which task (index + title) failed and why, from the `✗` line
 - Note already-created tasks (they don't get rolled back — designer can still pick them up)
-- Stop creating further tasks
+- The ops agent stops creating further tasks on the first failure
 - Surface to user with explicit **partial-failure recovery guidance** (see Step 5)
 
 ---
@@ -155,7 +167,7 @@ If Step 3 stopped mid-batch (e.g., 2 of 5 tasks created before a failure), show 
 - [UXUI] <domain>: <screen 5>
 
 **Recovery options:**
-(a) Leave the already-created tasks, manually remove the completed tasks from design-draft.md, then re-run `/design-publish` to create the remaining ones.
+(a) Leave the already-created tasks, edit `design-draft.json` to remove the already-created tasks from the `tasks` array, then re-run `/design-publish` to create the remaining ones.
 (b) Close the already-created tasks on GitHub (they're unused), then re-run `/design-publish` after fixing whatever caused the failure — recreates all N tasks fresh.
 
 The skill does NOT automatically roll back created tasks. Your choice.
@@ -186,3 +198,4 @@ Wait for user to pick a path before continuing. Do NOT auto-clear the draft in t
 - **Auto-clear the draft on full success; keep it on partial failure.** After all N tasks ship, the GitHub issues are canonical — the draft has no further role. Keeping it around is what used to cause duplicate-issue bugs on re-runs. On partial failure, the draft is the recovery surface and stays untouched.
 - **Pre-check for title collisions before creating.** Open `uxui:todo` issues with the same title as a draft task indicate the user is about to duplicate (either re-running a stale draft or stomping a rejected-back task). Default to cancel, never close in-flight work.
 - **One batch per publish.** The draft is single-batch by construction.
+- **Single-user tool — no concurrent publishes.** Do not run two `/design-publish` invocations against the same draft at once: each would create all N issues. The duplicate-title pre-check only catches issues from a *completed* prior run, not an in-flight one.

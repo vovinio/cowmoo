@@ -90,7 +90,7 @@ Ask only if the role calls for it.
 
 **For ops-gh / ops-git / ops-other:**
 - Ask the user to list the operation names (UPPER_SNAKE_CASE). Minimum one. Each becomes a `### <OP>` section with `**Input from <agent>:**`, Pre-check, Execute, Verify, Report subsections.
-- For ops-gh specifically, ask which operations create issues — any issue-creating op (`CREATE_STORY`, `CREATE_TASK`, `CREATE_FOR_*`, `CREATE_DESIGN_TASK`, `CREATE_ISSUE`) needs Pattern 14's project-board linkage in its post-create step. Ask whether any create nested issues (story ↔ task) — those also need Pattern 14's sub-issue linkage (planner's `@plan-ops CREATE_TASK` is the reference).
+- For ops-gh specifically, ask which operations create issues, change labels, or close them — any such op needs Pattern 14's board-status sync (`board-status <#> <label|closed>`) after its label write (UXUI's delegated `CREATE_DESIGN_TASK` gets it inside the `issue-create` subcommand instead). Ask whether any create nested issues (story ↔ task) — those also need Pattern 14's sub-issue linkage (planner's `@plan-ops CREATE_TASK` is the reference).
 
 **For check:**
 - Ask which parallel family this belongs to (`/review`, `/define`, `/digest`, etc.). Look at the owning agent's CLAUDE.md "Available Agents" to see existing siblings and mirror the shape.

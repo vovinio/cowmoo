@@ -65,7 +65,7 @@ Current state of message channels. Each channel has a sender skill and a recipie
 | PM → UXUI | `for-uxui` (relabeled from `for-pm`) | PM's `/catchup` → `@pm-ops RESOLVE_ISSUE` action `transfer` target `uxui` | UXUI's `/catchup` |
 | Planner → UXUI | `for-uxui` | `/ask uxui` | UXUI's `/catchup` |
 | UXUI → Planner | `for-planner` | `/notify planner` or `/ask planner` | Planner's `/catchup` |
-| Designer → UXUI | `uxui:review` (designer flips `uxui:todo` → `uxui:review` with a Claude Design share URL) | Human designer (external — acts directly on the GitHub issue) | UXUI's `/catchup` dispatches to `/review-bundle` |
+| Designer → UXUI | `uxui:review` (designer drags the card to the "UX: Review" board column and posts a Claude Design share URL; UXUI's `/catchup` detects the card-move and sets the label — a direct `uxui:review` label-flip is still honored as a fallback) | Human designer (external — acts on the project board + the GitHub issue) | UXUI's `/catchup` dispatches to `/review-bundle` |
 
 (UXUI's `/notify planner` announces changes to `cowmoo/design/` files that may affect active planner work.)
 
@@ -92,5 +92,5 @@ Skipping any of these steps leaves the channel half-wired — either the sender 
 ## See Also
 
 - `docs/ARCHITECTURE.md` — why the system uses GitHub Issues for coordination at all
-- `docs/PATTERN-CATALOG.md` — Pattern 13 (Message Channel), Pattern 14 (GitHub GraphQL Patterns — project-board linkage + sub-issue linkage), Pattern 15 (Identity Prefix) with canonical shapes
+- `docs/PATTERN-CATALOG.md` — Pattern 13 (Message Channel), Pattern 14 (GitHub GraphQL Patterns — board Status sync + sub-issue linkage), Pattern 15 (Identity Prefix) with canonical shapes
 - Each agent's `.claude/rules/github-workflow.md` — label tables and per-agent identity conventions

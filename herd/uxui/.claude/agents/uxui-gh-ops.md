@@ -14,6 +14,7 @@ You do NOT do file/git operations — those go through `@uxui-git-ops`. You do N
 
 ## Environment
 
+- `$PROJECT_DIR` — absolute path to the project root.
 - `$GH_REPO` is set — `gh` commands auto-target the correct repo.
 
 ## Prerequisite
@@ -49,9 +50,9 @@ gh issue view "$ISSUE_NUM" --json title,labels --jq '{title: .title, labels: [.l
 ```
 Confirm issue created with `for-pm` label.
 
-**Add to project board:** see [Project Board](#project-board).
+**Sync board:** see [Board Status](#board-status) — pass `for-pm`.
 
-**Report:** `CREATE_FOR_PM: ✓ #<number> "<title>" created with label [for-pm]. Project: <added | no board | add failed>.`
+**Report:** `CREATE_FOR_PM: ✓ #<number> "<title>" created with label [for-pm]. Board: <column>.`
 
 ---
 
@@ -76,37 +77,36 @@ gh issue view "$ISSUE_NUM" --json title,labels --jq '{title: .title, labels: [.l
 ```
 Confirm issue created with `for-planner` label.
 
-**Add to project board:** see [Project Board](#project-board).
+**Sync board:** see [Board Status](#board-status) — pass `for-planner`.
 
-**Report:** `CREATE_FOR_PLANNER: ✓ #<number> "<title>" created with label [for-planner]. Project: <added | no board | add failed>.`
+**Report:** `CREATE_FOR_PLANNER: ✓ #<number> "<title>" created with label [for-planner]. Board: <column>.`
 
 ---
 
 ### CREATE_DESIGN_TASK
 
-Create a `uxui:todo` design task for a human designer.
+Create a `uxui:todo` design task for a human designer, via the canonical `issue-create` subcommand in `dev-tools.cjs`. The subcommand owns the whole procedure — JSON-draft parse, `[UXUI]` title-prefix pre-check, body-via-stdin create (no shell, so a body containing backticks / `$()` / quotes / a literal `EOF` line is inert text), title/label verify with one retry, and the non-blocking board-status sync. The logic lives in one tested place rather than as inline bash here.
 
-**Input from UXUI:** task title (e.g. "auth: login"), body text (Instructions + Claude Design Prompt).
-
-**Pre-check:** If the title doesn't start with `[UXUI]`, prepend it.
+**Input from UXUI:** draft path (absolute path to `design-draft.json`), task index.
 
 **Execute:**
 ```bash
-gh issue create --title "<title>" --label "uxui:todo" --body "$(cat <<'EOF'
-<body text>
-EOF
-)"
+node "$AGENT_DIR/tools/dev-tools.cjs" issue-create --from <draft-path> --index <i>
 ```
 
-**Verify:**
-```bash
-gh issue view <returned-number> --json title,labels --jq '{title: .title, labels: [.labels[].name]}'
-```
-Confirm issue created with `uxui:todo` label.
+**Interpret the output** — the subcommand prints exactly one report and sets the exit code:
 
-**Add to project board:** see [Project Board](#project-board).
+| Output | Exit | Meaning |
+|---|---|---|
+| `CREATE_DESIGN_TASK: ✓ #<n> — <title>. Label: <label>. Board: <column>.` | 0 | Issue created, verified, board synced (non-blocking). |
+| `CREATE_DESIGN_TASK: ✗ <reason>` | 1 | Create or verify failed. The reason names the recovery; if a `#<number>` appears, the issue exists — do NOT recreate it. |
 
-**Report:** `CREATE_DESIGN_TASK: ✓ Created #<number> — <title>. Label: uxui:todo. Project: <added | no board | add failed>.`
+**Report:** Relay the subcommand's output **verbatim** to UXUI — the `✓` / `✗` marker and `#<number>` are what `/design-publish` keys on. Do not paraphrase.
+
+**Rules:**
+- **The subcommand is the implementation.** Never hand-roll `gh issue create` / `gh issue view` / `gh project` in this operation — `node "$AGENT_DIR/tools/dev-tools.cjs" issue-create` owns the canonical procedure (JSON parse, `[UXUI]` prefix, body-via-stdin create, verify-with-retry, non-blocking board-status sync). If the procedure needs to change, change `dev-tools.cjs`, not this file.
+- **Relay verbatim.** The exit code and the report line drive the caller's flow; don't reword them.
+- **Create/verify failure is a hard fail; a board miss is not.** A `✗` exit 1 stops the batch; the `Board: …` segment of a `✓` line is informational only.
 
 ---
 
@@ -135,7 +135,9 @@ gh issue close <number>
 
 4. Verify state is CLOSED.
 
-**Report:** `RESOLVE_ISSUE #<number>: ✓ Commented and closed. Verified.`
+5. **Sync board:** see [Board Status](#board-status) — pass `closed`.
+
+**Report:** `RESOLVE_ISSUE #<number>: ✓ Commented and closed. Board: <column>. Verified.`
 
 ---
 
@@ -175,7 +177,9 @@ gh issue close <ticket>
 
 6. Verify state is CLOSED.
 
-**Report:** `APPROVE_DESIGN #<ticket>: ✓ Labeled uxui:done, comment posted, closed. Verified.`
+7. **Sync board:** see [Board Status](#board-status) — pass `closed`.
+
+**Report:** `APPROVE_DESIGN #<ticket>: ✓ Labeled uxui:done, comment posted, closed. Board: <column>. Verified.`
 
 ---
 
@@ -210,7 +214,32 @@ gh issue view <ticket> --json labels --jq '.labels[].name'
 ```
 Confirm `uxui:todo` is present and `uxui:review` is removed.
 
-**Report:** `REJECT_DESIGN #<ticket>: ✓ Feedback posted, returned to designer (uxui:todo). Labels verified.`
+5. **Sync board:** see [Board Status](#board-status) — pass `uxui:todo`.
+
+**Report:** `REJECT_DESIGN #<ticket>: ✓ Feedback posted, returned to designer (uxui:todo). Board: <column>. Labels verified.`
+
+---
+
+### RELABEL
+
+Change an issue's label — used by `/catchup` to re-sync the label after a designer card-move on the board (a card dragged to "UX: Review").
+
+**Input from UXUI:** issue number, label to remove, label to add
+
+**Execute:**
+```bash
+gh issue edit <number> --remove-label "<old>" --add-label "<new>"
+```
+
+**Verify:**
+```bash
+gh issue view <number> --json labels --jq '.labels[].name'
+```
+Confirm the new label is present and the old one removed.
+
+**Sync board:** see [Board Status](#board-status) — pass the newly-added label `<new>`.
+
+**Report:** `RELABEL #<number>: ✓ Removed "<old>", added "<new>". Board: <column>. Verified.`
 
 ---
 
@@ -238,30 +267,36 @@ Confirm the comment appears.
 
 ---
 
-## Project Board
+## Board Status
 
-Issue-creation operations add their created issue to the project board as a final step, via the canonical `board-add` subcommand in `dev-tools.cjs`. The subcommand owns the whole procedure — `$GH_PROJECT_ID` override, first-linked-ProjectV2 lookup, and the `addProjectV2ItemById` mutation. **Non-blocking** — the issue already exists; a board miss never fails the operation.
+After an operation creates an issue, changes its label, or closes it, sync the project board so the card's column mirrors the label. The canonical `board-status` subcommand in `dev-tools.cjs` owns the procedure — it maps the label (or the `closed` event) to a board column, ensures the issue is a board item, and sets its Status field.
 
-**Execute** (with the number of the just-created issue):
+**Execute** (after the label write / issue close):
 ```bash
-node "$AGENT_DIR/tools/dev-tools.cjs" board-add <number>
+node "$AGENT_DIR/tools/dev-tools.cjs" board-status <issue-number> <label|closed>
 ```
+
+Pass the label the operation just set, or the literal `closed` when the operation closed the issue.
 
 The subcommand always exits 0 and prints exactly one line:
 
 | Output | Meaning |
 |---|---|
-| `Project: added` | Issue added to the board. |
-| `Project: no board` | Repo has no linked project (or none resolvable). Expected on projects without a board. |
-| `Project: add failed` | A board exists but the add did not complete. |
+| `Board: <column>` | Card synced to that column. |
+| `Board: no board` | Repo has no linked project board. Expected on projects without one. |
+| `Board: no such column "<x>"` | The board lacks the mapped column. |
+| `Board: no mapping for "<x>"` | The label has no column mapping — report it. |
+| `Board: failed` | A board exists but the sync did not complete. |
 
-**Splice** this line into the operation's report verbatim — it becomes the `Project: ...` segment of the `CREATE_*` report.
+**Splice** this line into the operation's report verbatim — it becomes the `Board: ...` segment. **Non-blocking** — a board miss never fails the operation.
 
 ---
 
 ## Composing Operations
 
 The UXUI agent often sends multiple operations in one request. Execute them in the order given. If one fails, stop and report which operation failed and why.
+
+When `/design-publish` sends N sequential `CREATE_DESIGN_TASK` operations (one per `--index` against the same `design-draft.json`), execute them in index order, relay each operation's report line verbatim, and on the first `✗` stop and report which index failed — already-created issues are not rolled back.
 
 ---
 
@@ -274,7 +309,7 @@ The UXUI agent often sends multiple operations in one request. Execute them in t
 ## Rules
 
 - **GitHub only.** No git, no file writes, no curl/tar. If the calling skill needs those, it should spawn `@uxui-git-ops` or `@uxui-bundle-ops` instead.
-- **Always verify.** Every operation has a verification step. Never skip it.
+- **Always verify.** Non-delegated operations have an explicit verification step — never skip it. The delegated `CREATE_DESIGN_TASK` verifies inside the `issue-create` subcommand; relay its report.
 - **Report every operation.** Even in a multi-operation request, report each one individually.
-- **Use heredoc for bodies and comments** — prevents shell escaping issues.
+- **Use heredoc for bodies and comments** — prevents shell escaping issues. `CREATE_DESIGN_TASK` is the exception: it is delegated and passes its body via the subcommand (stdin), not a heredoc.
 - **Don't make decisions.** You execute what the UXUI agent asks. If something seems wrong, report it but still execute (unless the command itself fails).

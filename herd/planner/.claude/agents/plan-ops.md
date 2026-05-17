@@ -49,9 +49,9 @@ gh issue view <returned-number> --json title,labels --jq '{title: .title, labels
 ```
 Confirm the issue was created with `story` label.
 
-**Add to project board:** see [Project Board](#project-board).
+**Sync board:** see [Board Status](#board-status) — pass `story`.
 
-**Report:** `CREATE_STORY: ✓ Created #<number> — <title>. Label: story. Project: <added | no board | add failed>.`
+**Report:** `CREATE_STORY: ✓ Created #<number> — <title>. Label: story. Board: <column>.`
 
 ---
 
@@ -88,9 +88,9 @@ Confirm the task appears as a sub-issue.
 
 If linking fails but the issue was created, report the failure and the task number so it can be linked manually.
 
-**Add to project board:** see [Project Board](#project-board).
+**Sync board:** see [Board Status](#board-status) — pass the task's label (`todo`).
 
-**Report:** `CREATE_TASK: ✓ Created #<number> — <title>. Linked to story #<story>. Label: <label>. Project: <added | no board | add failed>.`
+**Report:** `CREATE_TASK: ✓ Created #<number> — <title>. Linked to story #<story>. Label: <label>. Board: <column>.`
 
 ---
 
@@ -145,15 +145,17 @@ gh issue view <number> --json state --jq .state
 ```
 Confirm state is CLOSED.
 
-**Report:** `CLOSE_ISSUE #<number>: ✓ Closed. <Comment posted. | No comment.>`
+**Sync board:** see [Board Status](#board-status) — pass `closed`.
+
+**Report:** `CLOSE_ISSUE #<number>: ✓ Closed. Board: <column>. <Comment posted. | No comment.>`
 
 ---
 
 ### RELABEL
 
-Change labels on an issue.
+Change an issue's label — used to relabel after rejecting work, and by `/catchup` to re-sync a label after a card-move on the board.
 
-**Input from planner:** issue number, labels to remove, labels to add
+**Input from planner:** issue number, label to remove, label to add
 
 **Execute:**
 ```bash
@@ -166,7 +168,9 @@ gh issue view <number> --json labels --jq '.labels[].name'
 ```
 Confirm new label is present and old label is removed.
 
-**Report:** `RELABEL #<number>: ✓ Removed "<old>", added "<new>". Verified.`
+**Sync board:** see [Board Status](#board-status) — pass the newly-added label `<new>`.
+
+**Report:** `RELABEL #<number>: ✓ Removed "<old>", added "<new>". Board: <column>. Verified.`
 
 ---
 
@@ -270,9 +274,9 @@ EOF
 
 **Verify:** The command returns the issue URL.
 
-**Add to project board:** see [Project Board](#project-board).
+**Sync board:** see [Board Status](#board-status) — pass `for-pm`.
 
-**Report:** `CREATE_FOR_PM: ✓ Created #<number> — <title>. URL: <url>. Project: <added | no board | add failed>.`
+**Report:** `CREATE_FOR_PM: ✓ Created #<number> — <title>. URL: <url>. Board: <column>.`
 
 ---
 
@@ -293,30 +297,34 @@ EOF
 
 **Verify:** The command returns the issue URL.
 
-**Add to project board:** see [Project Board](#project-board).
+**Sync board:** see [Board Status](#board-status) — pass `for-uxui`.
 
-**Report:** `CREATE_FOR_UXUI: ✓ Created #<number> — <title>. URL: <url>. Project: <added | no board | add failed>.`
+**Report:** `CREATE_FOR_UXUI: ✓ Created #<number> — <title>. URL: <url>. Board: <column>.`
 
 ---
 
-## Project Board
+## Board Status
 
-Issue-creation operations add their created issue to the project board as a final step, via the canonical `board-add` subcommand in `dev-tools.cjs`. The subcommand owns the whole procedure — `$GH_PROJECT_ID` override, first-linked-ProjectV2 lookup, and the `addProjectV2ItemById` mutation. **Non-blocking** — the issue already exists; a board miss never fails the operation.
+After an operation creates an issue, changes its label, or closes it, sync the project board so the card's column mirrors the label. The canonical `board-status` subcommand in `dev-tools.cjs` owns the procedure — it maps the label (or the `closed` event) to a board column, ensures the issue is a board item, and sets its Status field.
 
-**Execute** (with the number of the just-created issue):
+**Execute** (after the label write / issue close):
 ```bash
-node "$AGENT_DIR/tools/dev-tools.cjs" board-add <number>
+node "$AGENT_DIR/tools/dev-tools.cjs" board-status <issue-number> <label|closed>
 ```
+
+Pass the label the operation just set, or the literal `closed` when the operation closed the issue.
 
 The subcommand always exits 0 and prints exactly one line:
 
 | Output | Meaning |
 |---|---|
-| `Project: added` | Issue added to the board. |
-| `Project: no board` | Repo has no linked project (or none resolvable). Expected on projects without a board. |
-| `Project: add failed` | A board exists but the add did not complete. |
+| `Board: <column>` | Card synced to that column. |
+| `Board: no board` | Repo has no linked project board. Expected on projects without one. |
+| `Board: no such column "<x>"` | The board lacks the mapped column. |
+| `Board: no mapping for "<x>"` | The label has no column mapping — report it. |
+| `Board: failed` | A board exists but the sync did not complete. |
 
-**Splice** this line into the operation's report verbatim — it becomes the `Project: ...` segment of the `CREATE_*` report.
+**Splice** this line into the operation's report verbatim — it becomes the `Board: ...` segment. **Non-blocking** — a board miss never fails the operation.
 
 ---
 

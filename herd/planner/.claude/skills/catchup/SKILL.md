@@ -14,6 +14,18 @@ Read incoming messages, handle what you can, and prepare context for the rest.
 
 ## Step 1: Load Messages
 
+### 1a. Detect board card-moves (board → label)
+
+A human can route an issue to the planner by dragging its card into the "Planner" column. Detect those drags first and re-sync the label, so `@plan-reader` sees them:
+
+```bash
+node "$AGENT_DIR/tools/dev-tools.cjs" board-drags "Planner" for-planner
+```
+
+This prints one `<number><TAB><current-labels>` line per card a human dragged into the "Planner" column (cards there not already labelled `for-planner`) — or `Board: no board` (then skip this sub-step). For each, spawn `@plan-ops` **RELABEL** — remove its current status label (taken from the `board-drags` line), add `for-planner`. Do this before spawning `@plan-reader` below so the dragged cards appear in the message list.
+
+### 1b. Load the inbox
+
 Spawn `@plan-reader` with operation **GET_MESSAGES** — get all for-planner issues with full context, categorized by message type.
 
 **Verify the output before trusting it.** `@plan-reader` runs with `maxTurns: 30` and can fail partway (gh timeout, auth hiccup, opus turn truncation) and return empty or error-shaped prose. A silent failure looks identical to "no messages." Apply a presence + shape check, modeled on `/start` Step 2:

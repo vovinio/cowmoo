@@ -287,10 +287,15 @@ EOF
     gh label create "for-pm" --color "C5DEF5" --description "PM must address" --force </dev/null 2>/dev/null || true
     gh label create "for-planner" --color "BFD4F2" --description "Planner must review" --force </dev/null 2>/dev/null || true
     gh label create "for-uxui" --color "D4C5F9" --description "UXUI agent must review (from PM, planner, or builder)" --force </dev/null 2>/dev/null || true
+    # UXUI design-task workflow
+    gh label create "uxui:todo" --color "FBCA04" --description "Design task ready for a human designer" --force </dev/null 2>/dev/null || true
+    gh label create "uxui:in-progress" --color "FEF2C0" --description "Designer working (designer-set, optional)" --force </dev/null 2>/dev/null || true
+    gh label create "uxui:review" --color "D93F0B" --description "Designer finished — UXUI reviews" --force </dev/null 2>/dev/null || true
+    gh label create "uxui:done" --color "0E8A16" --description "Design approved" --force </dev/null 2>/dev/null || true
     echo ""
   elif $has_gh && ! $has_remote; then
     echo "No GitHub repo — skipping label creation."
-    echo "Create these labels after adding a remote: todo, in-progress, story, for-pm, for-planner, for-uxui"
+    echo "Create these labels after adding a remote: todo, in-progress, story, for-pm, for-planner, for-uxui, uxui:todo, uxui:in-progress, uxui:review, uxui:done"
     echo ""
   fi
 
@@ -413,7 +418,7 @@ create_project_board() {
       updateProjectV2Field(input: {
         fieldId: $fid
         singleSelectOptions: [
-          {name: "Backlog", color: GRAY, description: "Future work"}
+          {name: "Stories", color: PURPLE, description: "Parent story grouping tasks"}
           {name: "Todo", color: GREEN, description: "Ready for builder"}
           {name: "In Progress", color: ORANGE, description: "Builder working"}
           {name: "Planner", color: BLUE, description: "Needs planner review"}
@@ -425,12 +430,12 @@ create_project_board() {
           {name: "Done", color: GREEN, description: "Completed"}
         ]
       }) { clientMutationId }
-    }' -f fid="$status_field_id" >/dev/null 2>&1 && echo "  Columns: Backlog, Todo, In Progress, Planner, PM, UXUI, UX: Todo, UX: In Progress, UX: Review, Done"
+    }' -f fid="$status_field_id" >/dev/null 2>&1 && echo "  Columns: Stories, Todo, In Progress, Planner, PM, UXUI, UX: Todo, UX: In Progress, UX: Review, Done"
   fi
 
   echo ""
   echo "  Opening project — switch to Board view for kanban."
-  echo "  Also enable 'Item closed → Done' in project Settings > Workflows."
+  echo "  The herd keeps each card's Status column in sync with its issue label automatically — no manual workflow setup needed."
   open "$project_url" 2>/dev/null || echo "  Open: $project_url"
   echo ""
 }
