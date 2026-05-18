@@ -102,6 +102,7 @@ function healthCheck() {
   } else if (run('gh auth status') === null) {
     issues.push('gh installed but not authenticated. Run: gh auth login');
   }
+  if (!run('command -v jq')) issues.push('jq not found. Install: brew install jq');
 
   if (issues.length > 0) {
     console.log('Health check:');
@@ -283,6 +284,14 @@ function bundleFetch() {
     console.log('FAIL no-project-dir — PROJECT_DIR not set');
     process.exit(1);
   }
+  // ticket builds a filesystem path that is recursively deleted below — reject
+  // anything that is not a plain issue number so a `..`-laden value cannot
+  // escape the bundles/ directory. Mirrors the /^[0-9]+$/ guard on every other
+  // ticket/issue argument in this file (journalUpdate, issueTransition, ...).
+  if (!/^[0-9]+$/.test(String(ticket))) {
+    console.log('FAIL bad-ticket — ticket must be a positive integer');
+    process.exit(1);
+  }
 
   const bundleDir = path.join(PROJECT_DIR, 'cowmoo', 'design', 'bundles', String(ticket));
 
@@ -306,7 +315,9 @@ function bundleFetch() {
   const tmpFile = `/tmp/bundle-${ticket}-${Date.now()}.tar.gz`;
   let dlExitCode = 0;
   try {
-    execSync(`curl -sfL --max-time 60 -o ${JSON.stringify(tmpFile)} ${JSON.stringify(url)}`, {
+    // execFileSync (argv array, no shell) — `url` is externally supplied, so a
+    // shell-string curl would let $(...)/backticks in the URL execute.
+    execFileSync('curl', ['-sfL', '--max-time', '60', '-o', tmpFile, url], {
       encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], timeout: 75000,
     });
   } catch (e) {
@@ -366,23 +377,29 @@ function bundleFetch() {
   // usable data over a transient git issue (e.g., pre-commit hook,
   // signing config, lock file). The cleanup() helper is reserved for
   // pre-git failures (extraction, empty tarball, meta-write).
-  // 60s per-call timeout (run() default is 15s) — project pre-commit hooks
-  // (linters, type-checkers, signing) commonly exceed 15s on real repos.
+  // 60s per-call timeout (the git() helper defaults to 20s) — project pre-commit
+  // hooks (linters, type-checkers, signing) commonly exceed that on real repos.
+  // Routed through the shell-free git() helper: `domain` flows into commitMsg
+  // below and is externally supplied, so a shell-string git would be injectable.
   const relDir = path.relative(PROJECT_DIR, bundleDir);
-  const addResult = run(`git -C ${JSON.stringify(PROJECT_DIR)} add ${JSON.stringify(relDir)}`, { timeout: 60000 });
-  if (addResult === null) {
+  const addResult = git(['add', relDir], { timeout: 60000 });
+  if (!addResult.ok) {
     console.log('FAIL git-add — could not stage bundle directory (files left in place for inspection)');
     process.exit(4);
   }
 
   const commitMsg = `design(${domain}): capture bundle for ticket #${ticket}`;
-  const commitResult = run(`git -C ${JSON.stringify(PROJECT_DIR)} commit -m ${JSON.stringify(commitMsg)}`, { timeout: 60000 });
-  if (commitResult === null) {
+  // Pathspec-restricted to the bundle directory. A bare `git commit` would
+  // commit the whole index, sweeping any pre-existing staged content into the
+  // bundle-capture commit; `commit -- <relDir>` confines it to what was just
+  // staged. relDir was recreated above, so the pathspec cannot hit a no-match.
+  const commitResult = git(['commit', '-m', commitMsg, '--', relDir], { timeout: 60000 });
+  if (!commitResult.ok) {
     console.log('FAIL git-commit — git commit failed (files left in place; check hook / signing / lock)');
     process.exit(5);
   }
 
-  const shortHash = run(`git -C ${JSON.stringify(PROJECT_DIR)} rev-parse --short HEAD`) || '?';
+  const shortHash = git(['rev-parse', '--short', 'HEAD']).out || '?';
 
   // Re-list files to include meta.json in count
   const finalFiles = fs.readdirSync(bundleDir);
@@ -1085,6 +1102,11 @@ function journalUpdate() {
   if (!screen) fail('entry is missing "screen".');
   if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(date)) fail(`entry "date" must be YYYY-MM-DD (got "${entry.date}").`);
   if (!summary) fail('entry is missing "summary".');
+  // The journal is parsed by splitting on `## #<n> ` entry headings (see the
+  // raw.split below), so a summary containing such a line would be split off as
+  // a phantom entry on the next journal-update run. Reject it — this regex
+  // matches the parser's heading shape exactly.
+  if (/^## #[0-9]+ /m.test(summary)) fail('entry "summary" must not contain a line shaped like a journal entry heading ("## #<n> ...") — rephrase it.');
 
   const journalPath = path.join(PROJECT_DIR, 'cowmoo', 'design', 'VISUAL-JOURNAL.md');
   const PREAMBLE = '# Visual Journal\n\n'

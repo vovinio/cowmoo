@@ -84,6 +84,7 @@ function healthCheck() {
   } else if (run('gh auth status') === null) {
     issues.push('gh installed but not authenticated. Run: gh auth login');
   }
+  if (!run('command -v jq')) issues.push('jq not found. Install: brew install jq');
 
   if (issues.length > 0) {
     console.log('Health check:');

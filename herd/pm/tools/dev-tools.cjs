@@ -242,6 +242,24 @@ function inboxRemove() {
   else fs.writeFileSync(p, lines.join('\n') + '\n');
 }
 
+// --- Open inbox query (read-only GitHub for-pm issue list) ---
+//
+// Used by /status for a lightweight inbox snapshot — count + titles only,
+// without spawning the @inbox-reader sub-agent (which reads every issue body
+// plus all comments for full-context triage). Prints one `<number>\t<title>`
+// line per open for-pm issue, nothing when the inbox is empty. Always exits 0:
+// an empty inbox is a valid answer, and a gh failure degrades to no output
+// rather than blocking the snapshot. Read-only — no writes, no board sync.
+//
+function inboxOpen() {
+  const result = run('gh issue list --label "for-pm" --state open --json number,title --limit 30');
+  if (!result) return;
+  let issues;
+  try { issues = JSON.parse(result); } catch { return; }
+  if (!Array.isArray(issues)) return;
+  issues.forEach((i) => console.log(`${i.number}\t${i.title}`));
+}
+
 // --- Design Fetch (Claude Designer bundle download → transient /tmp dir) ---
 //
 // Used by PM's /import-design skill to extract a share URL into a temp
@@ -274,7 +292,9 @@ function designFetch() {
   const tmpFile = `/tmp/pm-import-${Date.now()}.tar.gz`;
   let dlExitCode = 0;
   try {
-    execSync(`curl -sfL --max-time 60 -o ${JSON.stringify(tmpFile)} ${JSON.stringify(url)}`, {
+    // execFileSync (argv array, no shell) — `url` is externally supplied, so a
+    // shell-string curl would let $(...)/backticks in the URL execute.
+    execFileSync('curl', ['-sfL', '--max-time', '60', '-o', tmpFile, url], {
       encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], timeout: 75000,
     });
   } catch (e) {
@@ -1015,6 +1035,9 @@ switch (command) {
       default: console.log('Usage: inbox <add|list|remove>');
     }
     break;
+  case 'inbox-open':
+    inboxOpen();
+    break;
   case 'workflow-check':
     workflowCheck(subcommand);
     break;
@@ -1046,5 +1069,5 @@ switch (command) {
     issueTransition();
     break;
   default:
-    console.log('Usage: node "$AGENT_DIR/tools/dev-tools.cjs" <hook|git-check|territory-check|check-files|inbox|workflow-check|next-step|design-fetch|downstream-engaged|commit|push|last-spec-commit|board-drags|issue-create|issue-transition>');
+    console.log('Usage: node "$AGENT_DIR/tools/dev-tools.cjs" <hook|git-check|territory-check|check-files|inbox|inbox-open|workflow-check|next-step|design-fetch|downstream-engaged|commit|push|last-spec-commit|board-drags|issue-create|issue-transition>');
 }

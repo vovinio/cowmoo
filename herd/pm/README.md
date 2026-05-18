@@ -192,7 +192,7 @@ The specs are written in business language, not technical language. A developer 
 | `/start` | Load the project and orient the session — greet a fresh project, or resume an existing one (assesses notes condition, suggests focus area). |
 | `/draft` | Extract decisions from the current conversation and save to working notes. |
 | `/digest` | Formalize confirmed working notes into spec files. Run as a dedicated session. |
-| `/review` | Verify spec integrity — terminology, references, scope, completeness, structure. Run after digest. |
+| `/review` | Verify spec integrity — terminology, references, scope, completeness, structure, risk. Run after digest. |
 | `/publish` | Commit PM file changes to git — specs, working notes, proposals. Run after /review or anytime. |
 | `/notify` | Announce spec changes to the planner or UXUI, and resolve tracked inbox issues. Run after /publish. |
 

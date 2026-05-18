@@ -3,7 +3,7 @@ name: status
 description: Quick read-only project snapshot — file states, tagged-item counts, inbox, domains, backlog size
 user-invocable: true
 disable-model-invocation: false
-allowed-tools: Read, Glob, Agent, Bash
+allowed-tools: Read, Glob, Bash
 ---
 
 # Status
@@ -22,7 +22,7 @@ Run `node "$AGENT_DIR/tools/dev-tools.cjs" check-files` and read the `working-no
 
 ### 2. Check Inbox
 
-Spawn `@inbox-reader` with operation **GET_INBOX** to get any pending for-pm issues. Show any pending issues — they may need attention.
+Run `node "$AGENT_DIR/tools/dev-tools.cjs" inbox-open`. It prints one `<number>\t<title>` line per open for-pm issue — nothing when the inbox is empty. This is a lightweight count + titles snapshot; the full-context triage read (every issue body and comment, via `@inbox-reader`) belongs to `/catchup`, not `/status`. Show any pending issues — they may need attention.
 
 ### 3. Gather Counts (lightweight)
 

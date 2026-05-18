@@ -60,6 +60,7 @@ function healthCheck() {
   } else if (run('gh auth status') === null) {
     issues.push('gh installed but not authenticated. Run: gh auth login');
   }
+  if (!run('command -v jq')) issues.push('jq not found. Install: brew install jq');
 
   if (issues.length > 0) {
     console.log('Health check:');
@@ -828,6 +829,32 @@ function issueTransition() {
   process.exit(0);
 }
 
+// --- Task scratch cleanup (delete local per-task working files) ---
+//
+// task-cleanup — remove active-task.md and deviations.md under
+// cowmoo/agent-files/builder/. Single owner of the per-task scratch lifecycle:
+// /start calls it before writing a fresh active-task.md (so a re-picked or
+// different task starts clean), /publish calls it at end-of-task. Local files
+// only — no git, no GitHub. Idempotent: a missing file is a silent no-op.
+function taskCleanup() {
+  if (!PROJECT_DIR) {
+    console.log('TASK-CLEANUP: ✗ PROJECT_DIR not set');
+    process.exit(1);
+  }
+  const base = path.join(PROJECT_DIR, 'cowmoo', 'agent-files', 'builder');
+  const removed = [];
+  for (const name of ['active-task.md', 'deviations.md']) {
+    const p = path.join(base, name);
+    try {
+      if (fs.existsSync(p)) { fs.rmSync(p); removed.push(name); }
+    } catch (e) {
+      console.log(`TASK-CLEANUP: ✗ could not remove ${name}: ${e.message}`);
+      process.exit(1);
+    }
+  }
+  console.log(`TASK-CLEANUP: ✓ ${removed.length ? `${removed.join(', ')} removed` : 'nothing to remove'}.`);
+}
+
 // --- Main ---
 
 const [,, command, subcommand] = process.argv;
@@ -854,6 +881,9 @@ switch (command) {
   case 'detect-dev-servers':
     detectDevServers();
     break;
+  case 'task-cleanup':
+    taskCleanup();
+    break;
   case 'commit': {
     const scope = subcommand;
     const message = process.argv[4] || '';
@@ -875,5 +905,5 @@ switch (command) {
     issueTransition();
     break;
   default:
-    console.log('Usage: node "$AGENT_DIR/tools/dev-tools.cjs" <hook|git-check|territory-check|workflow-check|next-step|detect-dev-servers|commit|push|board-drags|issue-create|issue-transition>');
+    console.log('Usage: node "$AGENT_DIR/tools/dev-tools.cjs" <hook|git-check|territory-check|workflow-check|next-step|detect-dev-servers|task-cleanup|commit|push|board-drags|issue-create|issue-transition>');
 }

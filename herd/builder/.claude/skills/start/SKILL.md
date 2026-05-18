@@ -32,7 +32,13 @@ Spawn `@task-check` to check for in-progress task.
 - If no todo tasks: "No tasks available." Spawn `@task-reader` GET_STATUS for overview. Stop.
 - Spawn `@task-reader` GET_TASK_CONTEXT with the found task.
 
-**Save task context** — Write the full task context returned by `@task-reader` to `$PROJECT_DIR/cowmoo/agent-files/builder/active-task.md`. Include everything: task number, title, labels, full PRD body, parent story, sibling tasks, Records, and planner comments. This is the local reference for `/build`, `/review`, and `/publish` — no need to re-fetch the PRD from GitHub.
+**Save task context** — For a new task (not a resume), first reset the per-task scratch so a prior task's deviations don't leak into this one:
+
+```bash
+node "$AGENT_DIR/tools/dev-tools.cjs" task-cleanup
+```
+
+Skip this on a resume — an in-progress task's `active-task.md` and `deviations.md` must be preserved. Then write the full task context returned by `@task-reader` to `$PROJECT_DIR/cowmoo/agent-files/builder/active-task.md`. Include everything: task number, title, labels, full PRD body, parent story, sibling tasks, Records, and planner comments. This is the local reference for `/build`, `/review`, and `/publish` — no need to re-fetch the PRD from GitHub.
 
 ---
 

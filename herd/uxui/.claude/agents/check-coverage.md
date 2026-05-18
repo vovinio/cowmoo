@@ -18,7 +18,7 @@ Product-wide checks — OVERVIEW, cross-domain reconciliation, unused roles, scr
 
 ## Prerequisite
 
-Read `.claude/rules/ui-vocabulary.md` — canonical state vocabulary (data component states, form states, control states) + role-naming convention. Apply these when checking State Coverage below.
+Read `.claude/rules/ui-vocabulary.md` — canonical state vocabulary (data component states, form states) + role-naming convention. Apply these when checking State Coverage below.
 
 ## Input
 

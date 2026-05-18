@@ -127,8 +127,8 @@ iso_to_local() {
             date -d "@$epoch" +"%l:%M%P" 2>/dev/null | sed 's/^ //'
             ;;
         datetime)
-            date -j -r "$epoch" +"%b %-d" 2>/dev/null | tr '[:upper:]' '[:lower:]' || \
-            date -d "@$epoch" +"%b %-d" 2>/dev/null
+            date -j -r "$epoch" +"%b %e" 2>/dev/null | tr '[:upper:]' '[:lower:]' | tr -s ' ' || \
+            date -d "@$epoch" +"%b %e" 2>/dev/null | tr -s ' '
             ;;
     esac
 }
@@ -264,9 +264,9 @@ if [ -n "$PROJECT_DIR" ]; then
         # "code" = anything in the project tree that ships via scope=code:
         # repo root + cowmoo/codebase/ (builder's public output). Excludes
         # other agents' territories, all agent-files, and config.json.
-        paths=$(echo "$git_status" | awk '{print substr($0, 4)}')
-        code_n=$(echo "$paths" | grep -cvE '^cowmoo/(specs|stack|design|agent-files|config\.json)' 2>/dev/null || echo 0)
-        builder_n=$(echo "$paths" | grep -c '^cowmoo/agent-files/builder/' 2>/dev/null || echo 0)
+        paths=$(echo "$git_status" | awk '{p=substr($0, 4); sub(/^.* -> /, "", p); print p}')
+        code_n=$(echo "$paths" | grep -cvE '^cowmoo/(specs|stack|design|agent-files|config\.json)' 2>/dev/null || true)
+        builder_n=$(echo "$paths" | grep -c '^cowmoo/agent-files/builder/' 2>/dev/null || true)
         [ "$code_n" -gt 0 ] 2>/dev/null && parts+="${dim}code:${reset}${orange}${code_n}${reset}"
         [ "$builder_n" -gt 0 ] 2>/dev/null && parts+="${parts:+ }${dim}builder:${reset}${orange}${builder_n}${reset}"
         if [ -n "$parts" ]; then
@@ -278,7 +278,7 @@ if [ -n "$PROJECT_DIR" ]; then
     # Deviations count
     dev_file="$PROJECT_DIR/cowmoo/agent-files/builder/deviations.md"
     if [ -f "$dev_file" ]; then
-        dev_count=$(grep -c '^## ' "$dev_file" 2>/dev/null || echo 0)
+        dev_count=$(grep -c '^## ' "$dev_file" 2>/dev/null || true)
         [ "$dev_count" -gt 0 ] 2>/dev/null && {
             [ -n "$line3" ] && line3+="$sep"
             line3+="${yellow}${dev_count} deviation(s)${reset}"
@@ -295,9 +295,9 @@ line4=""
 # ── Untracked skills check ──
 
 known="start build review publish return status propose playwright-cli map-codebase"
-if [ -d .claude/skills ]; then
-    for skill in $(ls .claude/skills/ 2>/dev/null); do
-        [ -d ".claude/skills/$skill" ] || continue
+if [ -n "$AGENT_DIR" ] && [ -d "$AGENT_DIR/.claude/skills" ]; then
+    for skill in $(ls "$AGENT_DIR/.claude/skills/" 2>/dev/null); do
+        [ -d "$AGENT_DIR/.claude/skills/$skill" ] || continue
         case " $known " in
             *" $skill "*) ;;
             *) line4+="${line4:+, }${skill}" ;;

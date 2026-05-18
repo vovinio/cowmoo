@@ -138,8 +138,8 @@ iso_to_local() {
             date -d "@$epoch" +"%l:%M%P" 2>/dev/null | sed 's/^ //'
             ;;
         datetime)
-            date -j -r "$epoch" +"%b %-d" 2>/dev/null | tr '[:upper:]' '[:lower:]' || \
-            date -d "@$epoch" +"%b %-d" 2>/dev/null
+            date -j -r "$epoch" +"%b %e" 2>/dev/null | tr '[:upper:]' '[:lower:]' | tr -s ' ' || \
+            date -d "@$epoch" +"%b %e" 2>/dev/null | tr -s ' '
             ;;
     esac
 }
@@ -236,13 +236,17 @@ if [ -n "$files_dir" ]; then
         # over-counted captured user quotes, log entries, and "DIGESTED"-section
         # bullets. The accurate "open" assessment lives in /start, which Reads
         # the file in full and classifies semantically.
-        eval $(awk '
+        # Parse counts via read, not eval — eval of command output is avoided
+        # on principle even though the awk output is integer-only by construction.
+        notes_counts=$(awk '
             /^- / {
                 if (/\[ready\]/) r++
                 else if (/\[future\]/) f++
             }
-            END { printf "nr=%d nf=%d", r+0, f+0 }
+            END { printf "%d %d", r+0, f+0 }
         ' "$notes_file" 2>/dev/null)
+        read -r nr nf <<< "$notes_counts"
+        nr=${nr:-0}; nf=${nf:-0}
 
         if [ "$nr" -gt 0 ] || [ "$nf" -gt 0 ]; then
             dot=" ${dim}\xc2\xb7${reset} "
@@ -312,9 +316,9 @@ if [ -n "$PROJECT_DIR" ]; then
         parts=""
         for dir in "cowmoo/specs" "cowmoo/agent-files/pm" "cowmoo/agent-files/pm/proposals"; do
             if [ "$dir" = "cowmoo/agent-files/pm" ]; then
-                n=$(echo "$git_status" | grep " ${dir}/" 2>/dev/null | grep -vc "/proposals/" 2>/dev/null || echo 0)
+                n=$(echo "$git_status" | grep " ${dir}/" 2>/dev/null | grep -vc "/proposals/" 2>/dev/null || true)
             else
-                n=$(echo "$git_status" | grep -c " ${dir}/" 2>/dev/null || echo 0)
+                n=$(echo "$git_status" | grep -c " ${dir}/" 2>/dev/null || true)
             fi
             [ "$n" -gt 0 ] 2>/dev/null && parts+="${parts:+ }${dim}${dir}:${reset}${orange}${n}${reset}"
         done
@@ -334,9 +338,9 @@ line4=""
 # ── Untracked skills check ──
 
 known="start draft digest review publish notify status propose copywrite ideate import import-design migrate catchup tidy recon-chrome recon-playwright compare playwright-cli"
-if [ -d .claude/skills ]; then
-    for skill in $(ls .claude/skills/ 2>/dev/null); do
-        [ -d ".claude/skills/$skill" ] || continue
+if [ -n "$AGENT_DIR" ] && [ -d "$AGENT_DIR/.claude/skills" ]; then
+    for skill in $(ls "$AGENT_DIR/.claude/skills/" 2>/dev/null); do
+        [ -d "$AGENT_DIR/.claude/skills/$skill" ] || continue
         case " $known " in
             *" $skill "*) ;;
             *) line4+="${line4:+, }${skill}" ;;

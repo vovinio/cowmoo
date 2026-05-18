@@ -602,6 +602,12 @@ cmd_doctor() {
     fail "gh CLI not installed — agents need it for GitHub operations"
   fi
 
+  if command -v jq >/dev/null 2>&1; then
+    pass "jq installed"
+  else
+    fail "jq not installed — agents need it for statuslines and JSON parsing (brew install jq)"
+  fi
+
   echo ""
   echo "GitHub labels (required for cross-agent workflow):"
   if command -v gh >/dev/null 2>&1 && gh repo view >/dev/null 2>&1 </dev/null; then

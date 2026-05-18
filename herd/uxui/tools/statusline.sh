@@ -138,8 +138,8 @@ iso_to_local() {
             date -d "@$epoch" +"%l:%M%P" 2>/dev/null | sed 's/^ //'
             ;;
         datetime)
-            date -j -r "$epoch" +"%b %-d" 2>/dev/null | tr '[:upper:]' '[:lower:]' || \
-            date -d "@$epoch" +"%b %-d" 2>/dev/null
+            date -j -r "$epoch" +"%b %e" 2>/dev/null | tr '[:upper:]' '[:lower:]' | tr -s ' ' || \
+            date -d "@$epoch" +"%b %e" 2>/dev/null | tr -s ' '
             ;;
     esac
 }
@@ -231,7 +231,9 @@ line2=""
 if [ -n "$files_dir" ]; then
     notes_file="$files_dir/WORKING-NOTES.md"
     if [ -f "$notes_file" ]; then
-        eval $(awk '
+        # Parse counts via read, not eval — eval of command output is avoided
+        # on principle even though the awk output is integer-only by construction.
+        notes_counts=$(awk '
             /^## / {
                 if (/\[ready\]/) tag="ready"
                 else if (/\[future\]/) tag="future"
@@ -242,8 +244,10 @@ if [ -n "$files_dir" ]; then
                 else if (/\[future\]/ || tag=="future") f++
                 else o++
             }
-            END { printf "nr=%d nf=%d no=%d", r+0, f+0, o+0 }
+            END { printf "%d %d %d", r+0, f+0, o+0 }
         ' "$notes_file" 2>/dev/null)
+        read -r nr nf no <<< "$notes_counts"
+        nr=${nr:-0}; no=${no:-0}
 
         if [ "$nr" -gt 0 ] || [ "$no" -gt 0 ]; then
             dot=" ${dim}\xc2\xb7${reset} "
@@ -295,7 +299,9 @@ if command -v gh >/dev/null 2>&1 && [ -n "$GH_REPO" ]; then
         dmt=$(stat -c %Y "$design_cache" 2>/dev/null || stat -f %m "$design_cache" 2>/dev/null)
         if [ $(( $(date +%s) - dmt )) -lt 60 ]; then
             design_fresh=true
-            eval $(cat "$design_cache")
+            # Parse the cache with read, not eval — $design_cache is a
+            # predictable /tmp path; eval would execute anything written there.
+            IFS=' ' read -r d_todo d_prog d_review d_done < "$design_cache" 2>/dev/null
         fi
     fi
 
@@ -305,7 +311,7 @@ if command -v gh >/dev/null 2>&1 && [ -n "$GH_REPO" ]; then
         d_prog=$(gh issue list --label "uxui:in-progress" --state open --json number 2>/dev/null | jq 'length' 2>/dev/null || echo 0)
         d_review=$(gh issue list --label "uxui:review" --state open --json number 2>/dev/null | jq 'length' 2>/dev/null || echo 0)
         d_done=$(gh issue list --label "uxui:done" --state closed --json number 2>/dev/null | jq 'length' 2>/dev/null || echo 0)
-        [ -n "$design_cache" ] && echo "d_todo=$d_todo d_prog=$d_prog d_review=$d_review d_done=$d_done" > "$design_cache" 2>/dev/null
+        [ -n "$design_cache" ] && printf '%s %s %s %s\n' "$d_todo" "$d_prog" "$d_review" "$d_done" > "$design_cache" 2>/dev/null
     fi
 
     parts=""
@@ -350,9 +356,9 @@ if [ -n "$PROJECT_DIR" ]; then
             if [ "$dir" = "cowmoo/agent-files/uxui" ]; then
                 # Exclude the proposals subdir so files under it are not double-counted
                 # in both this bucket and the dedicated proposals bucket below.
-                n=$(echo "$git_status" | grep " ${dir}/" | grep -cv " ${dir}/proposals/" 2>/dev/null || echo 0)
+                n=$(echo "$git_status" | grep " ${dir}/" | grep -cv " ${dir}/proposals/" 2>/dev/null || true)
             else
-                n=$(echo "$git_status" | grep -c " ${dir}/" 2>/dev/null || echo 0)
+                n=$(echo "$git_status" | grep -c " ${dir}/" 2>/dev/null || true)
             fi
             [ "$n" -gt 0 ] 2>/dev/null && parts+="${parts:+ }${dim}${dir}:${reset}${orange}${n}${reset}"
         done
@@ -372,9 +378,9 @@ line4=""
 # ── Untracked skills check ──
 
 known="start draft define review publish ask notify catchup process-inbox process-message status propose design-start design-draft design-publish review-bundle approve-design resolve-review"
-if [ -d .claude/skills ]; then
-    for skill in $(ls .claude/skills/ 2>/dev/null); do
-        [ -d ".claude/skills/$skill" ] || continue
+if [ -n "$AGENT_DIR" ] && [ -d "$AGENT_DIR/.claude/skills" ]; then
+    for skill in $(ls "$AGENT_DIR/.claude/skills/" 2>/dev/null); do
+        [ -d "$AGENT_DIR/.claude/skills/$skill" ] || continue
         case " $known " in
             *" $skill "*) ;;
             *) line4+="${line4:+, }${skill}" ;;

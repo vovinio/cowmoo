@@ -129,8 +129,8 @@ iso_to_local() {
             date -d "@$epoch" +"%l:%M%P" 2>/dev/null | sed 's/^ //'
             ;;
         datetime)
-            date -j -r "$epoch" +"%b %-d" 2>/dev/null | tr '[:upper:]' '[:lower:]' || \
-            date -d "@$epoch" +"%b %-d" 2>/dev/null
+            date -j -r "$epoch" +"%b %e" 2>/dev/null | tr '[:upper:]' '[:lower:]' | tr -s ' ' || \
+            date -d "@$epoch" +"%b %e" 2>/dev/null | tr -s ' '
             ;;
     esac
 }

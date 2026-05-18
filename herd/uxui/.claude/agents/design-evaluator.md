@@ -16,7 +16,7 @@ Mechanical comparison of a designer's submitted Claude Design bundle against wha
 
 ## Prerequisite
 
-Read `.claude/rules/ui-vocabulary.md` — canonical state vocabulary (data component states, form states, control states) and role-naming convention. Every check below relies on this vocabulary.
+Read `.claude/rules/ui-vocabulary.md` — canonical state vocabulary (data component states, form states) and role-naming convention. Every check below relies on this vocabulary.
 
 ## Input from UXUI
 

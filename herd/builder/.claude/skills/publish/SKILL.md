@@ -114,7 +114,7 @@ Then run each command yourself (Bash), in order. **After every command, read its
 3. **Post Record** — `node "$AGENT_DIR/tools/dev-tools.cjs" issue-transition --from cowmoo/agent-files/builder/.op-handoff.json --index 0`. Output: `POST_COMMENT #<n>: ✓ commented. Verified.` or `POST_COMMENT #<n>: ✗ <reason>`.
 4. **Complete task** — `node "$AGENT_DIR/tools/dev-tools.cjs" issue-transition --from cowmoo/agent-files/builder/.op-handoff.json --index 1`. Output: `COMPLETE #<n>: ✓ <steps>. Verified. Board: Done.` or `COMPLETE #<n>: ✗ <reason>`.
 5. **Update BUILD-NOTES.md** — if this task revealed project-specific rules (patterns to follow, traps to avoid, conventions that differ from defaults), add them as directives. Merge with existing entries on the same topic. Delete entries this task proved wrong.
-6. **Clean up** — `rm -f "$PROJECT_DIR/cowmoo/agent-files/builder/deviations.md" "$PROJECT_DIR/cowmoo/agent-files/builder/active-task.md"`
+6. **Clean up** — `node "$AGENT_DIR/tools/dev-tools.cjs" task-cleanup` — removes the per-task scratch (`active-task.md`, `deviations.md`); the task is complete. Output: `TASK-CLEANUP: ✓ ...`. The deletions are staged and committed by step 7.
 7. **Commit working files** — `node "$AGENT_DIR/tools/dev-tools.cjs" commit working "<docs(builder): description>"` (only if BUILD-NOTES or other working files changed; uses the heredoc form from step 1 for the message). Same `✓` / `Nothing to commit` / `✗` outputs as step 1.
 8. **Push working files** — `node "$AGENT_DIR/tools/dev-tools.cjs" push` (no-op if step 7 produced no commit; otherwise pushes the working-files commit). Same skip/failure semantics as the code push in step 2.
 
@@ -123,6 +123,15 @@ Then run each command yourself (Bash), in order. **After every command, read its
 **On `COMMIT: ✓` with a `Note:` line about pre-existing foreign staged content** — surface that line to the user so they know it stayed staged.
 
 **If any other step fails:** Report which step failed and list the remaining commands still needed. Do not skip failed steps or proceed as if they succeeded. **PUSH failure is non-fatal** — the local commit is correct; surface the error and continue with the next step. On a re-run, the handoff file is rewritten from scratch — no stale entries carry over.
+
+**If the working-files commit (step 7) fails:** the task is already complete on GitHub (closed at step 4) and the code is committed and pushed — so re-running `/publish` will not resume steps 7–8 (it stops at the prerequisites: no in-progress task, nothing to publish). Surface the failure, then give the user the exact commands to finish manually once they resolve the cause:
+
+```bash
+node "$AGENT_DIR/tools/dev-tools.cjs" commit working "<docs(builder): description>"
+node "$AGENT_DIR/tools/dev-tools.cjs" push
+```
+
+The working files (BUILD-NOTES.md, proposals) stay uncommitted in the working tree until then — nothing is lost.
 
 ---
 

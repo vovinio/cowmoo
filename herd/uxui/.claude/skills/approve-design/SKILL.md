@@ -131,7 +131,17 @@ node "$AGENT_DIR/tools/dev-tools.cjs" journal-update --from cowmoo/agent-files/u
 
 Read its one-line stdout. **If it reports `✗`** (journal write or self-verify failed), stop — surface the error line and let the user resolve it before going further. Do NOT proceed to 5b: the journal file-write must succeed first.
 
-**5b. Post the summary comment** via the `issue-transition` command. The journal file is the primary artifact; the comment is a chronological broadcast mirror (always a NEW comment — never edits an existing one). **Write** the handoff file again (overwriting 5a's handoff — it's already been consumed) as a one-element array — the `comment` carries the `**[UXUI]** ` identity prefix and mirrors the journal summary:
+**5b. Post the summary comment** via the `issue-transition` command. The journal file is the primary artifact; the comment is a chronological broadcast mirror (a NEW comment — never edits an existing one).
+
+**Idempotency pre-check (resume safety).** Step 2's `review-resume-state` inspects only the domain file — it cannot tell whether a prior partial run already posted this comment (a run that reached 5b then failed at Step 6 leaves the domain file dirty, so the resume re-enters here). Before posting, check for an existing summary comment:
+
+```bash
+gh issue view <issue> --json comments --jq '[.comments[].body | select(startswith("**[UXUI]** Summary (approved"))] | length'
+```
+
+If the count is `1` or more, a prior run already posted the summary comment — **skip the rest of 5b** (do not write the handoff, do not run `issue-transition`) and proceed to Step 6. If the count is `0`, post it now.
+
+**Write** the handoff file again (overwriting 5a's handoff — it's already been consumed) as a one-element array — the `comment` carries the `**[UXUI]** ` identity prefix and mirrors the journal summary:
 
 ```json
 [
@@ -223,7 +233,7 @@ Then render an `AskUserQuestion` hand-off picker for the next action — `Run /c
 - [ ] Step 2 — `review-resume-state` run; sub-case reported to the user
 - [ ] Step 3 — domain file edited with the `**Bundle:**` line (or skipped per Step 2)
 - [ ] Step 4 — journal summary composed inline and approved by the user (or skipped per Step 2)
-- [ ] Step 5 — `journal-update` wrote the entry; `issue-transition` UPDATE_JOURNAL posted the summary comment (or skipped per Step 2)
+- [ ] Step 5 — `journal-update` wrote the entry; `issue-transition` UPDATE_JOURNAL posted the summary comment (or skipped per Step 2, or skipped by 5b's idempotency pre-check)
 - [ ] Step 6 — `commit attach-design` committed domain file + journal; pushed (or skipped per Step 2)
 - [ ] Step 7 — `issue-transition` APPROVE_DESIGN ran; issue is `uxui:done` and closed
 - [ ] Step 8 — planner notification considered via picker (judgment call)
@@ -235,9 +245,9 @@ Then render an `AskUserQuestion` hand-off picker for the next action — `Run /c
 ## Rules
 
 - **The user already approved.** This skill runs the transaction; it does not re-litigate the approve/reject decision — that happened in `/review-bundle`.
-- **Re-invocation is safe.** Step 2's `review-resume-state` makes a resume idempotent — it skips whatever the prior run committed. Never run the commit sequence blind.
+- **Re-invocation is safe.** Step 2's `review-resume-state` makes a resume idempotent — it skips whatever the prior run committed, and Step 5b's idempotency pre-check skips the summary comment if a prior run already posted it. Never run the commit sequence blind.
 - **Never close with an un-attached bundle.** The Step 6 guard exists for this — APPROVE_DESIGN must not close an issue whose bundle was never recorded in the domain file.
 - **Domain file edits stay scoped.** The Edit adds one `**Bundle:**` line below the screen's section. Don't restructure the file.
 - **One bundle per task.** If a screen is re-designed (rejected → resubmitted → re-reviewed → approved), the prior `**Bundle:**` line stays as history; the new one appends below it. The most recent line is the current canonical bundle. The bundle directory `cowmoo/design/bundles/<ticket>/` is per-ticket — a re-fetch overwrites it; prior bundles are preserved only via git history.
-- **Journal summary is the durable record.** The 15–20 line summary from Step 4, persisted by `journal-update`, is the canonical record of what was approved. It lives latest-only in `cowmoo/design/VISUAL-JOURNAL.md` (replace-in-place on re-approval) AND as a new comment on the GH issue (chronological — never edit, always post anew). `/design-start` reads the journal for visual-direction synthesis. Compose it with care.
+- **Journal summary is the durable record.** The 15–20 line summary from Step 4, persisted by `journal-update`, is the canonical record of what was approved. It lives latest-only in `cowmoo/design/VISUAL-JOURNAL.md` (replace-in-place on re-approval) AND as a comment on the GH issue (posted once per approval — Step 5b's pre-check keeps a resume from double-posting; never edited in place). `/design-start` reads the journal for visual-direction synthesis. Compose it with care.
 - **Notifying planner is a judgment call, not automatic.**

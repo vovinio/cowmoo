@@ -56,3 +56,21 @@ PM's and planner's check agents audit prose (specs, PRDs), where findings are le
 - If PM or planner later adds enough code-adjacent check work to warrant a verifier, Pattern 9 absorbs that — it's not an asymmetry at that point.
 
 **Revisit if.** PM or planner adopts a verifier, collapsing this to "everyone runs the full pattern." Or if builder retires its verifier (unlikely — but the divergence would disappear).
+
+---
+
+## board-drags read as a selection hint, not a label re-sync
+
+**Pattern.** Pattern 14 — GitHub GraphQL Patterns (the read direction).
+
+**Divergence.** Pattern 14's read direction says a skill using the `board-drags` subcommand detects a human card-drag and re-syncs the issue label via a `RELABEL` op (delegated to `issue-transition`). Builder's `/start` runs `board-drags "In Progress" in-progress` but does NOT build a `RELABEL` op — it uses the result only as a soft task-selection hint ("if it prints exactly one, prefer that issue as the task to load"). The label flip `todo → in-progress` happens later, in `/start`'s Step 6 CLAIM op, and only after the user confirms the task.
+
+**Why.** PM, planner, and UXUI process a board-drag in `/catchup` as an inbox event — the drag means "this issue now belongs to my queue," so re-syncing the label immediately is correct. Builder's `/start` is not an inbox: a card dragged into "In Progress" is a *suggestion* of what to build next, and builder must not claim a task until the user has seen the proposed approach and agreed. An eager RELABEL would flip `todo → in-progress` before the user confirms — claiming the task on the human's behalf. Builder defers the label change to the user-gated CLAIM, so the drag stays a hint and the CLAIM is the single, confirmed re-sync.
+
+**Curator implication.** When verifying Pattern 14's read direction on builder:
+- Expect `/start` to invoke `board-drags` but NOT build a `RELABEL` op from its output.
+- The board→label re-sync for builder happens via the CLAIM op in `/start` Step 6, gated on user confirmation — that is builder's substitute for the immediate RELABEL.
+- Do not flag the absence of a RELABEL-on-detection in builder `/start` as a Pattern 14 violation.
+- The ordering invariant (re-sync before any label→board write) does not apply — builder `/start` performs no board→label re-sync to order.
+
+**Revisit if.** Builder gains an inbox-style entry point where a board-drag means "this is now mine" rather than "consider building this" — at which point an immediate RELABEL would match Pattern 14's read direction.

@@ -3,7 +3,7 @@ name: catchup
 description: Triage pending for-pm issues from GitHub — quick-resolve or transition into a working session.
 user-invocable: true
 disable-model-invocation: false
-allowed-tools: Agent, Read, Glob, Bash, Edit, Write, AskUserQuestion
+allowed-tools: Agent, Read, Glob, Bash, Write, AskUserQuestion
 ---
 
 # Catch Up
@@ -106,15 +106,13 @@ The `issue-transition` command runs comment → relabel/close in order, verifies
 ### Spec Change Needed
 1. Read the full issue context
 2. Present the problem — what's being flagged, which specs are affected
-3. Assess scope:
-   - **Small fix** (typo in spec, missing edge case, clarification) — resolve inline. Read the relevant spec file, discuss the change with user, apply the fix, self-verify. Then write the handoff file and run the **RESOLVE_ISSUE** op per the **Invoking RESOLVE_ISSUE** mechanics above — action and transfer-target per the **Routing rule** above.
-   - **Needs discussion** — "This needs a deeper discussion session. I'll load the context so we can work on it." Transition to discussion mode (see below). The eventual answer ships via `/notify`, which closes the original tracked issue with a link to the new announcement.
+3. Every spec change routes through the normal pipeline — a typo, a missing edge case, or a larger gap alike — so `/review` gates it before anything is committed. Tell the user: "This needs spec work. I'll track the issue and load the context so we can work on it." Transition to discussion mode (Step 4). The eventual answer ships via `/digest` → `/review` → `/publish` → `/notify`; `/notify` closes the tracked issue with a link to the announcement. **`/catchup` never edits spec files itself** — it triages; spec writes happen only through the reviewed pipeline.
 
 ---
 
 ## Step 4: Transition to Discussion (when needed)
 
-When an issue needs real spec work:
+When an issue needs a spec change:
 
 1. Tell the user: "Issue #N needs spec work. Transitioning to a discussion session about [topic]."
 2. Track the issue for later resolution:
@@ -141,10 +139,9 @@ If all issues were quick-resolved without needing a discussion session, state th
 
 - [N] issues resolved
   - #<number>: <resolution summary> — <closed | transferred>
-- Spec files changed: <list, or "none">
 ```
 
-Then render an `AskUserQuestion` hand-off picker of concrete next actions — never close on a prose "Next:" line. Build the options from context: if spec files were changed, lead with `/publish` `(Recommended)` — *saves the spec changes and pushes to the remote* — followed by other live continuations (e.g. `/notify` to announce downstream once published); if no spec files changed, offer the live continuations directly. Always end with `Done for now` last. Each option's `description` names what it leads to.
+Then render an `AskUserQuestion` hand-off picker of concrete next actions — never close on a prose "Next:" line. Build the options from context: the live continuations (another `/catchup` pass if issues were skipped this round, or returning to other work), with `Done for now` last. Each option's `description` names what it leads to.
 
 ---
 
@@ -155,7 +152,6 @@ Before finishing, confirm:
 - [ ] All issues presented to user with categories
 - [ ] Each processed issue: discussed, resolved, confirmed by user
 - [ ] Quick resolutions: RESOLVE_ISSUE run via `dev-tools.cjs issue-transition` (verified)
-- [ ] Spec changes (if any): self-verified after edit
 - [ ] Issues needing work: transitioned to discussion mode, issue left open
 - [ ] Report presented (or discussion session started)
 
@@ -163,7 +159,7 @@ Before finishing, confirm:
 
 ## Rules
 
-- **Triage, don't force** — if an issue needs discussion, transition. Don't try to resolve complex spec problems inline.
+- **Triage, don't force** — every spec change transitions to a discussion session; `/catchup` never edits spec files inline. Only quick questions resolve in catchup.
 - **User decides** — present your recommendation; the user confirms or redirects through the picker, never an assumed yes
 - **One at a time** — process each issue fully before moving to the next
 - **Quick resolve = comment + close/transfer** — always through `dev-tools.cjs issue-transition` with verification

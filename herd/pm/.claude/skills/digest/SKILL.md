@@ -184,7 +184,7 @@ Target files:
 For any `[future]` items encountered in this domain:
 
 1. Read `$PROJECT_DIR/cowmoo/agent-files/pm/BACKLOG.md`
-2. Append each deferred item with its **full context**:
+2. Append each deferred item as a `## <item name>` section — a level-2 header directly under the file's `# Backlog` H1 — with its **full context** beneath that header:
    - What the item is
    - Why it was deferred
    - What it relates to in current scope
@@ -225,7 +225,7 @@ Do NOT write a permanent "Digest progress" section into WORKING-NOTES.md. The du
 
 If any `[future]` items remain in working notes that weren't associated with a processed domain:
 
-1. Append each to `$PROJECT_DIR/cowmoo/agent-files/pm/BACKLOG.md` with full context (what it is, why deferred, what it relates to)
+1. Append each to `$PROJECT_DIR/cowmoo/agent-files/pm/BACKLOG.md` as a `## <item name>` section — a level-2 header under the file's `# Backlog` H1 — with full context beneath it (what it is, why deferred, what it relates to)
 2. Verify written correctly
 3. Remove from `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md`
 
@@ -291,6 +291,7 @@ Before finishing, confirm:
 
 - **Self-verify every edit** — the write → re-read → verify loop catches silent data loss (dropped fields, mangled formatting, missing sections) that would otherwise go unnoticed until the next `/review` run.
 - **Full context in backlog** — never strip reasoning or detail when moving to backlog. Deferred items may be picked up months later by a different person; without context they become opaque line items that nobody acts on.
+- **Backlog items are `##` sections** — each deferred item moved to BACKLOG.md is one level-2 header (`## <item name>`) under the `# Backlog` H1, with its context beneath. One header per item keeps items individually addressable and countable (`/status` counts top-level `##` headers as the backlog size).
 - **Don't digest uncertain items** — if something isn't confirmed, it stays in notes. Putting unconfirmed content into specs creates false confidence — readers assume specs are settled decisions.
 - **One domain at a time** — complete the full cycle (transform → write → clean) for each domain before starting the next. Focused work produces better output. A half-processed domain is recoverable via the transient checkpoint (deleted at completion); two half-processed domains are a mess.
 - **WORKING-NOTES.md is staging, not history.** Every item this skill processes is either written into a spec (Step 4b) or moved to BACKLOG.md (Step 4c) — and then removed from WORKING-NOTES.md (Step 4d). No "kept for traceability," no "Digest progress" log, no exceptions. Git history (committed by `/publish`) is the durable audit trail.

@@ -127,8 +127,8 @@ iso_to_local() {
             date -d "@$epoch" +"%l:%M%P" 2>/dev/null | sed 's/^ //'
             ;;
         datetime)
-            date -j -r "$epoch" +"%b %-d" 2>/dev/null | tr '[:upper:]' '[:lower:]' || \
-            date -d "@$epoch" +"%b %-d" 2>/dev/null
+            date -j -r "$epoch" +"%b %e" 2>/dev/null | tr '[:upper:]' '[:lower:]' | tr -s ' ' || \
+            date -d "@$epoch" +"%b %e" 2>/dev/null | tr -s ' '
             ;;
     esac
 }
@@ -275,7 +275,7 @@ if [ -n "$PROJECT_DIR" ]; then
         for pair in "cowmoo/agent-files/planner planner" "cowmoo/stack stack"; do
             dir="${pair% *}"
             label="${pair##* }"
-            n=$(echo "$git_status" | grep -c " ${dir}/" 2>/dev/null || echo 0)
+            n=$(echo "$git_status" | grep -c " ${dir}/" 2>/dev/null || true)
             [ "$n" -gt 0 ] 2>/dev/null && parts+="${parts:+ }${dim}${label}:${reset}${orange}${n}${reset}"
         done
         if [ -n "$parts" ]; then
@@ -294,9 +294,9 @@ line4=""
 # ── Untracked skills check ──
 
 known="tech-stack start draft review publish ask catchup tidy status propose"
-if [ -d .claude/skills ]; then
-    for skill in $(ls .claude/skills/ 2>/dev/null); do
-        [ -d ".claude/skills/$skill" ] || continue
+if [ -n "$AGENT_DIR" ] && [ -d "$AGENT_DIR/.claude/skills" ]; then
+    for skill in $(ls "$AGENT_DIR/.claude/skills/" 2>/dev/null); do
+        [ -d "$AGENT_DIR/.claude/skills/$skill" ] || continue
         case " $known " in
             *" $skill "*) ;;
             *) line4+="${line4:+, }${skill}" ;;

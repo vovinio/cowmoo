@@ -26,17 +26,6 @@ For every form:
 - **Success** — submit succeeded. Explicit next state — redirect, confirmation, or cleared form.
 - **Error** — submit failed. Field-level errors inline; form-level errors summarized.
 
-## Button and interactive control states
-
-For every button, link, and interactive control:
-
-- **Default** — resting state.
-- **Hover** — pointer over element.
-- **Focus** — keyboard focus. Distinct from hover.
-- **Active** — click/tap in progress.
-- **Disabled** — not currently actionable, visually muted.
-- **Loading** — async action in progress. Indicator inside the control, non-clickable.
-
 ## Role-naming convention
 
 Domain files reference roles from `cowmoo/design/roles.md` by name — never raw values.
