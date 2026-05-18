@@ -461,6 +461,17 @@ cmd_projects() {
   done
 }
 
+# _pending_proposals <dir> — print proposal .md files in <dir> still pending.
+# A proposal carrying a "## Status:" line was resolved by a prior /curate run
+# (curate Step 5 appends it); only un-statused files count as pending.
+_pending_proposals() {
+  local dir="$1"
+  [ -d "$dir" ] || return 0
+  find "$dir" -name '*.md' -not -name '.*' 2>/dev/null | while IFS= read -r f; do
+    grep -q '^## Status:' "$f" 2>/dev/null || printf '%s\n' "$f"
+  done
+}
+
 cmd_proposals() {
   if [ ! -f "$PROJECTS_FILE" ]; then
     echo "No projects registered yet. Run: moo init (from a project directory)"
@@ -484,7 +495,7 @@ cmd_proposals() {
       local dir="$path/cowmoo/agent-files/$agent/proposals"
       if [ -d "$dir" ]; then
         local agent_count
-        agent_count=$(find "$dir" -name '*.md' -not -name '.*' 2>/dev/null | wc -l | tr -d ' ')
+        agent_count=$(_pending_proposals "$dir" | wc -l | tr -d ' ')
         if [ "$agent_count" -gt 0 ]; then
           count=$((count + agent_count))
         fi
@@ -499,7 +510,7 @@ cmd_proposals() {
         local dir="$path/cowmoo/agent-files/$agent/proposals"
         if [ -d "$dir" ]; then
           local files
-          files=$(find "$dir" -name '*.md' -not -name '.*' 2>/dev/null)
+          files=$(_pending_proposals "$dir")
           if [ -n "$files" ]; then
             local n
             n=$(echo "$files" | wc -l | tr -d ' ')

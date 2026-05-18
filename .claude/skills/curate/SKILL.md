@@ -15,9 +15,11 @@ Read proposals from all deployed projects, group them, design options, and prese
 
 Read `projects.md` (in the cowmoo repo root) to get the list of registered projects. For each project path listed, scan `cowmoo/agent-files/pm/proposals/`, `cowmoo/agent-files/uxui/proposals/`, `cowmoo/agent-files/planner/proposals/`, and `cowmoo/agent-files/builder/proposals/` for proposal files.
 
+**Collect only pending proposals.** A proposal that carries a `## Status:` line was already resolved by a prior `/curate` run (Step 5 appends it) — skip it. A pending proposal has no `## Status:` line. `./moo proposals` applies the identical filter, so its count and this scan agree.
+
 Tip: run `./moo proposals` from the terminal first to see a quick summary.
 
-If no projects are registered or no proposals found, report that and stop.
+If no projects are registered or no pending proposals found, report that and stop.
 
 ### 2. Group proposals
 
@@ -58,12 +60,14 @@ Render the choice as an `AskUserQuestion` picker — `Apply A` `(Recommended)`, 
 
 - **Apply [option]**: Make the actual edit to the target file. Show the diff.
 - **Edit**: User refines the proposed change. Then apply.
-- **Skip**: Mark the proposal as `status: skipped`.
+- **Skip**: Mark the proposal `skipped` — Step 5 records it as a `## Status: skipped` line.
 - **Project only**: Write the change to the project's `cowmoo/agent-files/<agent>/.claude/rules/`. These rules are tracked in git (team-shared across the project's contributors), not per-user.
 
 ### 5. Clean up
 
-After processing each proposal, update the proposal file's frontmatter with its status.
+After processing each proposal, append a `## Status:` line to the proposal file recording how it was resolved — `## Status: applied`, `## Status: project-only`, or `## Status: skipped` — optionally followed by a one-line reason. Proposal files use `##`-header metadata (`## From:`, `## Target:`, `## Urgency:`), not YAML frontmatter, so the resolution is a `## Status:` line, not a frontmatter key.
+
+This line is the resolved-marker that Step 1 and `./moo proposals` filter on: a proposal carrying a `## Status:` line is no longer counted as pending. The file stays in `proposals/` as the durable decision record — `@proposal-writer`'s duplicate check still sees it, so a resolved idea is not re-proposed by an agent.
 
 **Stale targets:** if a proposal's `Target:` field points to a file / skill / sub-agent / op that no longer exists in `herd/`, flag it explicitly in the group's options. Discover staleness by checking the filesystem, not by consulting a hardcoded list:
 
