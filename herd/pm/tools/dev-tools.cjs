@@ -75,6 +75,8 @@ function healthCheck() {
     issues.push('gh installed but not authenticated. Run: gh auth login');
   }
   if (!run('command -v jq')) issues.push('jq not found. Install: brew install jq');
+  if (!run('command -v curl')) issues.push('curl not found — required for design-bundle import.');
+  if (!run('command -v tar')) issues.push('tar not found — required for design-bundle import.');
 
   if (issues.length > 0) {
     console.log('Health check:');

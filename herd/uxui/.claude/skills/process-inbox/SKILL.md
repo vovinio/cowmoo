@@ -52,7 +52,7 @@ If the inbox has only 1 item, **render a confirmation picker via `AskUserQuestio
 For each item the user picked, process in priority order: `uxui:review` review tasks first (they block the design pipeline), then `for-uxui` messages. Route by kind:
 
 - **Bundle submission** (`uxui:review`, `hasShareUrl: true`) → **invoke `/review-bundle <number>`**. It fetches the bundle, evaluates it via `@design-evaluator`, triages, and on approval hands off to `/approve-design`.
-- **No-bundle review task** (`uxui:review`, `hasShareUrl: false`) → **invoke `/resolve-review <number>`**. It treats the comments and resolves the task — close as no-longer-needed, send back to `uxui:todo`, or fix a UI definition.
+- **No-bundle review task** (`uxui:review`, `hasShareUrl: false`) → **invoke `/resolve-review <number>`**. It treats the comments and resolves the task — send back to `uxui:todo`, close as no-longer-needed, or escalate a contested spec premise to PM and close.
 - **Agent message** (`for-uxui`) → **invoke `/process-message <number>`**. It reads the message and routes it (spec update / UI gap / UI question).
 
 All three resolution skills are model-invocable — dispatch by invoking them, **one item at a time** (let each finish before the next). If the user would rather run them separately, hand them the list of `/<skill> <n>` commands.

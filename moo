@@ -267,7 +267,8 @@ EOF
   local entries=(
     "# Cowmoo agent session state (per-user, not shared)"
     "cowmoo/agent-files/*/.workflow-step"
-    "cowmoo/agent-files/planner/.inbox-context"
+    "cowmoo/agent-files/*/.inbox-context"
+    "cowmoo/agent-files/*/.op-handoff.json"
     "cowmoo/agent-files/planner/draft.md"
     "cowmoo/agent-files/planner/techstack-notes.md"
   )
@@ -632,7 +633,8 @@ cmd_doctor() {
   if [ -f "$PROJECT/.gitignore" ]; then
     local required_gitignore=(
       "cowmoo/agent-files/*/.workflow-step"
-      "cowmoo/agent-files/planner/.inbox-context"
+      "cowmoo/agent-files/*/.inbox-context"
+      "cowmoo/agent-files/*/.op-handoff.json"
       "cowmoo/agent-files/planner/draft.md"
       "cowmoo/agent-files/planner/techstack-notes.md"
     )

@@ -72,39 +72,28 @@ node "$AGENT_DIR/tools/dev-tools.cjs" bundle-fetch <issue> <domain> <screen> <de
 
 The command downloads the tarball (60s timeout), extracts it into `cowmoo/design/bundles/<issue>/` (`--strip-components=1`), writes `meta.json`, and `git add` + `git commit`s. It prints exactly one line and sets an exit code: `OK ticket=N files=M commit=<hash> path=<relpath>` on success, or a `FAIL <kind> — …` line otherwise (`url-unreachable`, `url-timeout`, `extraction-failed`, `extraction-empty`, `git-add`, `git-commit`, `meta-write`, `no-project-dir`).
 
-**If the command reports `FAIL url-unreachable` (URL expired or unreachable):**
+**On `OK`** — proceed to Step 4.
 
-The `POST_COMMENT` op posts its comment via the `issue-transition` command, which reads the comment from a JSON handoff file. **Write** a one-element array to `$PROJECT_DIR/cowmoo/agent-files/uxui/.op-handoff.json` (a single reused path, overwritten each use) — compose the comment with the `**[UXUI]** ` identity prefix:
+**On `FAIL`** — classify the failure via the **"Resolving a `uxui:review` card"** decision procedure in `.claude/rules/github-workflow.md`. A `bundle-fetch` failure is one of two rows:
+
+**`url-unreachable` / `url-timeout` → the designer acts next.** The fetch cannot proceed without the designer (re-share an expired URL; retry or re-share after a timeout). Apply the **designer-acts-next** row — relabel `uxui:review → uxui:todo` so the card sits in the designer's column, not stranded in "UX: Review". **Write** a one-element handoff array to `$PROJECT_DIR/cowmoo/agent-files/uxui/.op-handoff.json` (a single reused path, overwritten each use), `comment` composed with the `**[UXUI]** ` identity prefix, then run `issue-transition` at `--index 0`:
 
 ```json
 [
-  { "op": "POST_COMMENT", "issue": <issue>, "comment": "**[UXUI]** The Claude Design share URL appears to have expired. Please re-share from your Claude Design session and post the new URL on this issue." }
+  { "op": "RETURN_TO_TODO", "issue": <issue>, "comment": "**[UXUI]** <comment text — see below>", "removeLabel": "uxui:review", "addLabel": "uxui:todo" }
 ]
 ```
-
-Then run the command at `--index 0`, asking the designer for a fresh URL:
-
 ```bash
 node "$AGENT_DIR/tools/dev-tools.cjs" issue-transition --from cowmoo/agent-files/uxui/.op-handoff.json --index 0
 ```
 
-Read its stdout — `POST_COMMENT #<n>: ✓ commented. Verified.` means done; `POST_COMMENT #<n>: ✗ <reason>` means the post failed. Stop. The designer will re-share and the cycle resumes.
+Comment text by kind:
+- **`url-unreachable`** — "The Claude Design share URL appears to have expired. Please re-share from your Claude Design session and post the new URL on this issue."
+- **`url-timeout`** — "The Claude Design bundle download timed out (>60s). The URL itself is likely still valid — usually a large bundle or a slow network. Please either (a) retry by re-posting the same URL on this issue, or (b) if this persists, re-share from Claude Design in case the export was unusually large."
 
-**If the command reports `FAIL url-timeout` (download timed out):**
+Read the command's stdout — `RETURN_TO_TODO #<n>: ✓ …` means done (comment posted, card flipped `uxui:review → uxui:todo`); `✗ <reason>` names what already succeeded — do NOT retry on `✗`. Stop. The designer acts from "UX: Todo"; on a re-share they relabel back to `uxui:review` and `/catchup` re-routes the card here.
 
-The URL itself is likely still valid — a re-share would not help. **Write** a one-element array to `$PROJECT_DIR/cowmoo/agent-files/uxui/.op-handoff.json` (overwritten per use) — comment composed with the `**[UXUI]** ` identity prefix:
-
-```json
-[
-  { "op": "POST_COMMENT", "issue": <issue>, "comment": "**[UXUI]** The Claude Design bundle download timed out (>60s). The URL itself is likely still valid — this is usually a large bundle or a slow network. Please either (a) retry by re-posting the same URL on this issue (we'll attempt another fetch), or (b) if this persists, re-share from Claude Design in case the export was unusually large." }
-]
-```
-
-Then run `node "$AGENT_DIR/tools/dev-tools.cjs" issue-transition --from cowmoo/agent-files/uxui/.op-handoff.json --index 0`. Stop. The designer may retry or re-share.
-
-**If `bundle-fetch` returns any other `FAIL` line** (e.g., `extraction-failed`, `extraction-empty`, `meta-write`, `git-add`, `git-commit`, `no-project-dir`):
-
-Surface the raw error line to the user and stop. Do NOT proceed to Step 4 — either the bundle directory was cleaned up by the script (extraction / meta-write / no-project-dir) and `@design-evaluator` has nothing to read, or the bundle is uncommitted (git-add / git-commit) and ATTACH_DESIGN in `/approve-design` will either race or no-op later. These failure modes require manual intervention (check disk space, git hooks, signing config, lock files) before the review can resume.
+**Any other `FAIL`** (`extraction-failed`, `extraction-empty`, `meta-write`, `git-add`, `git-commit`, `no-project-dir`) **→ UXUI is blocked mid-resolution.** This is the one row whose destination is "stays `uxui:review`": the bundle directory was cleaned up or the commit didn't land, so `@design-evaluator` has nothing to read and `/approve-design`'s ATTACH_DESIGN would later race or no-op — and the failure is infrastructural (disk space, git hooks, signing config, lock files), not a designer hand-back. Surface the raw `FAIL` line to the user and stop. Do NOT proceed to Step 4 and do NOT relabel — the card correctly stays `uxui:review` for re-run once the infra issue is fixed.
 
 ---
 
@@ -168,7 +157,7 @@ If ROLE_ADDITIONS were accepted, tell `/approve-design` which role names — it 
 
 ## Step 7: Reject path
 
-If the user wants to return for revision:
+A rejection is the **designer-acts-next** row of the `uxui:review` decision procedure in `.claude/rules/github-workflow.md` — a feedback comment plus a relabel `uxui:review → uxui:todo`. If the user wants to return for revision:
 
 1. **Compose feedback comment** — discuss with user what to write. Should include:
    - Which findings need to be addressed (specific gaps/concerns)
@@ -222,6 +211,8 @@ On the reject path, after the report render an `AskUserQuestion` hand-off picker
 
 - [ ] Issue loaded; `uxui:review` label confirmed; share URL found in comments (no URL → redirected to `/resolve-review`)
 - [ ] Bundle fetched and committed via the `bundle-fetch` command
+- [ ] (Bundle-fetch `url-unreachable`/`url-timeout`) `RETURN_TO_TODO` ran — comment posted, card flipped `uxui:review → uxui:todo`; skill stopped
+- [ ] (Bundle-fetch infra failure) raw `FAIL` line surfaced; card left `uxui:review` for re-run; skill stopped
 - [ ] `@design-evaluator` ran; findings classified
 - [ ] User triaged findings and chose approve/reject
 - [ ] (Approve) `/approve-design <issue> <domain> <screen>` invoked

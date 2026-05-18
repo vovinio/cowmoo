@@ -82,9 +82,10 @@ Iterative, small-batch flow with three phases of thinking:
               APPROVE → /approve-design: bundle attached to domain file,
                         journal written, issue flipped uxui:done + closed
               REJECT  → feedback comment, flipped back to uxui:todo
-   no bundle → /resolve-review → treat comments →
-              resolve & close (no design needed) /
-              send back to uxui:todo / fix a UI definition
+   no bundle → /resolve-review → treat comments → classify "who acts next" →
+              back to uxui:todo (designer) /
+              closed without uxui:done (no design needed) /
+              escalate contested spec premise to PM & close
 ```
 
 1. `/design-start` — Agent-led synthesis: reads specs + design defs + closed `uxui:done` tasks + bundle dirs to learn what's been approved and what visual direction has emerged. Proposes 1-3 next tasks with reasoning (why these together, why now, what they inherit, what they establish). Conversational; nothing written.
@@ -94,7 +95,7 @@ Iterative, small-batch flow with three phases of thinking:
 5. `/catchup` (lean gate) reconciles the board, scans the inbox, classifies each `uxui:review` card; if there is work it hands off to `/process-inbox`, which presents the inbox and dispatches each item to its resolution skill.
 6. `/review-bundle` (bundle path) — fetches the bundle (`bundle-fetch`), runs `@design-evaluator`, triages with you. On reject: feedback comment, flipped back to `uxui:todo`. On approve: hands off to `/approve-design`.
 7. `/approve-design` — the approval transaction: attaches the bundle to the domain file, writes the visual journal, commits, flips the issue to `uxui:done` and closes. Re-invocable to resume a partial run.
-8. `/resolve-review` (no-bundle path) — treats the comments and resolves with you: close as no-longer-needed (without `uxui:done`), send back to `uxui:todo`, or fix a UI definition. A bundle is one possible input, not a requirement.
+8. `/resolve-review` (no-bundle path) — treats the comments, makes any `cowmoo/design/` fix they imply, then classifies the card via the `uxui:review` decision procedure (`github-workflow.md`) and resolves with you: send back to `uxui:todo`, close as no-longer-needed (without `uxui:done`), or escalate a contested spec premise to PM and close. A bundle is one possible input, not a requirement.
 9. When a meaningful chunk of related screens has reached `uxui:done`, suggest `/notify planner` — judgment call, never automatic.
 
 ### Messages Flow
@@ -115,7 +116,7 @@ Iterative, small-batch flow with three phases of thinking:
 
 **Phase A — UI definitions:** `/start` (load context, assess coverage), `/draft` (capture discussion), `/define` (formalize into cowmoo/design/ files), `/review` (verify coverage against specs), `/publish` (commit changes)
 **Phase B — Design tasks:** `/design-start` (synthesize state, propose 1-3 next tasks with reasoning — no writes), `/design-draft` (compose task bodies inline + validate + write design-draft.json — rerunnable), `/design-publish` (preview + ship N uxui:todo issues — pure publication)
-**Review tasks:** `/review-bundle` (bundle path — fetch, `@design-evaluator`, triage, reject; hands approval to `/approve-design`), `/approve-design` (the approval transaction — attach bundle, write journal, commit, close as `uxui:done`; re-invocable to resume a partial run), `/resolve-review` (no-bundle path — treat the comments, resolve/send-back/fix a UI definition)
+**Review tasks:** `/review-bundle` (bundle path — fetch, `@design-evaluator`, triage, reject; hands approval to `/approve-design`), `/approve-design` (the approval transaction — attach bundle, write journal, commit, close as `uxui:done`; re-invocable to resume a partial run), `/resolve-review` (no-bundle path — treat the comments, classify, resolve: send-back / close / escalate-to-PM)
 **Inbox & messages:** `/catchup` (lean gate — reconcile the board, scan, report counts), `/process-inbox` (present the inbox + route each item), `/process-message` (handle one `for-uxui` agent message — spec update / UI gap / UI question), `/ask pm` (ask PM about spec gaps), `/ask planner` (respond to a for-uxui message), `/notify planner` (announce cowmoo/design/ changes to planner)
 **Utilities:** `/status` (read-only snapshot), `/propose` (suggest system improvements)
 
