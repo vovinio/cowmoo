@@ -2,7 +2,7 @@
 name: audit-agent
 description: Deep per-agent audit. Fully reads every file for one herd agent, then runs 6 substantive checks — hidden assumptions, rule-vs-rule coherence, liveness, end-to-end flows, cross-boundary consumption, and honest review (including scope drift). Catches semantic and logical issues the structural pipeline (check/patterns/contracts/coherence) is blind to.
 user-invocable: true
-disable-model-invocation: true
+disable-model-invocation: false
 argument-hint: <pm | uxui | planner | builder>
 ---
 

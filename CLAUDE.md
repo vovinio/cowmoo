@@ -219,13 +219,13 @@ Three enforcement layers keep the herd consistent, in order of when they fire:
 
 Each skill is state-based — it reads the current repo and reports what's wrong *now*, not what changed. There is no "diff-aware" default, because curator reviews aren't about change; they're about whether the current state satisfies the catalog. See the state-based-checks principle in `docs/PATTERN-CATALOG.md`.
 
-**Running the pipeline with me.** These four skills are model-invokable (Pattern 16 carveout), so after a herd edit session I can run them for you without you retyping each command:
+**Running the pipeline with me.** The four structural-pipeline skills are model-invokable (Pattern 16 carveout), so after a herd edit session I can run them for you without you retyping each command:
 
 - You kick off by either typing the first skill yourself or saying "run the pipeline."
 - I run each skill, report its findings, then render an `AskUserQuestion` hand-off picker — the next pipeline skill (recommended when the current skill came back clean), `Fix findings first`, and `Stop here`. You select; no typing "yes" or "continue" between skills.
 - **I do not chain without a selection.** Two skills never run back-to-back without you picking the next step from the hand-off picker.
 - **Hard stop on critical findings.** If a skill surfaces any CRITICAL finding, the hand-off picker drops the "run the next skill" option — it offers only `Fix the findings` and `Stop here`. You decide whether to fix before continuing.
-- Only `/check`, `/patterns`, `/contracts`, `/coherence` are model-invokable. Every other curator skill (`/scaffold-subagent`, `/rename-sweep`, `/curate`, `/audit-agent`, `/audit-hygiene`, `/pressure-test`) stays user-only — you must invoke those yourself.
+- Model-invokable curator skills are the four pipeline skills (`/check`, `/patterns`, `/contracts`, `/coherence`) plus the deep `/audit-agent` — so I can propose a review after an agent-edit session without you retyping the command. `/audit-agent` is *not* a pipeline step: I propose it (often from a pipeline skill's hand-off picker) and run it only on your selection, never chained automatically. The other curator skills (`/scaffold-subagent`, `/rename-sweep`, `/curate`, `/audit-hygiene`, `/pressure-test`) stay user-only — you must invoke those yourself.
 
 If you want to narrow the review to a subset, pass an explicit scope to the skill (once supported): `/patterns herd/uxui` or `/check herd/builder/.claude/agents/`.
 

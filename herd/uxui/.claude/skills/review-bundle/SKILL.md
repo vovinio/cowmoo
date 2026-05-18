@@ -135,9 +135,15 @@ Present the evaluator's findings. Lead with the recommendation:
 - ...
 ```
 
-Discuss with the user. The user makes the final call: approve, return for revision, or address ROLE_ADDITIONS first by updating roles.md.
+Discuss with the user. **Classify each finding — blocking or deferrable** (see `.claude/rules/corrections.md`). A finding that changes what the screen *does* or whether a builder can build it correctly — a missing state, a layout or role change, a contradiction — is **blocking**. A finding that is purely copy-grade — microcopy, a label, wording that drifted from a spec — is **deferrable**: the bundle's HTML is the build reference, but a copy delta does not stop the screen from being correct, so it is logged to `PENDING-CORRECTIONS.md` rather than forcing a bundle return. Do not inflate a copy nit into a blocker.
 
-When the user has 2-4 distinct routes (e.g. "approve as-is", "approve and add new role", "return for X"), use the `AskUserQuestion` tool.
+The user makes the final call. The routes:
+
+- **Approve** — no findings, or only deferrable copy deltas. Log each deferrable delta to `PENDING-CORRECTIONS.md` first — to `For: designer` for copy in the bundle's HTML (key the entry to this card's `<domain> / <screen>` from Step 2, per the entry format in `.claude/rules/corrections.md`), or `For: PM` for a copy mismatch against a spec — then proceed to Step 6. The bundle is approved as-is; `/dispatch-corrections` batches the logged deltas later.
+- **Approve with role additions** — accept ROLE_ADDITIONS, then approve (Step 6 passes the role names to `/approve-design`).
+- **Return for revision** — any blocking finding. The bundle goes back to the designer (Step 7).
+
+Render the choice with the `AskUserQuestion` tool — recommended route first. When deferrable copy deltas were logged on an approve route, tell `/approve-design` so its journal entry records them.
 
 ---
 

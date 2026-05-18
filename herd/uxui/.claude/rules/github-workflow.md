@@ -12,12 +12,12 @@ Always prefix GitHub comments with `**[UXUI]**` and issue titles with `[UXUI]`.
 
 | Label | Meaning | Who sets it |
 |-------|---------|-------------|
-| `uxui:todo` | Design task ready for a human designer to pick up. Created via `/design-publish`. Returned here by `/review-bundle`'s reject path or `/resolve-review`'s send-back. | `/design-publish` (create), `/review-bundle` reject + `/resolve-review` send-back (return) |
+| `uxui:todo` | Design task ready for a human designer to pick up. Created via `/design-publish`, or as a copy-corrections batch via `/dispatch-corrections`. Returned here by `/review-bundle`'s reject path or `/resolve-review`'s send-back. | `/design-publish` + `/dispatch-corrections` (create), `/review-bundle` reject + `/resolve-review` send-back (return) |
 | `uxui:review` | Card sits in the "UX: Review" board column — a task awaiting resolution. Usually a designer's Claude Design submission (a posted share URL); may also be a human card-move with other intent (cancelled, a question, mid-work notes). `/catchup` scans and classifies it (bundle vs no-bundle); `/process-inbox` dispatches it to `/review-bundle` or `/resolve-review`. | UXUI `/catchup` — syncs the label to **any** card moved into the "UX: Review" column, unconditionally (a direct `uxui:review` label-flip is still honored as a fallback) |
 | `uxui:done` | Design task approved via `/approve-design`. Bundle attached to the relevant domain file. Issue is closed. Counts toward "what's been designed." A no-bundle task resolved as no-longer-needed is closed *without* this label — it was not designed. | `/approve-design` — replaces `uxui:review`, closes the issue |
 | `for-uxui` | Incoming message from another agent (PM, planner) — spec update, UI gap, UI question, or PM answer to your `/ask pm` escalation (relabeled by PM from `for-pm` → `for-uxui`) | The sender's skill when creating the issue, OR PM's `/catchup` (a transfer relabel) when answering a UXUI-originated `for-pm` |
-| `for-pm` | Outgoing message TO PM — spec gap, question, or issue found during UI work | UXUI via `/ask pm` |
-| `for-planner` | Outgoing message — cowmoo/design/ changes announcement or response to a `for-uxui` message | UXUI via `/notify planner` or `/ask planner` |
+| `for-pm` | Outgoing message TO PM — a blocking spec gap or question found during UI work, or a batched set of non-blocking copy corrections | UXUI via `/ask pm` (blocking escalation) or `/dispatch-corrections` (batched non-blocking corrections) |
+| `for-planner` | Outgoing message — cowmoo/design/ changes announcement, response to a `for-uxui` message, or a batched set of non-blocking notes | UXUI via `/notify planner`, `/ask planner`, or `/dispatch-corrections` |
 
 **Designer-side convention (not agent-managed):** `uxui:in-progress` may be set by the human designer when picking up a `uxui:todo` task. UXUI does not act on this label; it appears in statusline counts only.
 
@@ -47,6 +47,8 @@ Always prefix GitHub comments with `**[UXUI]**` and issue titles with `[UXUI]`.
 - *Expired share URL* — `bundle-fetch` reports `url-unreachable`. The designer must re-share → **designer acts next**. Relabel `uxui:review → uxui:todo` with a re-share request.
 - *Screen no longer needed* — a designer's comment says an existing screen will be reused as a redirect; nothing to design, no spec question → **no design produced**. Close, no `uxui:done`.
 - *Comment contests the spec* — a designer says the screen shouldn't exist, but the spec mandates it; only PM can rule → **PM acts next**. Close (no `uxui:done`) and `/ask pm`.
+
+**A deferrable copy delta is not a reject.** A copy-grade finding from bundle review — microcopy, a label, wording drift — is logged to `PENDING-CORRECTIONS.md` (see `.claude/rules/corrections.md`) and the bundle still takes the **design approved** row; it does *not* send the card back to the designer. Only a *blocking* finding (a missing state, a layout/role change) triggers the designer-acts-next row. `/dispatch-corrections` later ships the logged copy deltas as one batched `uxui:todo`.
 
 ## Board columns
 

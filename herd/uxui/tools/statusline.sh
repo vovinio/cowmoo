@@ -288,6 +288,15 @@ if [ -n "$files_dir" ] && [ -f "$files_dir/.inbox-context" ]; then
 fi
 [ "${c_tracked:-0}" -gt 0 ] 2>/dev/null && { [ -n "$line2" ] && line2+="${sep}"; line2+="${cyan}${c_tracked} tracked${reset}"; }
 
+# ── Pending corrections (PENDING-CORRECTIONS.md unchecked entries) ──
+
+c_corr=0
+if [ -n "$files_dir" ] && [ -f "$files_dir/PENDING-CORRECTIONS.md" ]; then
+    # Count unchecked queue entries — lines starting with "- [ ]".
+    c_corr=$(awk '/^- \[ \]/ {n++} END {print n+0}' "$files_dir/PENDING-CORRECTIONS.md" 2>/dev/null)
+fi
+[ "${c_corr:-0}" -gt 0 ] 2>/dev/null && { [ -n "$line2" ] && line2+="${sep}"; line2+="${yellow}${c_corr} corrections${reset}"; }
+
 # ── Design task counts (uxui:todo, uxui:in-progress, uxui:review) ──
 
 if command -v gh >/dev/null 2>&1 && [ -n "$GH_REPO" ]; then
@@ -377,7 +386,7 @@ line4=""
 
 # ── Untracked skills check ──
 
-known="start draft define review publish ask notify catchup process-inbox process-message status propose design-start design-draft design-publish review-bundle approve-design resolve-review"
+known="start draft define review publish ask notify dispatch-corrections catchup process-inbox process-message status propose design-start design-draft design-publish review-bundle approve-design resolve-review"
 if [ -n "$AGENT_DIR" ] && [ -d "$AGENT_DIR/.claude/skills" ]; then
     for skill in $(ls "$AGENT_DIR/.claude/skills/" 2>/dev/null); do
         [ -d "$AGENT_DIR/.claude/skills/$skill" ] || continue

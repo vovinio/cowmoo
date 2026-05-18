@@ -97,7 +97,7 @@ Include these sections (omit any that are genuinely empty for the bundle under r
 - **Roles established:** any NEW roles this bundle introduced (added to `roles.md` via Step 1). List them; if none, say "none new in this bundle."
 - **Roles used:** the roles referenced on this screen (from the domain-file "Roles Used" section).
 - **Patterns set up for downstream screens:** reusable decisions this bundle establishes for later work (e.g. "8px as default border-radius", "serif headers / sans body pairing").
-- **Deviations / open items:** anything the evaluator flagged as `CONCERN` or `OBSERVATION` that was accepted with rationale.
+- **Deviations / open items:** anything the evaluator flagged as `CONCERN` or `OBSERVATION` that was accepted with rationale. Also record any copy delta `/review-bundle` logged to `PENDING-CORRECTIONS.md` during review — the stale copy, the corrected copy, and that it is queued for batched dispatch (the bundle was approved as-is per `.claude/rules/corrections.md`, since a copy delta is non-blocking).
 
 Present the composed block as a durable-record preview, not a draft for chat-review:
 

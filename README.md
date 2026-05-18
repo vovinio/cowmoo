@@ -237,6 +237,7 @@ Planner /catchup               →  approves (close) or rejects (todo + comment)
 | `/status` | Quick project snapshot |
 | `/tidy` | Reorganize working notes |
 | `/import [folder]` | Import existing docs |
+| `/import-design [url]` | Start spec work from a Claude Designer share URL — walk screens, populate notes, hand off to UXUI |
 | `/copywrite` | Review and improve all user-facing text |
 | `/ideate` | Research-informed product ideation |
 | `/migrate` | Align existing specs to current templates |
@@ -258,6 +259,7 @@ Planner /catchup               →  approves (close) or rejects (todo + comment)
 | `/review-bundle` · `/approve-design` · `/resolve-review` | Phase B: resolve a `uxui:review` task — evaluate a designer's bundle, run the approval transaction, or treat a no-bundle card |
 | `/ask [pm\|planner]` | Ask PM about spec gaps, or respond to a planner `for-uxui` finding |
 | `/notify planner` | Announce `cowmoo/design/` file changes when active tasks may consume them |
+| `/dispatch-corrections [designer\|pm\|planner]` | Batch non-blocking copy-grade corrections collected during review/design work into one consolidated issue per target |
 | `/catchup` · `/process-inbox` · `/process-message` | Inbox: `/catchup` gates (reconcile board + scan), `/process-inbox` presents & routes, `/process-message` handles one `for-uxui` agent message |
 | `/status` | Show UXUI project status |
 | `/propose [idea]` | Propose an agent system improvement |

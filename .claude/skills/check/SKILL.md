@@ -169,6 +169,76 @@ Both sub-steps run independently. Missing `@<name>` → CRITICAL; missing `rules
 
 > **No body-level `/<skill>` check.** A herd skill/agent body referencing a `/<skill>` that doesn't exist is *not* mechanically decidable — herd bodies legitimately contain slash-prefixed example content (URL routes like `/login`, paths like `/path`), and a regex cannot tell an example route from a real skill reference. That distinction needs comprehension, which violates this skill's "mechanical only" rule. The real cases are covered elsewhere: stale herd-skill references are caught by `/rename-sweep` (on rename) and `/patterns` / `/audit-agent` (body-reading passes); curator-skill references in herd files are a hard FAIL in Step 7's de-curation check.
 
+**4c — Disk ↔ README registration.**
+
+The repo's root `README.md` carries a `## Commands Reference` with a per-agent table (`### PM`, `### UXUI`, `### Planner`, `### Builder`) — the GitHub-facing command list a user reads. It must stay in sync with the skills on disk: a skill added without a README row, or a README row naming a deleted skill, is drift the user sees. Same bidirectional shape as 4a, against the README instead of CLAUDE.md. An agent that also has its own `herd/<agent>/README.md` is checked too — skills AND sub-agents.
+
+Installed third-party skills (Pattern 16 carveout — `allowed-tools:` present, both required keys absent) are exempt: they ship via an external installer, not as authored commands.
+
+```bash
+setopt NULL_GLOB 2>/dev/null || shopt -s nullglob 2>/dev/null || true  # zsh: unmatched globs → empty, not fatal
+# Third-party skill names — exempt from README registration.
+THIRDPARTY=$(for d in herd/*/.claude/skills/*/SKILL.md; do
+  [ -f "$d" ] || continue
+  fm=$(awk '/^---$/{c++;next} c==1{print}' "$d")
+  echo "$fm" | grep -q "^allowed-tools:" || continue
+  echo "$fm" | grep -qE "^(user-invocable|disable-model-invocation):" && continue
+  basename "$(dirname "$d")"
+done | sort -u)
+
+for agent in pm uxui planner builder; do
+  case "$agent" in
+    pm) head="PM";; uxui) head="UXUI";; planner) head="Planner";; builder) head="Builder";;
+  esac
+  # Extract the agent's subsection within the root README's ## Commands Reference.
+  # $head is interpolated into the awk program by the shell (double-quoted), so the
+  # heading match is a plain /regex/. awk's $0 is avoided deliberately: a literal
+  # `$0` in a SKILL.md bash block is consumed as a skill-argument placeholder when
+  # the skill body loads, leaving broken awk. `\$` is the end-of-line anchor.
+  sec=$(awk "
+    /^## Commands Reference/ { inref = 1; next }
+    inref && /^## / { inref = 0 }
+    inref && /^### $head\$/ { f = 1; next }
+    inref && f && /^### / { f = 0 }
+    inref && f { print }
+  " README.md)
+  if [ -z "$sec" ]; then
+    echo "  FAIL: README.md has no '### $head' subsection under ## Commands Reference"
+    continue
+  fi
+  # Reverse: each non-third-party skill dir must appear as /<name> in the subsection.
+  for d in herd/$agent/.claude/skills/*/; do
+    [ -d "$d" ] || continue
+    name=$(basename "$d")
+    echo "$THIRDPARTY" | grep -qx "$name" && continue
+    echo "$sec" | grep -q "/$name\b" \
+      || echo "  WARN: herd/$agent skill /$name is missing from README.md Commands Reference (### $head)"
+  done
+  # Forward: each /<cmd> in the subsection must resolve to a skill dir for this agent.
+  echo "$sec" | rg -No --pcre2 '(?:^|(?<=[\s`(]))/[a-z][a-z0-9-]*(?![a-z0-9/-])' 2>/dev/null \
+    | sed 's|^/||' | sort -u | while read name; do
+    [ -d "herd/$agent/.claude/skills/$name" ] && continue
+    echo "  WARN: README.md Commands Reference (### $head) lists /$name but herd/$agent has no such skill"
+  done
+  # Per-agent README, if the agent has one — skills AND sub-agents.
+  rd="herd/$agent/README.md"
+  [ -f "$rd" ] || continue
+  for d in herd/$agent/.claude/skills/*/; do
+    [ -d "$d" ] || continue
+    name=$(basename "$d")
+    echo "$THIRDPARTY" | grep -qx "$name" && continue
+    grep -q "/$name\b" "$rd" || echo "  WARN: herd/$agent skill /$name is missing from $rd"
+  done
+  for f in herd/$agent/.claude/agents/*.md; do
+    [ -f "$f" ] || continue
+    name=$(basename "$f" .md)
+    grep -q "@$name\b" "$rd" || echo "  WARN: herd/$agent sub-agent @$name is missing from $rd"
+  done
+done
+```
+
+README drift is **advisory**, not critical: a README is user-facing documentation, not agent-loaded context (unlike CLAUDE.md in 4a, whose drift means the agent itself doesn't know a skill exists). The skill still runs correctly — but the user reads a stale command list, so the drift is a real finding every run until fixed.
+
 ### Step 5 — Skill → dev-tools subcommand existence
 
 Every git / GitHub write is a `dev-tools.cjs` subcommand a skill invokes directly (Pattern 6 — Delegated Write Operation). For every `node "$AGENT_DIR/tools/dev-tools.cjs" <subcommand>` invocation in a skill or sub-agent body, `<subcommand>` must be a real dispatcher `case` in that agent's `dev-tools.cjs`.

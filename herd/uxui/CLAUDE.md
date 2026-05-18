@@ -106,6 +106,8 @@ Iterative, small-batch flow with three phases of thinking:
 
 `/catchup` is the lean inbox gate — reconcile the board, scan, report counts. `/process-inbox` presents the inbox and routes each item: `for-uxui` agent messages to `/process-message`, `uxui:review` bundles to `/review-bundle`, no-bundle review tasks to `/resolve-review`.
 
+`/dispatch-corrections` sits outside this flow — run anytime. It ships the `PENDING-CORRECTIONS.md` queue (non-blocking copy-grade corrections collected during review and design work) as one batched issue per target. Blocking findings still escalate immediately via `/ask`; only non-blocking ones are queued. See `.claude/rules/corrections.md`.
+
 ### Utilities
 
 `/status`, `/propose` — run anytime.
@@ -117,7 +119,7 @@ Iterative, small-batch flow with three phases of thinking:
 **Phase A — UI definitions:** `/start` (load context, assess coverage), `/draft` (capture discussion), `/define` (formalize into cowmoo/design/ files), `/review` (verify coverage against specs), `/publish` (commit changes)
 **Phase B — Design tasks:** `/design-start` (synthesize state, propose 1-3 next tasks with reasoning — no writes), `/design-draft` (compose task bodies inline + validate + write design-draft.json — rerunnable), `/design-publish` (preview + ship N uxui:todo issues — pure publication)
 **Review tasks:** `/review-bundle` (bundle path — fetch, `@design-evaluator`, triage, reject; hands approval to `/approve-design`), `/approve-design` (the approval transaction — attach bundle, write journal, commit, close as `uxui:done`; re-invocable to resume a partial run), `/resolve-review` (no-bundle path — treat the comments, classify, resolve: send-back / close / escalate-to-PM)
-**Inbox & messages:** `/catchup` (lean gate — reconcile the board, scan, report counts), `/process-inbox` (present the inbox + route each item), `/process-message` (handle one `for-uxui` agent message — spec update / UI gap / UI question), `/ask pm` (ask PM about spec gaps), `/ask planner` (respond to a for-uxui message), `/notify planner` (announce cowmoo/design/ changes to planner)
+**Inbox & messages:** `/catchup` (lean gate — reconcile the board, scan, report counts), `/process-inbox` (present the inbox + route each item), `/process-message` (handle one `for-uxui` agent message — spec update / UI gap / UI question), `/ask pm` (ask PM about spec gaps), `/ask planner` (respond to a for-uxui message), `/notify planner` (announce cowmoo/design/ changes to planner), `/dispatch-corrections <designer | pm | planner>` (flush the `PENDING-CORRECTIONS.md` queue as one consolidated issue per target)
 **Utilities:** `/status` (read-only snapshot), `/propose` (suggest system improvements)
 
 ## Available Agents
@@ -171,6 +173,7 @@ You define the product's UI structure: design intent, navigation, user journeys,
 | `cowmoo/design/bundles/<ticket>/` | Extracted Claude Design exports — README, project/*.html, chats/*.md, meta.json. One folder per `uxui:todo` ticket. Read by `@design-evaluator` at review time; designer/human reference otherwise. NOT read by `/design-start` (that reads `VISUAL-JOURNAL.md`). | Written + committed by `/review-bundle` (the `bundle-fetch` subcommand) |
 | `cowmoo/agent-files/uxui/WORKING-NOTES.md` | Discussion capture, UI decisions in progress | Consumed by /define |
 | `cowmoo/agent-files/uxui/design-draft.json` | Phase B draft — JSON: `batch` context + a `tasks` array of `{title, label, body}` objects, before publish. Rewritten by `/design-draft`, consumed by `/design-publish`, optionally cleared after publish. | Created by /design-draft |
+| `cowmoo/agent-files/uxui/PENDING-CORRECTIONS.md` | Queue of non-blocking copy-grade corrections collected during review and design work, grouped by target (designer / PM / planner). Each entry is a small delta too minor for an immediate cross-agent round-trip. See `.claude/rules/corrections.md`. | Appended by review/design skills; dispatched + checked off by `/dispatch-corrections` |
 
 Domain files reference roles from `cowmoo/design/roles.md` by name — never raw values. Concrete token values are resolved downstream.
 
@@ -185,6 +188,7 @@ Domain files reference roles from `cowmoo/design/roles.md` by name — never raw
 - **Spec unclear or gap found** → Discuss with user, then `/ask pm` if can't resolve.
 - **Spec contradiction** → `/ask pm` — don't guess at which side is correct.
 - **Task scope wrong (a for-uxui message's premise doesn't match cowmoo/design/)** → `/ask planner` with the factual observation.
+- **Non-blocking observation for another agent** (a copy nit, a small spec-text mismatch, a minor task-PRD note — something that doesn't stop correct work) → don't fire an immediate `/ask`. Log it to `PENDING-CORRECTIONS.md`; `/dispatch-corrections` ships it in a batch. `/ask` is for *blocking* escalations only. See `.claude/rules/corrections.md`.
 - **Coverage gap** → `/review` catches it. Route to working notes for the next session.
 - **Conflicting patterns** → Two screens handle similar interactions differently. Resolve before committing — consistency matters.
 

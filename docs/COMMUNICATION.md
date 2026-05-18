@@ -60,14 +60,16 @@ Current state of message channels. Each channel has a sender skill and a recipie
 | Planner → PM | `for-pm` | `/ask pm` | PM's `/catchup` |
 | PM → Planner | `for-planner` | `/notify planner` | Planner's `/catchup` |
 | PM → Planner | `for-planner` (relabeled from `for-pm`) | PM's `/catchup` (transfer relabel) | Planner's `/catchup` (`other` category) |
-| UXUI → PM | `for-pm` | `/ask pm` | PM's `/catchup` |
+| UXUI → PM | `for-pm` | `/ask pm` or `/dispatch-corrections` | PM's `/catchup` |
 | PM → UXUI | `for-uxui` | `/notify uxui` | UXUI's `/catchup` → `/process-message` |
 | PM → UXUI | `for-uxui` (relabeled from `for-pm`) | PM's `/catchup` (transfer relabel) | UXUI's `/catchup` → `/process-message` |
 | Planner → UXUI | `for-uxui` | `/ask uxui` | UXUI's `/catchup` → `/process-message` |
-| UXUI → Planner | `for-planner` | `/notify planner` or `/ask planner` | Planner's `/catchup` |
+| UXUI → Planner | `for-planner` | `/notify planner`, `/ask planner`, or `/dispatch-corrections` | Planner's `/catchup` |
 | Designer → UXUI | `uxui:review` (a card moved into the "UX: Review" board column — usually a designer posting a Claude Design share URL, but also a human card-move with other intent; UXUI's `/catchup` detects the card-move and syncs the label unconditionally — a direct `uxui:review` label-flip is still honored as a fallback) | Human designer (external — acts on the project board + the GitHub issue) | UXUI's `/catchup` scans + classifies the card; `/process-inbox` dispatches it to `/review-bundle` or `/resolve-review` |
 
 (UXUI's `/notify planner` announces changes to `cowmoo/design/` files that may affect active planner work.)
+
+(UXUI's `/dispatch-corrections` is a sender on the existing `for-pm` / `for-planner` channels — not a new channel. It batches non-blocking copy-grade corrections UXUI collected during review and design work into one consolidated issue per target; blocking findings still escalate immediately via `/ask`. It also dispatches a designer copy-corrections batch as a `uxui:todo` task. See UXUI's `.claude/rules/corrections.md`.)
 
 (The Designer → UXUI channel is the one external-human handoff. `/catchup` reconciles the board and scans; `/process-inbox` classifies and dispatches: a bundle goes to `/review-bundle` — on approval `/approve-design` flips the issue to `uxui:done` and closes it, on rejection it flips back to `uxui:todo`; a no-bundle card (cancelled, a question, mid-work) goes to `/resolve-review` and is resolved from its comments — closed without `uxui:done` if no longer needed, or sent back to `uxui:todo`.)
 
@@ -81,7 +83,7 @@ Agents that never talk to each other directly:
 
 When the system needs a new direct communication path, the changes required are:
 
-1. **Sender skill** — add or extend a `/notify` skill (for announcements) or `/ask` skill (for blocked requests) with the target. Include content guidelines for what the message should contain, and the `issue-create` invocation (compose the body, write the `.op-handoff.json` entry, run the subcommand).
+1. **Sender skill** — add or extend a sender skill that composes the message and invokes `issue-create` (`/notify` for announcements, `/ask` for blocked requests, or a batching sender like `/dispatch-corrections`). Include content guidelines for what the message should contain, and the `issue-create` invocation (compose the body, write the `.op-handoff.json` entry, run the subcommand).
 2. **Handoff entry** — the sender skill's handoff entry carries `op: "CREATE_FOR_<TARGET>"` and `label: "for-<target>"`. The generic `issue-create` subcommand handles it — adding a channel needs no new `dev-tools.cjs` code, only the right label in the entry.
 3. **Recipient handler** — update the recipient's inbox skill(s) to recognize the new message source and route to the appropriate handler (`/catchup` for PM / planner / builder; for UXUI the handler lives in `/process-message`, reached via `/catchup` → `/process-inbox`).
 4. **Rules updates** — update the `github-workflow.md` rule on both sender and recipient sides to reflect the new channel.

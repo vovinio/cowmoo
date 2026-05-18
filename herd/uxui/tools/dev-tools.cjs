@@ -171,7 +171,7 @@ function hookSessionStart() {
 // --- Workflow Step Tracking ---
 
 const SEQUENCE = ['start', 'draft', 'define', 'review', 'publish'];
-const UNTRACKED = new Set(['status', 'propose', 'catchup', 'process-inbox', 'process-message', 'ask', 'notify', 'design-start', 'design-draft', 'design-publish', 'review-bundle', 'approve-design', 'resolve-review']);
+const UNTRACKED = new Set(['status', 'propose', 'catchup', 'process-inbox', 'process-message', 'ask', 'notify', 'dispatch-corrections', 'design-start', 'design-draft', 'design-publish', 'review-bundle', 'approve-design', 'resolve-review']);
 const ANYTIME = new Set([]);
 
 function workflowPath() {

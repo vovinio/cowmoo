@@ -16,6 +16,8 @@ Request action from another agent whose domain owns something UXUI can't fix:
 
 Use when UXUI has a problem that can't be resolved without input from another agent, or when UXUI needs to respond to an incoming `for-uxui` message with a finding the planner must act on.
 
+`/ask` is for **blocking** escalations — UXUI cannot proceed correctly without the answer. A **non-blocking** observation — a copy nit, a small spec-text mismatch, wording that drifted but still works — is *not* an `/ask`: per `.claude/rules/corrections.md` it is collected in `PENDING-CORRECTIONS.md` and shipped in a batch by `/dispatch-corrections`. Send an `/ask` now only if the finding genuinely blocks UXUI.
+
 ---
 
 ## Step 1: Determine Target
@@ -176,6 +178,7 @@ Then render an `AskUserQuestion` hand-off picker for the next action. Build the 
 
 ## Rules
 
+- **Blocking only** — `/ask` is for escalations that block UXUI. A non-blocking observation is collected in `PENDING-CORRECTIONS.md` and dispatched by `/dispatch-corrections`, not sent as a one-off `/ask`. See `.claude/rules/corrections.md`.
 - **Observational, not prescriptive** — PROBLEM and OBSERVED state what was observed, not what the recipient should do.
 - **Product terms, not UI terms** (PM target) — describe what's wrong in specs, not what's hard to design.
 - **Don't diagnose across boundaries** (`for-planner` target) — if your finding is "task scope is wrong", report the observation. Let the planner decide whether to rewrite the PRD, split the task, or something else.
