@@ -31,7 +31,7 @@ When you have a single concrete recommendation ("I suggest X because Y — confi
 
 Only change what's truly needed. Read existing code and understand the design before modifying it. "It could also be written this way" is not a reason to rewrite. When you do make changes, verify they don't break what already works.
 
-When editing agent instructions, use that agent's own abstractions — its agents, commands, and environment variables. Never reference bare shell commands when the agent has a dedicated mechanism. For example: builder uses `@task-ops` for all git/gh operations and `git -C "$PROJECT_DIR"` for direct git — never bare `git` or `gh` in instruction text.
+When editing agent instructions, use that agent's own abstractions — its commands, sub-agents, and environment variables. Never reference bare shell commands when the agent has a dedicated mechanism. For example: herd skills perform git/GitHub writes through the `dev-tools.cjs` subcommands (`commit`, `push`, `issue-create`, `issue-transition`, …) and read-only git through `git -C "$PROJECT_DIR"` — never bare `git` or `gh` in instruction text.
 
 ## Removing or Renaming Canonical Content
 
@@ -136,6 +136,7 @@ Skills only enter context when the user invokes them. A herd agent can have 20 s
 CLAUDE.md                           # Curator brain (this file)
 .claude/                            # Curator skills, templates, asymmetries, agents, rules
 docs/                               # Reference documentation (ARCHITECTURE, COMMUNICATION, PATTERN-CATALOG)
+ideas/                              # Curator planning docs — not deployed to projects
 tools/                              # Curator tooling (pattern-check hook, statusline)
 projects.md                         # Registry of initialized projects
 moo                                 # CLI launcher
@@ -196,7 +197,7 @@ Edit agent files directly in `herd/pm/`, `herd/uxui/`, `herd/planner/`, or `herd
 Three enforcement layers keep the herd consistent, in order of when they fire:
 
 1. **Scaffold-time** — Use `/scaffold-subagent` (and future `/scaffold-skill`, `/scaffold-rule`) before creating a new component. The scaffolder writes the canonical shape from `docs/PATTERN-CATALOG.md` so pattern compliance is a starting condition, not something the curator has to enforce after the fact.
-2. **Write-time** — A `PostToolUse` hook (matcher: `Edit|Write`) runs `tools/pattern-check.cjs` after every Edit/Write; the script self-filters to herd files (non-herd writes are silent no-ops). On herd files it flags unambiguous violations (missing frontmatter, sub-agent Prerequisite placement, old `gh project list` pattern, curator refs) immediately in the same turn. Silent on clean files.
+2. **Write-time** — A `PostToolUse` hook (matcher: `Edit|Write`) runs `tools/pattern-check.cjs` after every Edit/Write; the script self-filters to herd files (non-herd writes are silent no-ops). On herd files it flags unambiguous violations (missing frontmatter, sub-agent Prerequisite placement, sub-agent git/GitHub writes, old `gh project list` pattern, curator refs) immediately in the same turn. Silent on clean files.
 3. **Audit-time** — Run the pipeline when you want a structural review. It works at any commit cadence (including none — curator sessions commonly accumulate uncommitted edits over long stretches).
 
 **Pipeline:**
@@ -204,7 +205,7 @@ Three enforcement layers keep the herd consistent, in order of when they fire:
 ```
 1. /check             → Syntax, cross-refs (all herd files, bidirectional), frontmatter, architectural invariants
 2. /patterns          → Canonical shape verified against docs/PATTERN-CATALOG.md
-3. /contracts         → Op parameters, handler-producer, state lifecycles, channel traces
+3. /contracts         → Op parameters, reader-classifier coverage, state lifecycles, channel traces
 4. /coherence         → Tool availability, env assumptions, rule-command fit, step order
 5. Fix any findings
 6. Loop until clean
@@ -263,7 +264,7 @@ This reads every file for the named agent (no partial reads, no sampling), then 
 
 The curator's source of truth for "what a correct herd component looks like" lives in two places:
 
-- **`docs/PATTERN-CATALOG.md`** — named patterns organized into five groups: herd-level layout (agent layout, dev-tools, statusline, settings, hooks), role patterns (ops agent, sub-agent Read, proposal writer, check-with-verifier, parallel implementation, workflow tracking, inbox), cross-agent (message channel, GitHub GraphQL, identity prefix), skill authoring (frontmatter, rule-earns-place, partial-failure recovery, hard gate, bounded validation loop), and curator-skill structure (detection skill, finding format, verification phase). Each pattern has Purpose, Canonical Shape, Reference Implementation, Find-Instances recipe, and a pointer to declared exceptions. No inventory counts, no hand-maintained rosters.
+- **`docs/PATTERN-CATALOG.md`** — named patterns organized into five groups: herd-level layout (agent layout, dev-tools, statusline, settings, hooks), role patterns (delegated write operation, sub-agent Read, proposal writer, check-with-verifier, parallel implementation, workflow tracking, inbox), cross-agent (message channel, GitHub GraphQL, identity prefix), skill authoring (frontmatter, rule-earns-place, partial-failure recovery, hard gate, bounded validation loop), and curator-skill structure (detection skill, finding format, verification phase). Each pattern has Purpose, Canonical Shape, Reference Implementation, Find-Instances recipe, and a pointer to declared exceptions. No inventory counts, no hand-maintained rosters.
 - **`.claude/asymmetries/<agent>.md`** — per-agent declarations of deliberate divergence from the catalog (e.g., planner's dual SEQUENCES, builder's FORBIDDEN deny-list, builder's no-inbox, builder's exclusive use of the check-verify pattern). Each entry has Why, Curator-implication, and Revisit-if.
 
 The detection skills read these two files fresh on every run. Adding a pattern, adding an asymmetry, or changing which agents instantiate what does not require any skill edit.
@@ -274,7 +275,7 @@ The detection skills read these two files fresh on every run. Adding a pattern, 
 
 Changes to either template propagate to every detection skill automatically.
 
-**Audit decisions — don't re-raise resolved findings.** Each agent has a file at `.claude/audit-decisions/<agent>.md` listing findings that prior audits raised, the curator evaluated, and the curator decided were NOT bugs. `/audit-agent` reads this file first (Step 1) and skips its entries during the scan. When a new finding is resolved as "not a bug" during audit triage, append a short entry (title, verdict, one-line why — ≤3 lines) so future audits don't re-surface it. Delete entries when the underlying decision changes.
+**Audit decisions — don't re-raise resolved findings.** Each agent can have a file at `.claude/audit-decisions/<agent>.md` — created on demand the first time a finding is resolved as "not a bug" (so the directory holds only the agents audited so far, not all four). It lists findings that prior audits raised, the curator evaluated, and the curator decided were NOT bugs. `/audit-agent` reads this file first (Step 1) and skips its entries during the scan. When a new finding is resolved as "not a bug" during audit triage, append a short entry (title, verdict, one-line why — ≤3 lines) so future audits don't re-surface it. Delete entries when the underlying decision changes.
 
 ## Project registry
 

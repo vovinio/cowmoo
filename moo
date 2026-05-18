@@ -725,7 +725,7 @@ cmd_update_skills() {
   done
 
   if [ "$updated" -gt 0 ]; then
-    echo "$updated agent(s) updated. Review with: git diff -- herd/*/. claude/skills/playwright-cli/"
+    echo "$updated agent(s) updated. Review with: git diff -- herd/*/.claude/skills/playwright-cli/"
   else
     echo "All agents already up to date."
   fi

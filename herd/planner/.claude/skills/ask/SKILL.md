@@ -4,7 +4,7 @@ description: Create a for-pm (spec issues) or for-uxui (UI definition issues) Gi
 user-invocable: true
 disable-model-invocation: true
 argument-hint: <pm | uxui>
-allowed-tools: Agent, Read, Glob, Bash, AskUserQuestion
+allowed-tools: Agent, Read, Write, Glob, Bash, AskUserQuestion
 ---
 
 # Ask
@@ -23,7 +23,7 @@ Parse the argument: `pm` or `uxui`.
 
 If no argument is provided, **render the target choice via `AskUserQuestion`** (single-select). Recommended option first with `(Recommended)` suffix — pick PM when the discussion concerns a spec gap, contradiction, or business-logic question; pick UXUI when the discussion concerns a UI definition issue (missing screen state, question about a `cowmoo/design/` file). Each option's `description` carries the consequence ("creates a `for-pm` issue addressed to PM" vs "creates a `for-uxui` issue addressed to UXUI"). Per CLAUDE.md's picker rule. Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker.
 
-The target determines which label and which `@plan-ops` operation to use.
+The target determines which label and which `dev-tools.cjs` op to run.
 
 ---
 
@@ -92,30 +92,68 @@ Questions (if any):
 
 ## Step 4: Create GitHub Issue
 
+Ops are delegated through a JSON handoff file: the skill composes the title/body, writes the handoff array to `$PROJECT_DIR/cowmoo/agent-files/planner/.op-handoff.json` with the `Write` tool, then runs the matching `dev-tools.cjs` subcommand itself with the `Bash` tool, passing `--from` the handoff file and the `--index` of the entry. The handoff file is a single reused path — each run overwrites it. The subcommand prints exactly one report line; read its `✓`/`✗` marker and exit code to know what happened.
+
 ### `for-pm`
 
-Spawn `@plan-ops` with **CREATE_FOR_PM**:
-- Title: `[Planner] <summary>`
-- Body: the composed message
+Write the handoff file with a single-element array:
+
+```json
+[
+  { "op": "CREATE_FOR_PM", "title": "[Planner] <summary>", "label": "for-pm", "body": "<composed message>" }
+]
+```
+
+Then run:
+
+```bash
+node "$AGENT_DIR/tools/dev-tools.cjs" issue-create --from cowmoo/agent-files/planner/.op-handoff.json --index 0
+```
+
+A `CREATE_FOR_PM: ✓ #<n> — <title>. Label: for-pm. Board: <column>.` line means the issue was created, verified, and board-synced. A `CREATE_FOR_PM: ✗ <reason>` line means create or verify failed — if a `#<number>` appears, the issue exists, do NOT recreate it.
 
 ### `for-uxui`
 
-Spawn `@plan-ops` with **CREATE_FOR_UXUI**:
-- Title: `[Planner] <summary>`
-- Body: the composed message
+Write the handoff file with a single-element array:
+
+```json
+[
+  { "op": "CREATE_FOR_UXUI", "title": "[Planner] <summary>", "label": "for-uxui", "body": "<composed message>" }
+]
+```
+
+Then run:
+
+```bash
+node "$AGENT_DIR/tools/dev-tools.cjs" issue-create --from cowmoo/agent-files/planner/.op-handoff.json --index 0
+```
+
+A `CREATE_FOR_UXUI: ✓ #<n> — <title>. Label: for-uxui. Board: <column>.` line means the issue was created, verified, and board-synced. A `CREATE_FOR_UXUI: ✗ <reason>` line means create or verify failed — if a `#<number>` appears, the issue exists, do NOT recreate it.
+
+The skill owns the identity prefix — the title MUST start with `[Planner] `; the `issue-create` command uses it verbatim.
 
 ### In both cases
 
 If the current session is responding to one or more inbox-tracked issues (check `inbox list` from Step 2), present each to the user:
 
 - "Tracked issue #N: [title]. Is this escalation addressing it?"
-- For each confirmed:
-  1. Spawn `@plan-ops` with **POST_COMMENT** on the tracked issue, linking to the new escalation (e.g., "**[Planner]** Escalated to #<new-number> — <PM|UXUI> will respond as a new `for-planner` issue when resolved.").
-  2. Spawn `@plan-ops` with **CLOSE_ISSUE** on the tracked issue — the escalation issue now owns the lifecycle; the eventual answer arrives as a new `for-planner` message.
-  3. Remove the tracked issue from the inbox:
-     ```bash
-     node "$AGENT_DIR/tools/dev-tools.cjs" inbox remove <tracked-number>
-     ```
+- For each confirmed: this is a two-op sequence — `POST_COMMENT` then `CLOSE_ISSUE` on the tracked issue. Overwrite the handoff file with a two-element array:
+  ```json
+  [
+    { "op": "POST_COMMENT", "issue": <tracked-number>, "comment": "**[Planner]** Escalated to #<new-number> — <PM|UXUI> will respond as a new `for-planner` issue when resolved." },
+    { "op": "CLOSE_ISSUE", "issue": <tracked-number>, "close": true }
+  ]
+  ```
+  Then run the two ops in sequence — both are `issue-transition` ops:
+  ```bash
+  node "$AGENT_DIR/tools/dev-tools.cjs" issue-transition --from cowmoo/agent-files/planner/.op-handoff.json --index 0
+  node "$AGENT_DIR/tools/dev-tools.cjs" issue-transition --from cowmoo/agent-files/planner/.op-handoff.json --index 1
+  ```
+  Run index 0 first; if its report starts with `✗`, stop and report the failure — do NOT run index 1. Only on `✓` proceed to index 1. The skill composes the `**[Planner]** ` comment prefix into the handoff entry — `dev-tools.cjs` does not add it. The `CLOSE_ISSUE` entry omits `comment` (the comment is posted by the separate `POST_COMMENT` op). After both reports come back `✓`, remove the tracked issue from the inbox:
+  ```bash
+  node "$AGENT_DIR/tools/dev-tools.cjs" inbox remove <tracked-number>
+  ```
+  Handle one tracked issue at a time — each gets its own handoff overwrite + the two-op run.
 - For each declined: leave it tracked and open for a future `/publish` or `/ask`.
 
 Each confirmed tracked issue is closed at escalation time — the escalation issue (`for-pm` or `for-uxui`) owns the next step, and the eventual answer returns as a new `for-planner` message that `/catchup` will process. Closing here keeps `gh issue list --label "for-planner" --state open` clean across sessions, preventing escalated-but-unresolved blockers from re-surfacing as ghost "blocked" items on every `/catchup`.
@@ -142,7 +180,7 @@ Each confirmed tracked issue is closed at escalation time — the escalation iss
 - [ ] Message includes necessary content for the target
 - [ ] Observations are factual, not prescriptive
 - [ ] User approved the message
-- [ ] GitHub issue created via @plan-ops (CREATE_FOR_PM or CREATE_FOR_UXUI)
+- [ ] GitHub issue created via `issue-create` (CREATE_FOR_PM or CREATE_FOR_UXUI)
 - [ ] Tracked issues presented; each confirmed one linked, closed, and removed from inbox (if any)
 
 ---

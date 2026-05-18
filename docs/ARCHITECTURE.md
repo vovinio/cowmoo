@@ -77,7 +77,7 @@ Agents in separate terminals can't share context directly. GitHub Issues provide
 
 The `GH_REPO` environment variable (set by `moo`) tells `gh` which repo to target.
 
-For the principle that governs how agents communicate across these channels — report observations, don't diagnose or prescribe fixes across agent boundaries — see `docs/COMMUNICATION.md`. The full channel matrix (sender skill → ops operation → label → receiver handler → response op) also lives in `docs/COMMUNICATION.md`. Label transition commands are in each agent's `.claude/rules/github-workflow.md`.
+For the principle that governs how agents communicate across these channels — report observations, don't diagnose or prescribe fixes across agent boundaries — see `docs/COMMUNICATION.md`. The full channel matrix (sender skill → `issue-create` → label → receiver handler → response write) also lives in `docs/COMMUNICATION.md`. Label transition commands are in each agent's `.claude/rules/github-workflow.md`.
 
 ## Label-Based Ownership
 
@@ -128,7 +128,7 @@ Sub-agents (`herd/<agent>/.claude/agents/*.md` and curator-only `.claude/agents/
 
 For every sub-agent that semantically applies canonical content (identity prefix, state vocabulary, API security rules, test-writing rules), the pattern is: `Read .claude/rules/<rule-file>.md` as the first step of its Process. For sub-agents that run mechanical commands with baked-in arguments (readers, executors, external-tool runners), the Read is unnecessary — the rule usage is already encoded in the commands.
 
-Each herd agent owns one or more ops sub-agents that follow Pattern 6's canonical shape. Count is per-agent: planner (`@plan-ops`) and builder (`@task-ops`) each have one; PM splits into two (`@pm-ops` for GitHub/git, `@pm-bundle-ops` for transient Claude Designer share-URL fetch); UXUI splits into four (`@uxui-gh-ops`, `@uxui-git-ops`, `@uxui-bundle-ops`, `@uxui-journal-ops`). The split mirrors what the agent's write surface looks like — bundle fetches that never touch GitHub do not need the GitHub Prerequisite Read loaded into every operation. Ops sub-agents that touch `gh`/labels (`@pm-ops`, `@plan-ops`, `@task-ops`, `@uxui-gh-ops`, `@uxui-journal-ops`) carry `Read .claude/rules/github-workflow.md` as a Prerequisite; pure-git or pure-fetch ops sub-agents (`@pm-bundle-ops`, `@uxui-git-ops`, `@uxui-bundle-ops`) omit it. Builder's `@check-criteria`, `@check-patterns`, `@check-edge-cases`, `@check-security` all Read their relevant rule files. UXUI's `@check-coverage`, `@design-task-checker`, and `@design-evaluator` Read `.claude/rules/ui-vocabulary.md`.
+Write operations are not sub-agents — they are `dev-tools.cjs` subcommands invoked directly by the skills that need them (see Pattern 6, Delegated Write Operation). Sub-agents are reserved for work that reasons. For a reasoning sub-agent that applies canonical content, the Read pattern above holds: builder's `@check-criteria`, `@check-patterns`, `@check-edge-cases`, `@check-security` all Read their relevant rule files as a Prerequisite; UXUI's `@check-coverage`, `@design-task-checker`, and `@design-evaluator` Read `.claude/rules/ui-vocabulary.md`.
 
 ## Herd Agents Are Standalone (De-Curation)
 
@@ -152,15 +152,15 @@ The previous project-wide `project/.claude/` layer has been removed — there is
 | Builder can't change tech stack | settings.json deny: `Edit(**/cowmoo/stack/**)`, `Write(**/cowmoo/stack/**)` |
 | Agents can't write other agents' files | settings.json deny: `Edit(**/cowmoo/agent-files/{other}/**)`, `Write(**/cowmoo/agent-files/{other}/**)` |
 | PM / UXUI / planner can't write project code | `territory-check` hook (PreToolUse Edit\|Write) — hard-blocks writes outside the agent's scope via `TERRITORY` allow-list in `dev-tools.cjs`. Builder uses `FORBIDDEN` deny-list instead (see `.claude/asymmetries/builder.md`). |
-| Builder commits and pushes only its own files | @task-ops scopes: code (outside `cowmoo/`), `cowmoo/agent-files/builder/` (includes `proposals/` and `codebase/`). `PUSH` op publishes the commit to the remote (skips cleanly if no `origin`) |
-| UXUI commits and pushes only its own files | `@uxui-git-ops` scopes: `cowmoo/design/`, `cowmoo/agent-files/uxui/` (includes `proposals/`). `@uxui-bundle-ops` script scopes: `cowmoo/design/bundles/<ticket>/`. `PUSH` op publishes commits to the remote (skips cleanly if no `origin`) |
+| Builder commits and pushes only its own files | the `commit` subcommand's `code` scope (the product tree outside `cowmoo/`) and `working` scope (`cowmoo/agent-files/builder/`, `cowmoo/codebase/`); `push` publishes to the remote (skips cleanly if no `origin`) |
+| UXUI commits and pushes only its own files | the `commit` subcommand's scopes: `cowmoo/design/` + `cowmoo/agent-files/uxui/`; `bundle-fetch` commits `cowmoo/design/bundles/<ticket>/`; `push` publishes to the remote (skips cleanly if no `origin`) |
 | Each agent has own skills/tools | Own `.claude/` and `tools/` directories |
 
 ## What We Dropped
 
 Compared to the original coding-agent system:
 - **No read counter, message counter, sync markers, or caching files** — simplified
-- **No build state machine in code** — ops agents handle `gh` commands, skills delegate
+- **No build state machine in code** — git/GitHub writes are `dev-tools.cjs` subcommands, invoked directly by skills
 - **No setup.sh deployment** — agents stay in cowmoo, accessed via `--add-dir`
 - **No Linear CLI** — replaced by `gh` CLI (GitHub Issues)
 - **No counter.sh, track-spec-change.sh** — skill instructions handle these concerns

@@ -42,11 +42,20 @@ Wait for explicit approval before proceeding.
 
 ## Step 3: Commit and Push
 
-Spawn `@uxui-git-ops` with operation **COMMIT** and the approved message. Wait for the COMMIT report.
+Run the `commit general` command with the approved message — `commit` mode `general` owns the whole procedure (merge-state guard, pathspec-restricted staging, index-lock retry, hash-pinned content-verify). Use a single-quoted heredoc so the message never gets mangled by the shell:
 
-**If the report begins with `COMMIT: ✗`** — the operation either refused to run (mid-merge/rebase/cherry-pick state) or failed during verification (foreign content in the commit). Surface the report verbatim to the user and **stop the publish flow** — do NOT proceed to PUSH or produce the Step 4 "Committed" report. The user resolves the underlying state (finish the merge, investigate the foreign content with the recovery command in the report) then re-runs `/publish`.
+```bash
+node "$AGENT_DIR/tools/dev-tools.cjs" commit general "$(cat <<'EOF'
+<approved message>
+EOF
+)"
+```
 
-**If the op reports `COMMIT: Nothing to commit.`** — there were no staged UXUI-territory changes. Report this plainly to the user:
+Read the command's one-line stdout (it may emit a trailing `Note:` line):
+
+**If the report begins with `COMMIT: ✗`** — the command either refused to run (mid-merge/rebase/cherry-pick state) or failed during verification (foreign content in the commit). Surface the report verbatim to the user and **stop the publish flow** — do NOT run PUSH or produce the Step 4 "Committed" report. The user resolves the underlying state (finish the merge, investigate the foreign content with the recovery command in the report) then re-runs `/publish`.
+
+**If the report reads `COMMIT: Nothing to commit.`** — there were no staged UXUI-territory changes. Report this plainly to the user:
 
 ```
 Nothing to commit — cowmoo/design/ and cowmoo/agent-files/uxui/ are clean.
@@ -57,11 +66,15 @@ Do NOT produce the Step 4 "Committed" report in this case. Stop.
 
 **On `COMMIT: ✓`** — proceed. If the success report includes a `Note:` line about pre-existing foreign staged content, surface that line to the user so they know it stayed staged.
 
-Spawn `@uxui-git-ops` with operation **PUSH** to publish the commit to the remote. Wait for the PUSH report.
+Run the `push` command to publish the commit to the remote — it owns the origin pre-check, the idempotent `push -u origin HEAD`, the extended network timeout, and the `[ahead N]` verify:
 
-If the project has no `origin` remote, PUSH reports `skipped` and the publish completes locally — that's expected on a fresh project that hasn't been linked to GitHub yet.
+```bash
+node "$AGENT_DIR/tools/dev-tools.cjs" push
+```
 
-If PUSH fails (network, auth, conflict), surface the error to the user. The local commit is intact; the user can run `git push` manually or re-run `/publish` once the issue is resolved.
+Read its one-line stdout. If the project has no `origin` remote, `push` reports `PUSH: skipped — no git remote 'origin' configured.` and the publish completes locally — that's expected on a fresh project that hasn't been linked to GitHub yet.
+
+If `push` reports `PUSH: ✗ <reason>` (network, auth, conflict), surface the error to the user. The local commit is intact; the user can run `git -C "$PROJECT_DIR" push` manually or re-run `/publish` once the issue is resolved.
 
 ---
 
@@ -84,8 +97,8 @@ Before finishing, confirm:
 - [ ] Conversation scanned for unpersisted state
 - [ ] Working notes updated if needed
 - [ ] Changes reviewed and approved by user
-- [ ] Committed via @uxui-git-ops (verified)
-- [ ] Pushed via @uxui-git-ops PUSH (or `PUSH: skipped` reported when no remote configured)
+- [ ] Committed via the `commit general` command (verified)
+- [ ] Pushed via the `push` command (or `PUSH: skipped` reported when no remote configured)
 - [ ] Report presented with next steps
 
 ---

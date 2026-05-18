@@ -66,9 +66,9 @@ The rest of the steps reference this model. If you can't write it confidently, g
 
 **Goal:** surface unstated assumptions baked into operations, skills, and rules. The ones that break when they meet a project that violates them.
 
-For each operation in the agent's ops file(s), each skill, and each rule, ask:
+For each `dev-tools.cjs` write subcommand the agent defines, each skill, and each rule, ask:
 
-*Note on ops-file enumeration:* an agent may have one or several ops files depending on its write surface — count is not constrained by Pattern 6. Enumerate operations across every match for `herd/<agent>/.claude/agents/*-ops.md` rather than assuming a single file.
+*Note:* write operations are `dev-tools.cjs` subcommands — `commit`, `push`, `issue-create`, `issue-transition` for every agent, plus planner's `issue-edit-body` and uxui's `journal-update`. Enumerate them from the dispatcher `case` labels, not from sub-agent `### OP` sections (there are no ops sub-agents).
 
 1. What languages/frameworks/project layouts does this assume?
 2. What project state does it assume (non-empty, has tests, has CI, has a specific directory layout)?
@@ -77,11 +77,11 @@ For each operation in the agent's ops file(s), each skill, and each rule, ask:
 
 A good hidden-assumption finding names the assumption **and the concrete state where it breaks**.
 
-**Reference case (historical — already fixed):** An earlier version of `@task-ops COMMIT scope=code` staged only `"$SOURCE_DIR/"` (a single configurable code subdir). Assumption: tests live under `$SOURCE_DIR` (JS co-location pattern). Broke on Python (`tests/` at repo root), Rust (integration `tests/`), Go (many layouts). For a TDD-first agent, "commit writes only the `src/` part of the test cycle" was a real bug. Current design stages by exclusion (`git add . ':(exclude)cowmoo'`), which captures the full product tree regardless of layout. Audit this class of failure mode — single-path assumptions that don't survive language-convention variance.
+**Reference case (historical — already fixed):** An earlier version of the builder's `commit` `code` scope staged only `"$SOURCE_DIR/"` (a single configurable code subdir). Assumption: tests live under `$SOURCE_DIR` (JS co-location pattern). Broke on Python (`tests/` at repo root), Rust (integration `tests/`), Go (many layouts). For a TDD-first agent, "commit writes only the `src/` part of the test cycle" was a real bug. Current design stages by exclusion (`git add . ':(exclude)cowmoo'`), which captures the full product tree regardless of layout. Audit this class of failure mode — single-path assumptions that don't survive language-convention variance.
 
 **Check each of these loci:**
 
-- Ops agent operations — especially any that stage, commit, or filter paths
+- `dev-tools.cjs` write subcommands — especially any that stage, commit, or filter paths
 - Skill prerequisites — "the project must have X"
 - Rule applicability — "always do X" assumes X is applicable everywhere
 - dev-tools.cjs helper functions — hardcoded ports, paths, or patterns
@@ -136,12 +136,11 @@ This overlaps with `/contracts` Section 6 (Sub-agent Liveness) but goes deeper �
 1. **Sub-agents in `CLAUDE.md` "Available Agents"** — is `@<name>` spawned by at least one skill, sub-agent, or main-agent flow? If not, is it clearly labeled user-invokable?
 2. **Skills in `CLAUDE.md` "Available Skills"** — is the skill referenced by any workflow, or purely user-invoked? Either is fine, but the description should match.
 3. **Rules in `.claude/rules/`** — is each rule Read explicitly by at least one sub-agent (for canonical-content rules), or always-loaded for the main agent (for agent-behavior rules)? An always-loaded rule that nothing applies is dead weight.
-4. **Ops operations** — is each `### OP` header invoked by at least one skill? Enumerate every match for `herd/<agent>/.claude/agents/*-ops.md` — count varies per agent (currently planner/builder one each, PM two, UXUI four). (Overlaps with `/contracts` Section 1 Check C but repeat it here in the context of the full model.)
-5. **dev-tools.cjs subcommands** — each `case '<x>':` invoked by at least one skill, sub-agent, hook, or statusline? (Sub-agent files are a valid caller location — see `/check` Step 6.)
+4. **dev-tools.cjs subcommands** — is each `case '<x>':` invoked by at least one skill, sub-agent, hook, or statusline? (Sub-agent files are a valid caller location — see `/check` Step 6. Overlaps with `/contracts` Section 1 Check C but repeat it here in the context of the full model.)
 
 **Liveness pattern to look for:** a sub-agent named in CLAUDE.md "Available Agents" but absent from every skill body, sub-agent body, and Process section. Either fix by wiring it into a workflow or relabel the CLAUDE.md entry as user-invokable. (Historical example: `@auditor` and `@auditor-quick` once fit this shape; they're now auto-invoked from `/review` Step 1b — verified before raising similar findings.)
 
-**Report format same as `/contracts` Section 6 (Sub-agent Liveness), extended to cover all component types (sub-agents, skills, rules, ops operations, dev-tools subcommands).**
+**Report format same as `/contracts` Section 6 (Sub-agent Liveness), extended to cover all component types (sub-agents, skills, rules, dev-tools subcommands).**
 
 ---
 

@@ -1,13 +1,13 @@
 ---
 name: contracts
-description: Semantic contract checks — op parameters match invocations, handlers have producers, state files have complete lifecycles, channel traces work end-to-end. Model-invokable after /patterns passes (propose, then run on user approval).
+description: Semantic contract checks — op parameters match invocations, reader classifiers cover catchup handlers, state files have complete lifecycles, channel traces work end-to-end. Model-invokable after /patterns passes (propose, then run on user approval).
 user-invocable: true
 disable-model-invocation: false
 ---
 
 # Contracts
 
-Checks the class of bug that looks fine at the terminology level but is functionally broken. A skill spawns an ops operation with the wrong parameters; a `/catchup` handler exists but nothing sends that category of message; a state file has readers but no writer; a channel trace has a broken link.
+Checks the class of bug that looks fine at the terminology level but is functionally broken. A skill writes a handoff entry missing a field its subcommand needs; a reader sub-agent classifies messages into fewer categories than `/catchup` can handle; a state file has readers but no writer; a channel trace has a broken link.
 
 Run after `/check` passes. This skill assumes mechanical integrity (files exist, cross-references resolve). Contract checks reason about SEMANTIC fit — what the sender intends versus what the receiver accepts.
 
@@ -22,55 +22,71 @@ Read:
 
 ---
 
-## Section 1 — Op parameter contracts
+## Section 1 — Handoff-entry contracts
 
-Every `@<agent>-ops OPERATION` invocation in a skill must pass only parameters the operation declares in its `Input from <agent>` declaration.
+Every git / GitHub write is a `dev-tools.cjs` subcommand a skill invokes directly (Pattern 6 — Delegated Write Operation). For a body-carrying op a skill first writes a JSON **handoff entry** to `cowmoo/agent-files/<agent>/.op-handoff.json`. The contract: each handoff entry carries the fields its subcommand requires, and the invoking skill runs the subcommand that entry's `op` belongs to. This section checks those inline `.op-handoff.json` entries. UXUI's split `/design-draft` → `/design-publish` flow is out of scope here — `/design-draft` composes and validates `design-draft.json` itself via `@design-task-checker`, so that handoff's field-contract is enforced there, not by this section.
 
 ### Discovery
 
 ```bash
 setopt NULL_GLOB 2>/dev/null || shopt -s nullglob 2>/dev/null || true  # zsh: unmatched globs → empty, not fatal
-# Invocations across all skills
-grep -rnE '@[a-z-]+-ops[^)]* [A-Z][A-Z_]{2,}' herd/*/.claude/skills/*/SKILL.md
-
-# Operations and their Input declarations — two shapes (see Check B):
-# the inline `**Input from <agent>:**` line, and the single-op-agent
-# `## Input from <agent>` section heading (Pattern 6).
-grep -rnE '^### [A-Z_]+$' herd/*/.claude/agents/*-ops.md
-grep -rnE '(\*\*Input from [A-Za-z]+:\*\*|^## Input from [A-Za-z]+)' herd/*/.claude/agents/*-ops.md
+# Skill invocations of the body-carrying write subcommands (commit/push take
+# inline args, no handoff entry — Checks A/B below do not apply to them)
+rg -n --hidden 'dev-tools\.cjs"[[:space:]]+(issue-create|issue-edit-body|issue-transition|journal-update)' herd/*/.claude/skills/*/SKILL.md
+# Handoff entries the skills compose (JSON objects carrying an "op" field)
+rg -n --hidden '"op"[[:space:]]*:' herd/*/.claude/skills/*/SKILL.md
 ```
+
+### Required fields per subcommand
+
+| Subcommand | Handoff entry must carry |
+|---|---|
+| `issue-create` | `op`, `title`, `label`, `body` (optional `parent` — a story issue # — for the sub-issue link) |
+| `issue-edit-body` | `op`, `issue`, `body` |
+| `issue-transition` | `op`, `issue`, and at least one of `comment` / `removeLabel` / `addLabel` / `close` |
+| `journal-update` | `op`, `ticket`, `domain`, `screen`, `date`, `summary` (UXUI only) |
+| `commit` / `push` | no handoff file — inline args (`commit` takes a scope/mode + message; `push` takes none) |
 
 ### Checks
 
-- **A — Missing operation.** Every invocation's operation name must exist as a `### OP_NAME` header in the referenced ops agent file. Missing = CRITICAL.
-- **B — Extra parameter.** Every parameter the invocation passes must appear in the op's declared inputs. An invocation passing `action: close` to an op whose inputs are `issue number, resolution summary` is a bug. The declared inputs come in two shapes (Pattern 6): the inline `**Input from <agent>:**` line, where the params are the rest of that line; and — for an ops agent with exactly one operation — a `## Input from <agent>` section, where the params are the bullets listed under that heading. Read whichever shape the ops file uses.
-- **C — Unused operation (advisory).** Ops defined in an ops agent but never invoked by any skill. Might be dead code; might be recently added.
+- **A — Missing required field.** A handoff entry a skill composes is missing a field its subcommand requires (e.g. an `issue-create` entry with no `label`, an `issue-transition` entry with only an `issue` and nothing to do). CRITICAL.
+- **B — Subcommand mismatch.** The skill writes an entry whose `op` belongs to one subcommand but invokes a different one — creates route to `issue-create`, comment/relabel/close to `issue-transition`, body rewrites to `issue-edit-body`. CRITICAL.
+- **C — Unreached subcommand (advisory).** A `dev-tools.cjs` subcommand defined for an agent but invoked by no skill. Might be dead, might be recently added. (`/check` Step 6 covers this mechanically.)
 
 ---
 
-## Section 2 — Handler–producer pairing
+## Section 2 — Reader-classifier coverage
 
-Every message category a `/catchup` (or reader sub-agent) handles must have at least one producer sending that category. And vice versa: every category a sender's compose skill produces must have a handler on the receiver side.
+A `/catchup` that loads its inbox through a reader sub-agent (planner's `@plan-reader`, PM's `@inbox-reader`) depends on that reader classifying every arriving message into a category `/catchup` has a handler for. If the reader's category vocabulary is narrower than the handler set, a message in an unlisted category gets misclassified — or dropped — before `/catchup` ever triages it.
+
+Producer→receiver channel pairing is *not* checked here — Section 5's channel trace covers it end-to-end on the `for-<target>` label axis. Section 2 checks only the reader→`/catchup` seam inside a single agent.
+
+One thing neither section checks mechanically: an *orphan handler* — a `/catchup` `### category` handler that no message ever lands in. `/catchup` handlers are category-keyed (`Spec update`, `UI gap`, …) while channels and labels are `for-<target>`-keyed, so the two can't be paired by string match. A dead handler is left to `/audit-agent`'s judgement pass, which reads the skill in context. This is a deliberate scope boundary, not an oversight.
 
 ### Discovery
 
 ```bash
 setopt NULL_GLOB 2>/dev/null || shopt -s nullglob 2>/dev/null || true  # zsh: unmatched globs → empty, not fatal
-# Categories handled in each /catchup
+# Handler headers in each /catchup. Keep only the message-category handlers
+# — discard procedural sub-headers (the `1a`/`1b` inbox-loading steps,
+# `Routing rule`, `Invoking RESOLVE_ISSUE`, and similar mechanics explainers).
 grep -rnE '^### ' herd/*/.claude/skills/catchup/SKILL.md
 
-# Categories sent by each compose skill
-grep -rnE '^### `for-' herd/*/.claude/skills/notify/SKILL.md herd/*/.claude/skills/ask/SKILL.md
-
-# Reader sub-agents that classify messages
-grep -rnE '\*\*[a-z-]+\*\* — ' herd/*/.claude/agents/*-reader.md
+# Category vocabulary each reader sub-agent classifies messages into.
+# Catches both lowercase-hyphenated tokens (plan-reader: `**spec-updated** — …`)
+# and prose-case labels (inbox-reader: `**Quick question** — …`). The same
+# pattern also matches `## Rules` bullets (`**Flag blockers prominently** — …`)
+# — keep only the lines in the reader's classification step, discard the rest.
+# `task-reader.md` is matched by the *-reader.md glob, but builder has no
+# `/catchup` — it has no reader→/catchup seam, so ignore it here.
+grep -rnE '\*\*[A-Za-z][A-Za-z -]*\*\* — ' herd/*/.claude/agents/*-reader.md
 ```
 
-### Checks
+### Check
 
-- **A — Orphan handler.** `/catchup` handles a category but no producer sends it. Dead code.
-- **B — Silent drop.** A compose skill produces a category but no receiver handles it. Messages arrive and vanish.
-- **C — Reader classifier gap.** A reader sub-agent's category list (e.g., in `plan-reader.md`) doesn't cover all the categories the receiver's `/catchup` handles. Arrivals get misclassified.
+- **Reader classifier gap.** A reader sub-agent's category list (e.g., in `plan-reader.md`) doesn't cover every message-category handler the owning agent's `/catchup` has. Messages in an uncovered category get misclassified or silently dropped before triage. CRITICAL.
+
+An agent whose `/catchup` loads the inbox directly (`gh issue list`, no reader sub-agent — UXUI is the current instance) has no reader→`/catchup` seam; it has nothing to check in this section.
 
 ---
 
@@ -156,13 +172,13 @@ For each channel documented in `docs/COMMUNICATION.md`, verify every link exists
 
 ```
 Sender skill file exists →
-  it spawns the expected ops operation →
-    the operation exists in the ops agent file →
-      the operation creates an issue with the expected label →
-        the receiver's /catchup reads that label →
-          the handler for the category exists →
-            the handler references a response op →
-              the response op exists
+  it composes the handoff entry and invokes `issue-create` (a fresh issue) or
+    `issue-transition` (a transfer relabel of an existing issue) →
+      the handoff entry carries the expected `for-<target>` label →
+        the issue ends up with that label (created fresh, or relabeled) →
+          the receiver's /catchup reads that label →
+            the handler for the category exists →
+              the handler performs its response write (a `dev-tools.cjs` invocation)
 ```
 
 **External-human channel** (declared exception in Pattern 13 — the Designer → UXUI row is the current instance):
@@ -170,7 +186,7 @@ Sender skill file exists →
 ```
 Label exists in the receiver's github-workflow.md label table →
   the receiver's /catchup (or dispatched skill) handles that label →
-    any response ops named in the Recipient column exist in the receiver's ops agent(s)
+    any response writes the handler performs are real `dev-tools.cjs` subcommand invocations
 ```
 
 The sender-side steps are skipped because no sender skill exists on the curator side of an external-human handoff.
@@ -186,7 +202,7 @@ sed -n '/^## Communication Channels/,/^## /p' docs/COMMUNICATION.md | grep '^| '
 
 For each row: parse the From / Label / Sender / Recipient columns.
 
-- If the Sender cell names a skill (contains `/<name>`) or an ops reference (contains `@<agent>-ops`), walk the **agent-to-agent** chain above.
+- If the Sender cell names a skill (contains `/<name>`), walk the **agent-to-agent** chain above.
 - If the Sender cell names an external-human actor (contains "Human" or "external" — the Designer → UXUI row is the canonical case), walk the **external-human** chain above.
 
 ### Finding
@@ -234,7 +250,7 @@ Every actionable finding uses the canonical four-part shape — see `.claude/tem
 Run the canonical verification phase. Read `.claude/templates/verification-phase.md` and follow its procedure with:
 
 - **Source skill name:** `/contracts`
-- **Severity ordering hint:** critical = missing op, dead read, orphan handler, broken channel trace, self-reference argument; advisory = unused ops, sibling divergences, user-invokable-but-unmarked.
+- **Severity ordering hint:** critical = missing handoff field, subcommand mismatch, dead read, reader classifier gap, broken channel trace, self-reference argument; advisory = unreached subcommand, sibling divergences, user-invokable-but-unmarked.
 
 ---
 
@@ -243,8 +259,8 @@ Run the canonical verification phase. Read `.claude/templates/verification-phase
 ```
 ## Contracts Results
 
-### Section 1: Op Parameter Contracts — [PASS / N findings]
-### Section 2: Handler-Producer Pairing — [PASS / N findings]
+### Section 1: Handoff-Entry Contracts — [PASS / N findings]
+### Section 2: Reader-Classifier Coverage — [PASS / N findings]
 ### Section 3: State-File Lifecycle — [PASS / N findings]
 ### Section 4: Semantic Argument Names — [PASS / N findings]
 ### Section 5: Channel Traces — [X of Y channels PASS, Z FAIL]

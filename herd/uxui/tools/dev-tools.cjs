@@ -441,17 +441,17 @@ function territoryCheck() {
   }
 }
 
-// --- Commit (canonical pathspec-restricted commit for @uxui-git-ops) ---
+// --- Commit (canonical pathspec-restricted commit) ---
 //
 // One tested implementation of the canonical commit procedure: merge-state
 // guard, pathspec-restricted commit, index-lock retry, hash-pinned
-// content-verify. The ops agent invokes one of:
+// content-verify. The /publish and /review-bundle skills invoke one of:
 //   node "$AGENT_DIR/tools/dev-tools.cjs" commit general "<message>"
 //   node "$AGENT_DIR/tools/dev-tools.cjs" commit roles "<message>"
 //   node "$AGENT_DIR/tools/dev-tools.cjs" commit attach-design <domain> "<message>"
-// and relays the printed report verbatim.
+// and read the printed report.
 //
-// Output markers (the ops agent and its caller skills match on these — the
+// Output markers (the calling skill matches on these — the
 // <OP> token is COMMIT / COMMIT_ROLES / ATTACH_DESIGN):
 //   <OP>: ✓ <hash> <subject>...   — success            (exit 0)
 //   <OP>: Nothing to commit.      — no territory change (exit 0)
@@ -657,13 +657,13 @@ function uxuiAttachProfile(domain) {
   };
 }
 
-// --- Push (canonical remote-sync for the ops agents) ---
+// --- Push (canonical remote-sync) ---
 //
-// Replaces inline bash in the ops-agent PUSH operation. Agent-independent —
+// The canonical remote push. Agent-independent —
 // push targets origin/HEAD regardless of which agent committed, so this takes
 // no profile and is a verbatim copy across all four dev-tools.cjs files.
 //
-// Output markers (ops agent + /publish skills match on the PUSH: prefix):
+// Output markers (the /publish skills match on the PUSH: prefix):
 //   PUSH: ✓ to origin/<branch>                          — success    (exit 0)
 //   PUSH: skipped — no git remote 'origin' configured.  — no remote  (exit 0)
 //   PUSH: ✗ <reason>                                    — failed     (exit 1)
@@ -704,15 +704,15 @@ function pushOp() {
   process.exit(0);
 }
 
-// --- Project board (canonical label↔Status sync for the ops agents) ---
+// --- Project board (canonical label↔Status sync) ---
 //
 // Agent-independent — verbatim copy across all four dev-tools.cjs files.
 //
 // The board mirrors issue labels: labels are the source of truth, the board's
 // Status field is kept in sync. LABEL_TO_COLUMN is the single definition of the
 // mapping. boardSyncCore ensures the issue is a board item and sets its Status
-// column; boardStatusOp is the `board-status` subcommand wrapper. NON-BLOCKING:
-// a board miss never fails the calling operation.
+// column; the issue-create / issue-transition subcommands call it directly.
+// NON-BLOCKING: a board miss never fails the calling operation.
 
 // LABEL_TO_COLUMN — canonical label/event → board-column mapping. The `closed`
 // key is the issue-closed event and overrides any label.
@@ -747,7 +747,7 @@ function resolveProjectId() {
 
 // boardSyncCore — ensure the issue is a board item and set its Status column.
 // Returns exactly one line; no console output and no process.exit, so callers
-// (the board-status subcommand, issueCreate) can splice the result into their
+// (issueCreate / issueTransition) can splice the result into their
 // own report:
 //   'Board: <column>'             — Status set
 //   'Board: no board'             — no linked ProjectV2 / $GH_REPO unset
@@ -785,16 +785,6 @@ function boardSyncCore(issueNumber, columnName) {
   let set = run(`gh api graphql -f query=${JSON.stringify(setMut)}`);
   if (set === null) { sleepMs(2000); set = run(`gh api graphql -f query=${JSON.stringify(setMut)}`); }
   return set === null ? 'Board: failed' : `Board: ${columnName}`;
-}
-
-// boardStatusOp — `board-status <issue#> <label|closed>` subcommand wrapper.
-// Maps the label/event to a column via LABEL_TO_COLUMN, syncs the board, and
-// prints one line. Always exits 0 — a board problem never fails the real op.
-function boardStatusOp(issueNumber, labelOrEvent) {
-  const column = LABEL_TO_COLUMN[labelOrEvent];
-  if (!column) { console.log(`Board: no mapping for "${labelOrEvent}"`); process.exit(0); }
-  console.log(boardSyncCore(issueNumber, column));
-  process.exit(0);
 }
 
 // boardDragsCore — find board cards a human dragged into <columnName>: cards
@@ -835,107 +825,318 @@ function boardDragsOp(columnName, expectedLabel) {
   process.exit(0);
 }
 
-// --- Issue creation (canonical delegated GitHub issue-create) ---
+// --- Issue operations (delegated GitHub issue create / edit / transition) ---
 //
-// issueCreate — create ONE GitHub issue from a task entry in a JSON draft,
-// verify it, link it to the project board, print exactly one report line, and
-// set the exit code. Replaces the inline `gh issue create` heredoc in the
-// @uxui-gh-ops CREATE_DESIGN_TASK operation; that operation becomes a thin
-// delegated wrapper that relays this report verbatim.
+// Two subcommands replace the inline `gh issue create / comment / edit /
+// close` heredocs (formerly hand-rolled):
 //
-//   issue-create --from <design-draft.json> --index <i>
+//   issue-create     --from <handoff.json> --index <i>
+//   issue-transition --from <handoff.json> --index <i>
 //
-// The body travels file → JSON.parse → gh stdin (`--body-file -`); it never
-// transits a shell, so backticks / $() / quotes / a literal EOF line in a body
-// are inert text.
+// The handoff file is a JSON array of op objects, authored by the calling
+// skill's Write tool at cowmoo/agent-files/<agent>/.op-handoff.json (one reused
+// path, overwritten per use); --index selects one entry. A single-op call is a
+// one-element array with --index 0. issue-create also accepts an object with a
+// `.tasks` array (UXUI's design-draft.json) for the CREATE_DESIGN_TASK path.
 //
-// Output — exactly one line. The <OP> token is CREATE_DESIGN_TASK so the
-// caller (@uxui-gh-ops / /design-publish) keys on the same marker as before:
-//   CREATE_DESIGN_TASK: ✓ #<n> — <title>. Label: <label>. Board: <column>.  exit 0
-//   CREATE_DESIGN_TASK: ✗ <reason>                                          exit 1
-// Create + verify are blocking (exit 1 on failure). The board sync is
-// non-blocking: its `Board: …` segment reports status, never the exit code.
-function issueCreate() {
-  const OP = 'CREATE_DESIGN_TASK';
-  const fail = (msg) => { console.log(`${OP}: ✗ ${msg}`); process.exit(1); };
+// Every body (issue text, comment, PRD) travels file → JSON.parse → gh stdin
+// (`--body-file -`) and never transits a shell — backticks / $() / quotes / a
+// literal EOF line in a body are inert text. Each subcommand prints exactly
+// ONE report line `<op>: ✓ …` / `<op>: ✗ …` and sets a meaningful exit code.
+// Each create / relabel / close calls boardSyncCore internally and folds the
+// `Board: …` segment into its report (non-blocking — a board miss never
+// changes the exit code). This block is agent-independent and verbatim-
+// identical across all four dev-tools.cjs files.
 
+// loadHandoffEntry — parse --from/--index, load + validate the handoff JSON,
+// return { entry, op }. On any failure prints `<subcmd>: ✗ <reason>` exit 1.
+function loadHandoffEntry(subcmd, defaultOp) {
+  const fail = (msg) => { console.log(`${subcmd}: ✗ ${msg}`); process.exit(1); };
   if (!PROJECT_DIR) fail('PROJECT_DIR not set.');
 
-  // Parse --from / --index (order-independent; reject unknown arguments).
   const argv = process.argv.slice(3);
   let from = null, indexRaw = null;
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--from') from = argv[++i];
     else if (argv[i] === '--index') indexRaw = argv[++i];
-    else fail(`unknown argument "${argv[i]}" — usage: issue-create --from <path> --index <i>`);
+    else fail(`unknown argument "${argv[i]}" — usage: ${subcmd} --from <path> --index <i>`);
   }
-  if (from == null || indexRaw == null) fail('usage: issue-create --from <path> --index <i>');
+  if (from == null) fail(`usage: ${subcmd} --from <path> --index <i>`);
+  if (indexRaw == null) indexRaw = '0';
   if (!/^[0-9]+$/.test(String(indexRaw))) fail(`--index must be a non-negative integer (got "${indexRaw}").`);
   const index = Number(indexRaw);
 
-  // Resolve and load the draft.
-  const draftPath = path.isAbsolute(from) ? from : path.join(PROJECT_DIR, from);
-  if (!fs.existsSync(draftPath)) fail(`draft not found at ${draftPath}.`);
+  const handoffPath = path.isAbsolute(from) ? from : path.join(PROJECT_DIR, from);
+  if (!fs.existsSync(handoffPath)) fail(`handoff file not found at ${handoffPath}.`);
   let raw;
-  try { raw = fs.readFileSync(draftPath, 'utf8'); } catch { fail('draft is empty or unreadable.'); }
-  if (!raw || !raw.trim()) fail('draft is empty or unreadable.');
-  let draft;
-  try { draft = JSON.parse(raw); } catch (e) { fail(`draft is not valid JSON: ${e.message}.`); }
-  if (!draft || !Array.isArray(draft.tasks)) fail('draft has no "tasks" array.');
-  if (draft.tasks.length === 0) fail('draft "tasks" array is empty.');
-  if (index >= draft.tasks.length) fail(`--index ${index} out of range (draft has ${draft.tasks.length} task(s)).`);
+  try { raw = fs.readFileSync(handoffPath, 'utf8'); } catch { fail('handoff file is unreadable.'); }
+  if (!raw || !raw.trim()) fail('handoff file is empty.');
+  let parsed;
+  try { parsed = JSON.parse(raw); } catch (e) { fail(`handoff file is not valid JSON: ${e.message}.`); }
 
-  const task = draft.tasks[index];
-  if (!task || typeof task.title !== 'string' || !task.title.trim()) fail(`task[${index}] is malformed: missing title.`);
-  if (typeof task.body !== 'string' || !task.body.trim()) fail(`task[${index}] is malformed: missing body.`);
-  const label = (typeof task.label === 'string' && task.label.trim()) ? task.label.trim() : 'uxui:todo';
+  let entries;
+  if (Array.isArray(parsed)) entries = parsed;
+  else if (parsed && Array.isArray(parsed.tasks)) entries = parsed.tasks;
+  else fail('handoff JSON must be an array of op objects (or an object with a "tasks" array).');
+  if (entries.length === 0) fail('handoff JSON is empty.');
+  if (index >= entries.length) fail(`--index ${index} out of range (handoff has ${entries.length} entr${entries.length === 1 ? 'y' : 'ies'}).`);
 
-  // [UXUI] title-prefix pre-check.
-  let title = task.title.trim();
-  if (!title.startsWith('[UXUI]')) title = `[UXUI] ${title}`;
+  const entry = entries[index];
+  if (!entry || typeof entry !== 'object' || Array.isArray(entry)) fail(`entry[${index}] is malformed (not an object).`);
+  const op = (typeof entry.op === 'string' && entry.op.trim()) ? entry.op.trim() : defaultOp;
+  if (!op) fail(`entry[${index}] is missing the "op" field.`);
+  return { entry, op };
+}
+
+// ghReason — map a failed gh() result to a short human-readable reason.
+function ghReason(res) {
+  const e = (res.err || '').toLowerCase();
+  if (/gh auth|not logged|authentication/.test(e)) return 'not authenticated (run: gh auth login)';
+  if (/could not resolve host|network|timeout|timed out/.test(e)) return 'network error reaching GitHub';
+  return splitLines(res.err)[0] || `gh exited ${res.code}`;
+}
+
+// issueCreate — create ONE issue from a handoff entry { op, title, label, body,
+// parent? }, verify title+label, optionally link it as a sub-issue of `parent`
+// (a story issue #, Pattern 14), sync the board. Title is used verbatim — the
+// caller supplies its own `[Agent]` identity prefix.
+function issueCreate() {
+  const { entry, op } = loadHandoffEntry('issue-create', 'CREATE_DESIGN_TASK');
+  const fail = (msg) => { console.log(`${op}: ✗ ${msg}`); process.exit(1); };
+
+  const title = (typeof entry.title === 'string') ? entry.title.trim() : '';
+  const label = (typeof entry.label === 'string') ? entry.label.trim() : '';
+  const body = (typeof entry.body === 'string') ? entry.body : '';
+  if (!title) fail('entry is missing "title".');
+  if (!label) fail('entry is missing "label".');
+  if (!body.trim()) fail('entry is missing "body".');
+  const parent = (entry.parent != null) ? String(entry.parent) : null;
+  if (parent !== null && !/^[0-9]+$/.test(parent)) fail(`"parent" must be an issue number (got "${entry.parent}").`);
 
   // Create — body via stdin, never a shell.
-  const created = gh(
-    ['issue', 'create', '--title', title, '--label', label, '--body-file', '-'],
-    { input: task.body },
-  );
+  const created = gh(['issue', 'create', '--title', title, '--label', label, '--body-file', '-'], { input: body });
   if (!created.ok) {
-    const e = created.err.toLowerCase();
-    let reason;
-    if (/gh auth|not logged|authentication/.test(e)) reason = 'not authenticated (run: gh auth login)';
-    else if (/could not resolve host|network|timeout|timed out/.test(e)) reason = 'network error reaching GitHub';
-    else if (/label|not found/.test(e)) reason = `could not create issue (check the "${label}" label exists in the repo)`;
-    else reason = splitLines(created.err)[0] || `gh exited ${created.code}`;
+    const e = (created.err || '').toLowerCase();
+    const reason = /label/.test(e)
+      ? `could not create issue (check the "${label}" label exists in the repo)`
+      : ghReason(created);
     fail(`gh issue create failed: ${reason}`);
   }
 
-  // Extract the issue number from the URL gh prints (last non-empty line).
+  // Issue number — last path segment of the URL gh prints.
   const num = (splitLines(created.out).pop() || '').split('/').pop();
-  if (!num || !/^[0-9]+$/.test(num)) {
-    fail(`issue created but could not parse its number from "${created.out}".`);
-  }
+  if (!num || !/^[0-9]+$/.test(num)) fail(`issue created but could not parse its number from "${created.out}".`);
 
-  // Verify title + label, with one retry for GitHub eventual-consistency lag.
+  // Verify title + label, one retry for GitHub eventual-consistency lag.
   const verifyOnce = () => {
-    const v = gh(['issue', 'view', num, '--json', 'title,labels',
-                  '--jq', '{title:.title,labels:[.labels[].name]}']);
+    const v = gh(['issue', 'view', num, '--json', 'title,labels', '--jq', '{title:.title,labels:[.labels[].name]}']);
     if (!v.ok) return false;
     try {
       const got = JSON.parse(v.out);
       return got.title === title && Array.isArray(got.labels) && got.labels.includes(label);
     } catch { return false; }
   };
-  if (!verifyOnce()) {
-    sleepMs(2000);
-    if (!verifyOnce()) {
-      fail(`#${num} created but verification failed (title/label mismatch or gh view error). The issue exists — investigate before re-publishing.`);
+  if (!verifyOnce()) { sleepMs(2000); if (!verifyOnce()) fail(`#${num} created but verification failed (title/label mismatch or gh view error). The issue exists — investigate before retrying.`); }
+
+  // Sub-issue link (Pattern 14) — only when a parent story is given.
+  let linkNote = '';
+  if (parent !== null) {
+    const storyId = gh(['issue', 'view', parent, '--json', 'id', '--jq', '.id']);
+    const taskId = gh(['issue', 'view', num, '--json', 'id', '--jq', '.id']);
+    if (!storyId.ok || !storyId.out || !taskId.ok || !taskId.out) {
+      fail(`#${num} created but sub-issue link failed (could not resolve node ids). The issue exists — link it to story #${parent} manually.`);
     }
+    const mutation = `mutation { addSubIssue(input: {issueId: "${storyId.out}", subIssueId: "${taskId.out}"}) { subIssue { number } } }`;
+    const linked = gh(['api', 'graphql', '-f', `query=${mutation}`]);
+    if (!linked.ok) fail(`#${num} created but sub-issue link to story #${parent} failed: ${ghReason(linked)}. The issue exists — link it manually.`);
+    linkNote = ` Linked to story #${parent}.`;
   }
 
-  // Board sync — non-blocking; status spliced in, exit code unaffected.
-  const board = boardSyncCore(num, LABEL_TO_COLUMN[label] || 'UX: Todo');
+  // Board sync — non-blocking.
+  const column = LABEL_TO_COLUMN[label];
+  const board = column ? boardSyncCore(num, column) : `Board: no mapping for "${label}"`;
 
-  console.log(`${OP}: ✓ #${num} — ${title}. Label: ${label}. ${board}.`);
+  console.log(`${op}: ✓ #${num} — ${title}. Label: ${label}.${linkNote} ${board}.`);
+  process.exit(0);
+}
+
+// issueTransition — comment and/or relabel and/or close an issue from a handoff
+// entry { op, issue, comment?, removeLabel?, addLabel?, close? }. Steps run in
+// order (comment → relabel → close), each verified with one retry; a failure
+// stops and reports what already succeeded. `removeLabel` may be a string or an
+// array — each label present is removed, an absent one is skipped (so COMPLETE
+// can drop in-progress best-effort and RETURN can drop whichever of
+// in-progress/todo is set). Covers POST_COMMENT, RELABEL, CLAIM, CLOSE_ISSUE,
+// RESOLVE_ISSUE, COMPLETE, RETURN, APPROVE_DESIGN, REJECT_DESIGN, and the
+// comment step of UPDATE_JOURNAL.
+function issueTransition() {
+  const { entry, op } = loadHandoffEntry('issue-transition', null);
+  const issue = (entry.issue != null) ? String(entry.issue) : '';
+  const done = [];
+  const fail = (msg) => {
+    const sofar = done.length ? ` (already done: ${done.join('; ')})` : '';
+    console.log(`${op}${/^[0-9]+$/.test(issue) ? ` #${issue}` : ''}: ✗ ${msg}${sofar}`);
+    process.exit(1);
+  };
+  if (!/^[0-9]+$/.test(issue)) fail(`entry "issue" must be an issue number (got "${entry.issue}").`);
+
+  const comment = (typeof entry.comment === 'string' && entry.comment.trim()) ? entry.comment : null;
+  const addLabel = (typeof entry.addLabel === 'string' && entry.addLabel.trim()) ? entry.addLabel.trim() : null;
+  let removeLabels = [];
+  if (Array.isArray(entry.removeLabel)) {
+    removeLabels = entry.removeLabel.filter((l) => typeof l === 'string' && l.trim()).map((l) => l.trim());
+  } else if (typeof entry.removeLabel === 'string' && entry.removeLabel.trim()) {
+    removeLabels = [entry.removeLabel.trim()];
+  }
+  const wantClose = entry.close === true;
+  if (!comment && !addLabel && removeLabels.length === 0 && !wantClose) {
+    fail('entry has nothing to do (no comment, removeLabel, addLabel, or close).');
+  }
+
+  // Step 1 — comment.
+  if (comment) {
+    const posted = gh(['issue', 'comment', issue, '--body-file', '-'], { input: comment });
+    if (!posted.ok) fail(`comment post failed: ${ghReason(posted)}`);
+    const norm = (s) => (s || '').replace(/\r\n/g, '\n').trim();
+    const verifyOnce = () => {
+      const v = gh(['issue', 'view', issue, '--json', 'comments', '--jq', '.comments[-1].body']);
+      return v.ok && norm(v.out) === norm(comment);
+    };
+    if (!verifyOnce()) { sleepMs(2000); if (!verifyOnce()) fail('comment posted but verification failed (could not confirm the latest comment). Investigate before retrying — re-running would double-post.'); }
+    done.push('commented');
+  }
+
+  // Step 2 — relabel. Read current labels first so an absent removeLabel is
+  // skipped (gh issue edit --remove-label errors on a label not on the issue).
+  if (addLabel || removeLabels.length) {
+    const readLabels = () => {
+      const v = gh(['issue', 'view', issue, '--json', 'labels', '--jq', '[.labels[].name]']);
+      if (!v.ok) return null;
+      try { return JSON.parse(v.out); } catch { return null; }
+    };
+    const cur = readLabels();
+    if (cur === null) fail('could not read current labels.');
+    const toRemove = removeLabels.filter((l) => cur.includes(l));
+    const needAdd = addLabel && !cur.includes(addLabel);
+    if (toRemove.length || needAdd) {
+      const args = ['issue', 'edit', issue];
+      toRemove.forEach((l) => { args.push('--remove-label', l); });
+      if (needAdd) args.push('--add-label', addLabel);
+      const r = gh(args);
+      if (!r.ok) fail(`relabel failed: ${ghReason(r)}`);
+      const verifyOnce = () => {
+        const after = readLabels();
+        if (after === null) return false;
+        return (!addLabel || after.includes(addLabel)) && toRemove.every((l) => !after.includes(l));
+      };
+      if (!verifyOnce()) { sleepMs(2000); if (!verifyOnce()) fail('relabel sent but verification failed (label state mismatch).'); }
+    }
+    const parts = [];
+    if (toRemove.length) parts.push(`removed ${toRemove.join(', ')}`);
+    if (needAdd) parts.push(`added ${addLabel}`);
+    done.push(parts.length ? `relabeled (${parts.join('; ')})` : 'labels already correct');
+  }
+
+  // Step 3 — close.
+  if (wantClose) {
+    const st = gh(['issue', 'view', issue, '--json', 'state', '--jq', '.state']);
+    if (!st.ok || st.out !== 'CLOSED') {
+      const c = gh(['issue', 'close', issue]);
+      if (!c.ok) fail(`close failed: ${ghReason(c)}`);
+    }
+    const verifyOnce = () => {
+      const v = gh(['issue', 'view', issue, '--json', 'state', '--jq', '.state']);
+      return v.ok && v.out === 'CLOSED';
+    };
+    if (!verifyOnce()) { sleepMs(2000); if (!verifyOnce()) fail('close sent but the issue is not CLOSED.'); }
+    done.push('closed');
+  }
+
+  // Board sync — non-blocking. A close wins; otherwise the newly-added label.
+  let board = '';
+  const column = wantClose ? LABEL_TO_COLUMN.closed : (addLabel ? LABEL_TO_COLUMN[addLabel] : null);
+  if (column) board = ` ${boardSyncCore(issue, column)}.`;
+  else if (addLabel) board = ` Board: no mapping for "${addLabel}".`;
+
+  console.log(`${op} #${issue}: ✓ ${done.join(', ')}. Verified.${board}`);
+  process.exit(0);
+}
+
+// --- Visual journal (delegated VISUAL-JOURNAL.md entry merge) ---
+//
+// journalUpdate — replace-or-append one ticket's entry in
+// cowmoo/design/VISUAL-JOURNAL.md from a handoff entry
+// { op, ticket, domain, screen, date, summary }. The journal keeps the LATEST
+// summary per ticket — a re-approval replaces the prior entry in place. The
+// file is parsed by entry heading (`## #<n> `), so the merge is deterministic
+// (no text splicing). Prints exactly one report line and sets the exit code.
+// UXUI-specific — only UXUI maintains a visual journal.
+function journalUpdate() {
+  const { entry, op } = loadHandoffEntry('journal-update', 'UPDATE_JOURNAL');
+  const fail = (msg) => { console.log(`${op}: ✗ ${msg}`); process.exit(1); };
+
+  const ticket = (entry.ticket != null) ? String(entry.ticket) : '';
+  const domain = (typeof entry.domain === 'string') ? entry.domain.trim() : '';
+  const screen = (typeof entry.screen === 'string') ? entry.screen.trim() : '';
+  const date = (typeof entry.date === 'string') ? entry.date.trim() : '';
+  const summary = (typeof entry.summary === 'string') ? entry.summary.trim() : '';
+  if (!/^[0-9]+$/.test(ticket)) fail(`entry "ticket" must be an issue number (got "${entry.ticket}").`);
+  if (!domain) fail('entry is missing "domain".');
+  if (!screen) fail('entry is missing "screen".');
+  if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(date)) fail(`entry "date" must be YYYY-MM-DD (got "${entry.date}").`);
+  if (!summary) fail('entry is missing "summary".');
+
+  const journalPath = path.join(PROJECT_DIR, 'cowmoo', 'design', 'VISUAL-JOURNAL.md');
+  const PREAMBLE = '# Visual Journal\n\n'
+    + 'Running record of approved design bundles. Each entry is the LATEST summary for '
+    + 'that ticket — on re-approval, the prior entry is replaced in place.\n\n'
+    + 'Consumers: `/design-start` reads this file to synthesize visual direction for new '
+    + 'batches. Builder and planner may read it for context on approved design character.\n\n'
+    + '---\n';
+  const block = `## #${ticket} — ${domain}/${screen} (approved ${date})\n\n`
+    + `${summary}\n\n`
+    + `**Bundle:** \`cowmoo/design/bundles/${ticket}/\`\n`;
+
+  // Load existing entries — parse by entry heading, so the merge is
+  // format-agnostic and deterministic.
+  let preamble = PREAMBLE;
+  let entries = []; // [{ ticket, text }]
+  if (fs.existsSync(journalPath)) {
+    let raw;
+    try { raw = fs.readFileSync(journalPath, 'utf8'); } catch { fail('VISUAL-JOURNAL.md exists but is unreadable.'); }
+    const parts = raw.split(/(?=^## #[0-9]+ )/m);
+    if (parts.length && !/^## #[0-9]+ /.test(parts[0])) {
+      const p = parts.shift().replace(/\s+$/, '');
+      if (p) preamble = p + '\n';
+    }
+    entries = parts.map((t) => {
+      const m = t.match(/^## #([0-9]+) /);
+      // Strip trailing whitespace and any legacy `---` divider between entries.
+      const text = t.replace(/\s+$/, '').replace(/\n+---\s*$/, '').replace(/\s+$/, '');
+      return { ticket: m[1], text };
+    });
+  }
+
+  // Replace-or-append the entry for this ticket.
+  const idx = entries.findIndex((e) => e.ticket === ticket);
+  const action = idx >= 0 ? 'replaced' : 'appended';
+  if (idx >= 0) entries[idx] = { ticket, text: block.replace(/\s+$/, '') };
+  else entries.push({ ticket, text: block.replace(/\s+$/, '') });
+
+  // Reassemble: preamble, then entries separated by a blank line.
+  const out = preamble.replace(/\s+$/, '') + '\n\n'
+    + entries.map((e) => e.text).join('\n\n') + '\n';
+  try { fs.writeFileSync(journalPath, out); } catch (e) { fail(`could not write VISUAL-JOURNAL.md: ${e.message}.`); }
+
+  // Self-verify the write.
+  let back;
+  try { back = fs.readFileSync(journalPath, 'utf8'); } catch { fail('wrote VISUAL-JOURNAL.md but could not re-read it.'); }
+  const count = (back.match(new RegExp(`^## #${ticket} `, 'mg')) || []).length;
+  if (count !== 1) fail(`write verification failed — expected exactly 1 entry for #${ticket}, found ${count}.`);
+  if (!back.includes(summary)) fail('write verification failed — summary text not present after write.');
+  if (!back.startsWith('# Visual Journal')) fail('write verification failed — the "# Visual Journal" header was lost.');
+
+  console.log(`${op} #${ticket}: ✓ journal entry ${action} in VISUAL-JOURNAL.md.`);
   process.exit(0);
 }
 
@@ -999,15 +1200,18 @@ switch (command) {
   case 'push':
     pushOp();
     break;
-  case 'board-status':
-    boardStatusOp(process.argv[3], process.argv[4]);
-    break;
   case 'board-drags':
     boardDragsOp(process.argv[3], process.argv[4]);
     break;
   case 'issue-create':
     issueCreate();
     break;
+  case 'issue-transition':
+    issueTransition();
+    break;
+  case 'journal-update':
+    journalUpdate();
+    break;
   default:
-    console.log('Usage: node "$AGENT_DIR/tools/dev-tools.cjs" <hook|git-check|territory-check|check-files|inbox|design-draft|workflow-check|next-step|bundle-fetch|commit|push|board-status|board-drags|issue-create>');
+    console.log('Usage: node "$AGENT_DIR/tools/dev-tools.cjs" <hook|git-check|territory-check|check-files|inbox|design-draft|workflow-check|next-step|bundle-fetch|commit|push|board-drags|issue-create|issue-transition|journal-update>');
 }

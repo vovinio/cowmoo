@@ -1,7 +1,9 @@
 #!/bin/bash
-# Statusline: two-line layout
+# Statusline: up to four lines
 # Line 1: context │ API limits │ model@branch
 # Line 2: tasks │ inbox │ actions
+# Line 3: workflow step → next
+# Line 4: warnings (only when something is wrong)
 set -f
 
 input=$(cat)

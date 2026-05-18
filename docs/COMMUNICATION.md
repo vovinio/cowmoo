@@ -59,17 +59,17 @@ Current state of message channels. Each channel has a sender skill and a recipie
 | Planner → Builder | (on task issue) | `/catchup` comment + relabel | Builder's `/start` comment scan |
 | Planner → PM | `for-pm` | `/ask pm` | PM's `/catchup` |
 | PM → Planner | `for-planner` | `/notify planner` | Planner's `/catchup` |
-| PM → Planner | `for-planner` (relabeled from `for-pm`) | PM's `/catchup` → `@pm-ops RESOLVE_ISSUE` action `transfer` target `planner` | Planner's `/catchup` (`other` category) |
+| PM → Planner | `for-planner` (relabeled from `for-pm`) | PM's `/catchup` (transfer relabel) | Planner's `/catchup` (`other` category) |
 | UXUI → PM | `for-pm` | `/ask pm` | PM's `/catchup` |
 | PM → UXUI | `for-uxui` | `/notify uxui` | UXUI's `/catchup` |
-| PM → UXUI | `for-uxui` (relabeled from `for-pm`) | PM's `/catchup` → `@pm-ops RESOLVE_ISSUE` action `transfer` target `uxui` | UXUI's `/catchup` |
+| PM → UXUI | `for-uxui` (relabeled from `for-pm`) | PM's `/catchup` (transfer relabel) | UXUI's `/catchup` |
 | Planner → UXUI | `for-uxui` | `/ask uxui` | UXUI's `/catchup` |
 | UXUI → Planner | `for-planner` | `/notify planner` or `/ask planner` | Planner's `/catchup` |
 | Designer → UXUI | `uxui:review` (designer drags the card to the "UX: Review" board column and posts a Claude Design share URL; UXUI's `/catchup` detects the card-move and sets the label — a direct `uxui:review` label-flip is still honored as a fallback) | Human designer (external — acts on the project board + the GitHub issue) | UXUI's `/catchup` dispatches to `/review-bundle` |
 
 (UXUI's `/notify planner` announces changes to `cowmoo/design/` files that may affect active planner work.)
 
-(The Designer → UXUI channel is the one external-human handoff. On approval, `/review-bundle` flips the issue to `uxui:done` and closes via `@uxui-gh-ops APPROVE_DESIGN`. On rejection, it flips back to `uxui:todo` via `@uxui-gh-ops REJECT_DESIGN` for the designer to iterate.)
+(The Designer → UXUI channel is the one external-human handoff. On approval, `/review-bundle` flips the issue to `uxui:done` and closes it. On rejection, it flips back to `uxui:todo` for the designer to iterate.)
 
 Agents that never talk to each other directly:
 - **Builder ↔ PM** — builder escalates through planner only
@@ -81,8 +81,8 @@ Agents that never talk to each other directly:
 
 When the system needs a new direct communication path, the changes required are:
 
-1. **Sender skill** — add or extend a `/notify` skill (for announcements) or `/ask` skill (for blocked requests) with the target. Include content guidelines for what the message should contain, and the `@*-ops` call.
-2. **Ops operation** — add a `CREATE_FOR_<target>` operation to the sender's `@*-ops` agent with the correct label. The ops agent receives title + body and posts them.
+1. **Sender skill** — add or extend a `/notify` skill (for announcements) or `/ask` skill (for blocked requests) with the target. Include content guidelines for what the message should contain, and the `issue-create` invocation (compose the body, write the `.op-handoff.json` entry, run the subcommand).
+2. **Handoff entry** — the sender skill's handoff entry carries `op: "CREATE_FOR_<TARGET>"` and `label: "for-<target>"`. The generic `issue-create` subcommand handles it — adding a channel needs no new `dev-tools.cjs` code, only the right label in the entry.
 3. **Recipient handler** — update the recipient's `/catchup` skill to recognize the new message source and route to the appropriate handler.
 4. **Rules updates** — update the `github-workflow.md` rule on both sender and recipient sides to reflect the new channel.
 5. **Update this document** — add a row to the Communication Channels table.

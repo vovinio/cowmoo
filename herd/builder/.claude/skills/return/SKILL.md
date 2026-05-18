@@ -64,13 +64,27 @@ User can edit the comment before confirming.
 
 ## Step 2: Execute (after user confirms)
 
-In order:
+**First, write the handoff file.** Compose the return comment with the `**[Builder]** ` identity prefix, then write `$PROJECT_DIR/cowmoo/agent-files/builder/.op-handoff.json` (Write tool) — a one-element JSON array with the RETURN entry:
 
-1. **Post comment + relabel** — spawn `@task-ops` with RETURN operation: task number + confirmed comment text.
+```json
+[
+  { "op": "RETURN", "issue": <NN>, "comment": "**[Builder]** <confirmed return comment from Step 1>", "removeLabel": ["in-progress", "todo"], "addLabel": "for-planner" }
+]
+```
+
+The handoff file is a single reused path, overwritten on each use. The identity prefix is the skill's job — compose `**[Builder]** ` into the `comment` field; the `issue-transition` command does not add it.
+
+Then, in order:
+
+1. **Post comment + relabel** — run the return command (Bash); it reads the RETURN entry from the handoff file and runs comment → relabel in order:
+   ```bash
+   node "$AGENT_DIR/tools/dev-tools.cjs" issue-transition --from cowmoo/agent-files/builder/.op-handoff.json --index 0
+   ```
+   The command prints exactly one line: `RETURN #<n>: ✓ <steps>. Verified. Board: Planner.` on success, or `RETURN #<n>: ✗ <reason>` on failure (the `✗` report names what already succeeded — if the comment failed, no relabel happened). Do not retry on `✗` — the command already retried internally.
 2. **Warn on uncommitted changes** — if uncommitted code changes exist: "Note: uncommitted code changes remain in the working tree. They'll be here when the task comes back."
 3. **Clean up** — `rm -f "$PROJECT_DIR/cowmoo/agent-files/builder/active-task.md"`
 
-**If `@task-ops` RETURN fails:** Stop. Report the failure (which step — comment post or relabel — and the error). Do NOT run the cleanup in step 3 — `active-task.md` must stay so the user can retry `/return` without re-running `/start`.
+**If the return command reports `✗`:** Stop. Report the failure (which step — comment post or relabel — and the error). Do NOT run the cleanup in step 3 — `active-task.md` must stay so the user can retry `/return` without re-running `/start`. On a retry, the handoff file is rewritten from scratch.
 
 ---
 

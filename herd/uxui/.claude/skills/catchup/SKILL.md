@@ -32,7 +32,17 @@ This prints one `<number><TAB><current-labels>` line per card sitting in "UX: Re
 gh issue view <number> --json comments --jq '[.comments[].body] | map(test("https?://")) | any'
 ```
 
-- **`true`** → a genuine submission (the card-move is the designer's submission ritual; it replaces the old `uxui:review` label-flip). Spawn `@uxui-gh-ops RELABEL` — remove the card's current `uxui:*` label (taken from the `board-drags` line), add `uxui:review`.
+- **`true`** → a genuine submission (the card-move is the designer's submission ritual; it replaces the old `uxui:review` label-flip). The `issue-transition` command reads its parameters from a JSON handoff file. **Write** a one-element array to `$PROJECT_DIR/cowmoo/agent-files/uxui/.op-handoff.json` (a single reused path, overwritten each use) — remove the card's current `uxui:*` label (taken from the `board-drags` line), add `uxui:review`:
+  ```json
+  [
+    { "op": "RELABEL", "issue": <number>, "removeLabel": "<current uxui:* label>", "addLabel": "uxui:review" }
+  ]
+  ```
+  Then run the command at `--index 0`:
+  ```bash
+  node "$AGENT_DIR/tools/dev-tools.cjs" issue-transition --from cowmoo/agent-files/uxui/.op-handoff.json --index 0
+  ```
+  The command relabels, verifies, and syncs the board. Read its stdout — `RELABEL #<n>: ✓ …` means done; `RELABEL #<n>: ✗ <reason>` means relabel or verify failed. Do NOT retry on `✗`. If multiple card-moves were detected, handle them one at a time — re-Write the handoff and re-run for each, since the file is overwritten per use.
 - **`false`** → not a submission (designer mid-work, or a stray drag). Leave it; do not act.
 
 ### 1b. Query the inbox
@@ -87,7 +97,7 @@ For each `for-uxui` message the user wants to handle, read the issue body to und
 
 **Two flavors of `for-uxui`:**
 - **Fresh issue** — sender created a new `for-uxui` issue (e.g., PM's `/notify uxui` announcing spec changes; planner's `/ask uxui` reporting a UI definition problem). Title prefix shows the sender (`[PM]`, `[Planner]`).
-- **Relabeled answer** — PM resolved a UXUI-originated `for-pm` by relabeling it `for-uxui` (PM's `/catchup` `@pm-ops RESOLVE_ISSUE` action `transfer` target `uxui`). The issue body is the original UXUI question; PM's answer is in the most recent comment. The title still has UXUI's `[UXUI]` prefix from the original `/ask pm`.
+- **Relabeled answer** — PM resolved a UXUI-originated `for-pm` by relabeling it `for-uxui` (PM's `/catchup` resolved it with a `transfer` relabel to `uxui`). The issue body is the original UXUI question; PM's answer is in the most recent comment. The title still has UXUI's `[UXUI]` prefix from the original `/ask pm`.
 
 The three handlers below cover both flavors. Relabeled answers most often map to **Spec update** (PM's answer clarifies a spec) or **UI question** (PM's answer is the clarification you asked for, no further work needed). Read the latest comment thread before picking a handler.
 
@@ -100,7 +110,7 @@ Specs were updated. Read the message to understand what changed:
 1. Read the relevant cowmoo/design/ domain file
 2. Read the updated spec files referenced in the message
 3. Assess impact: do existing UI definitions need updating? **You own this diagnosis** — the change is reported as fact, you decide whether UI needs updating.
-4. **Small fix** (quick update, no cross-screen impact) → discuss changes with user, update cowmoo/design/ files, self-verify, then close the issue via `@uxui-gh-ops RESOLVE_ISSUE`.
+4. **Small fix** (quick update, no cross-screen impact) → discuss changes with user, update cowmoo/design/ files, self-verify, then close the issue via the `issue-transition` RESOLVE_ISSUE command (see "Resolving via RESOLVE_ISSUE" below).
 5. **Extended work** (multi-screen redesign, spans sessions) → track the issue for later resolution and transition to discussion mode:
    ```bash
    node "$AGENT_DIR/tools/dev-tools.cjs" inbox add <number> "<title>"
@@ -114,7 +124,7 @@ A task needs a UI state or definition that isn't in `cowmoo/design/` files.
 1. Read the message — which screen, which state or definition is missing
 2. **Diagnose:** is this a real gap (missed during extraction) or a misunderstanding (the task scope was wrong, or the screen doesn't need that state)?
 3. **Real gap** → add the missing state/definition to `cowmoo/design/domains/*.md`, self-verify, then either:
-   - Quick update (one screen, one state) → run `/publish`, then close the issue via `@uxui-gh-ops RESOLVE_ISSUE`.
+   - Quick update (one screen, one state) → run `/publish`, then close the issue via the `issue-transition` RESOLVE_ISSUE command (see "Resolving via RESOLVE_ISSUE" below).
    - Extended update (multi-screen, spans sessions) → track the issue for later:
      ```bash
      node "$AGENT_DIR/tools/dev-tools.cjs" inbox add <number> "<title>"
@@ -133,7 +143,25 @@ Clarification about an existing UI definition.
 1. Read the question
 2. Answer inline — reference the cowmoo/design/ file and explain
 3. If the question reveals a documentation gap in cowmoo/design/, fix it
-4. Close the issue via @uxui-gh-ops RESOLVE_ISSUE with the answer
+4. Close the issue via the `issue-transition` RESOLVE_ISSUE command with the answer (see "Resolving via RESOLVE_ISSUE" below)
+
+---
+
+## Resolving via RESOLVE_ISSUE
+
+The `issue-transition` command reads its parameters from a JSON handoff file. To close a `for-uxui` issue: compose the resolution summary, prefix it with the `**[UXUI]** ` identity marker, **Write** a one-element array to `$PROJECT_DIR/cowmoo/agent-files/uxui/.op-handoff.json` (a single reused path, overwritten each use), then run the command at `--index 0`:
+
+```json
+[
+  { "op": "RESOLVE_ISSUE", "issue": <number>, "comment": "**[UXUI]** Resolved: <summary>", "close": true }
+]
+```
+
+```bash
+node "$AGENT_DIR/tools/dev-tools.cjs" issue-transition --from cowmoo/agent-files/uxui/.op-handoff.json --index 0
+```
+
+The command runs comment → close in order, verifies each step with one retry, and syncs the board. RESOLVE_ISSUE always closes the issue. Process inbox items one at a time (per the "One at a time" rule) — re-Write the handoff and re-run for each issue, since the file is overwritten per use. Read the command's stdout and key on the `✓` / `✗` marker (`RESOLVE_ISSUE #<n>: ✓ …` / `✗ <reason>`). Do NOT retry on `✗` — the command already retried internally.
 
 ---
 
@@ -164,7 +192,7 @@ Clarification about an existing UI definition.
 - **One at a time** — process each item fully before moving to the next.
 - **uxui:review always dispatches** — never review a bundle inline. `/review-bundle` is the only path; this skill only routes.
 - **User decides** — present your recommendation, let the user confirm.
-- **Close through @uxui-gh-ops** — never close issues directly.
+- **Close through the `issue-transition` command** — never close issues with hand-rolled `gh` calls.
 - **Spec updates may cascade** — a spec change might affect multiple screens. Check all related UI definitions.
 - **Conflicting for-uxui issues** — when multiple messages touch the same domain, process them together in one pass. Handling them in isolation risks contradictory UI updates.
 - **UI work reveals a spec gap** — don't guess at missing business logic. Track the issue and route to `/ask pm` with specific questions.

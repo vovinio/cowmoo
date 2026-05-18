@@ -68,7 +68,7 @@ After processing each proposal, update the proposal file's frontmatter with its 
 
 - For file / skill / rule targets: does the path exist?
 - For sub-agent targets (`@<name>`): does `herd/<agent>/.claude/agents/<name>.md` exist?
-- For op targets (`OP_NAME`): does the op appear as a `### OP_NAME` header in any ops agent file?
+- For op / command targets: does the named `dev-tools.cjs` subcommand exist as a dispatcher `case` in some agent's `dev-tools.cjs`?
 
 When a target is stale, the user picks: remap to the current successor (if a natural one exists — show the user the relevant area of the current codebase and let them decide), mark as skipped with reason "target removed", or apply the change to the project-level override only. Do not hardcode historical renames here — proposals are typically recent; genuinely ancient proposals will surface as "target removed" and the user can triage them.
 

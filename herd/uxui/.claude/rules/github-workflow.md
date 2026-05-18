@@ -12,12 +12,12 @@ Always prefix GitHub comments with `**[UXUI]**` and issue titles with `[UXUI]`.
 
 | Label | Meaning | Who sets it |
 |-------|---------|-------------|
-| `uxui:todo` | Design task ready for a human designer to pick up. Created via `/design-publish`. Returned here via `/review-bundle` reject path. | `@uxui-gh-ops CREATE_DESIGN_TASK` (create), `@uxui-gh-ops REJECT_DESIGN` (return) |
+| `uxui:todo` | Design task ready for a human designer to pick up. Created via `/design-publish`. Returned here via `/review-bundle` reject path. | `/design-publish` (create), `/review-bundle` reject path (return) |
 | `uxui:review` | Designer finished a task and submitted a Claude Design export — UXUI needs to review via `/review-bundle` | UXUI `/catchup` — on detecting the designer's card-move to the "UX: Review" column (a direct `uxui:review` label-flip is still honored as a fallback) |
-| `uxui:done` | Design task approved by `/review-bundle`. Bundle attached to the relevant domain file. Issue is closed. Counts toward "what's been designed." | `@uxui-gh-ops APPROVE_DESIGN` (on approve, replaces `uxui:review` and closes the issue) |
-| `for-uxui` | Incoming message from another agent (PM, planner) — spec update, UI gap, UI question, or PM answer to your `/ask pm` escalation (relabeled by PM from `for-pm` → `for-uxui`) | Sender's ops agent when creating the issue, OR PM's `@pm-ops RESOLVE_ISSUE` action `transfer` target `uxui` when answering a UXUI-originated `for-pm` |
-| `for-pm` | Outgoing message TO PM — spec gap, question, or issue found during UI work | UXUI via `/ask pm` → `@uxui-gh-ops CREATE_FOR_PM` |
-| `for-planner` | Outgoing message — cowmoo/design/ changes announcement or response to a `for-uxui` message | UXUI via `/notify planner` or `/ask planner` → `@uxui-gh-ops CREATE_FOR_PLANNER` |
+| `uxui:done` | Design task approved by `/review-bundle`. Bundle attached to the relevant domain file. Issue is closed. Counts toward "what's been designed." | `/review-bundle` on approve — replaces `uxui:review`, closes the issue |
+| `for-uxui` | Incoming message from another agent (PM, planner) — spec update, UI gap, UI question, or PM answer to your `/ask pm` escalation (relabeled by PM from `for-pm` → `for-uxui`) | The sender's skill when creating the issue, OR PM's `/catchup` (a transfer relabel) when answering a UXUI-originated `for-pm` |
+| `for-pm` | Outgoing message TO PM — spec gap, question, or issue found during UI work | UXUI via `/ask pm` |
+| `for-planner` | Outgoing message — cowmoo/design/ changes announcement or response to a `for-uxui` message | UXUI via `/notify planner` or `/ask planner` |
 
 **Designer-side convention (not agent-managed):** `uxui:in-progress` may be set by the human designer when picking up a `uxui:todo` task. UXUI does not act on this label; it appears in statusline counts only.
 
@@ -27,7 +27,7 @@ Always prefix GitHub comments with `**[UXUI]**` and issue titles with `[UXUI]`.
 
 ## Board columns
 
-Each label maps to a Projects v2 board column. The herd keeps each card's Status column in sync with its issue label automatically — every create / relabel / close runs `dev-tools.cjs board-status`, and a human dragging a card to another column is read back as a label change on the next `/catchup`. You never set the column by hand. The designer's "UX: Review" card-drag (above) is the one place a human card-move drives the workflow.
+Each label maps to a Projects v2 board column. The herd keeps each card's Status column in sync with its issue label automatically — every create / relabel / close is mirrored to the board by the `issue-create` / `issue-transition` subcommands, and a human dragging a card to another column is read back as a label change on the next `/catchup`. You never set the column by hand. The designer's "UX: Review" card-drag (above) is the one place a human card-move drives the workflow.
 
 | Label / event | Column |
 |---|---|

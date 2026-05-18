@@ -90,24 +90,18 @@ If no collisions, flow silently into Step 3.
 
 ## Step 3: Create each task
 
-Spawn `@uxui-gh-ops` **once** for the whole batch. The ops agent runs the delegated `CREATE_DESIGN_TASK` operation once per task index, against `design-draft.json` — the task body never passes through the prompt or a shell:
+Run the `issue-create` command **once per task index**, against `design-draft.json` — the task body is read from the file via stdin and never passes through the prompt or a shell. N is the length of the `tasks` array from Step 1; pass the absolute draft path. For `i` in `0 .. N-1`:
 
-```
-@uxui-gh-ops
-  For i in 0..N-1, run CREATE_DESIGN_TASK with:
-    --from $PROJECT_DIR/cowmoo/agent-files/uxui/design-draft.json --index i
-  Execute in index order. Relay each operation's report line verbatim.
-  On the first ✗, stop and report which index failed.
+```bash
+node "$AGENT_DIR/tools/dev-tools.cjs" issue-create --from $PROJECT_DIR/cowmoo/agent-files/uxui/design-draft.json --index <i>
 ```
 
-N is the length of the `tasks` array from Step 1. Pass the absolute draft path.
-
-Read the ops agent's relayed report lines: each `CREATE_DESIGN_TASK: ✓ #<n> — <title>. …` is a created task; the first `CREATE_DESIGN_TASK: ✗ …` line marks a mid-batch failure.
+Run them in index order: run → read the one-line stdout → check the `✓` / `✗` marker → on `✓` proceed to the next index; on the first `✗` **stop** and do not run further indices. Each `CREATE_DESIGN_TASK: ✓ #<n> — <title>. …` is a created task; the first `CREATE_DESIGN_TASK: ✗ …` line marks a mid-batch failure. Do NOT retry a `✗` — the command already retried internally; a second run would risk a duplicate issue.
 
 If a task creation fails (`✗`):
 - Report which task (index + title) failed and why, from the `✗` line
 - Note already-created tasks (they don't get rolled back — designer can still pick them up)
-- The ops agent stops creating further tasks on the first failure
+- Stop creating further tasks on the first failure — do not run the remaining indices
 - Surface to user with explicit **partial-failure recovery guidance** (see Step 5)
 
 ---
@@ -183,7 +177,7 @@ Wait for user to pick a path before continuing. Do NOT auto-clear the draft in t
 - [ ] User previewed the publish plan
 - [ ] Duplicate-title pre-check run; collisions surfaced + resolved (or none found)
 - [ ] User explicitly confirmed
-- [ ] All tasks created via `@uxui-gh-ops CREATE_DESIGN_TASK`
+- [ ] All tasks created via `issue-create` (`CREATE_DESIGN_TASK` per index)
 - [ ] Result verified
 - [ ] User informed of created issue numbers
 - [ ] Draft auto-cleared (full-success path) OR left in place for recovery (partial-failure path)
@@ -193,7 +187,7 @@ Wait for user to pick a path before continuing. Do NOT auto-clear the draft in t
 ## Rules
 
 - **Pure publication, no validation.** Validation already happened in `/design-draft`. If you suspect issues here, the right move is to ask the user to re-run `/design-draft` with corrections — don't validate inline.
-- **Preview before commit.** Always show the user what will be created before any `@uxui-gh-ops` writes.
+- **Preview before commit.** Always show the user what will be created before any `issue-create` run.
 - **Stop on first failure.** If task #2 of 5 fails, don't create tasks #3, #4, #5. Report what was created and what wasn't.
 - **Auto-clear the draft on full success; keep it on partial failure.** After all N tasks ship, the GitHub issues are canonical — the draft has no further role. Keeping it around is what used to cause duplicate-issue bugs on re-runs. On partial failure, the draft is the recovery surface and stays untouched.
 - **Pre-check for title collisions before creating.** Open `uxui:todo` issues with the same title as a draft task indicate the user is about to duplicate (either re-running a stale draft or stomping a rejected-back task). Default to cancel, never close in-flight work.

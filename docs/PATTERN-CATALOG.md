@@ -15,7 +15,7 @@ Every pattern has five fields:
 What this file does NOT contain:
 
 - Counts ("PM has 19 skills"). Discovered from disk.
-- Name rosters ("the 4 GH-touching ops agents are …"). Discovered from the Find instances recipe.
+- Name rosters ("the agents that touch GitHub are …"). Discovered from the Find instances recipe.
 - Per-agent configuration matrices that duplicate settings.json / dev-tools.cjs / frontmatter. Those files are the authoritative source.
 - Historical fences ("don't reintroduce the 8 deleted rules"). Time-bounded content belongs in commit history or audit-decisions, not in live documentation.
 
@@ -96,9 +96,10 @@ Required functions (every agent):
 - `workflowCheck()` — PreToolUse Skill hook, calls `markStep()` only (no warnings).
 - `nextStep()` — reads `.workflow-step` marker for the statusline.
 - `territoryCheck()` — PreToolUse Edit|Write hook, blocks writes outside the agent's scope.
-- `commitOp()` — the canonical pathspec-restricted commit (merge-state guard, index-lock retry, hash-pinned content-verify), exposed as the `commit` subcommand and invoked by the agent's ops sub-agent. Each agent supplies its own territory profile(s) as data; the `commitOp` body plus its support helpers (`git`, `indexMutate`, `inMergeState`) are parallel across agents. See Pattern 6 for the commit operation's canonical shape.
-- `pushOp()` — the canonical remote push (origin pre-check, idempotent `push -u origin HEAD`, extended network timeout, `[ahead N]` verify), exposed as the `push` subcommand and invoked by the ops sub-agent's `PUSH` operation. Agent-independent — no territory profile; the `pushOp` body is verbatim-identical across all four agents.
-- **Board-sync helpers** — `LABEL_TO_COLUMN` (the label/event → board-column map), `resolveProjectId`, `boardSyncCore` (ensure the issue is a board item + set its Status column; pure — returns a `Board: …` string, no console, no exit), `boardStatusOp` (the `board-status <issue#> <label|closed>` subcommand), and `boardDragsCore` / `boardDragsOp` (the `board-drags <column> <expected-label>` query — the read-sync's drag detector). The board mirrors issue labels: these keep the Projects v2 Status field in sync via `addProjectV2ItemById` + `updateProjectV2ItemFieldValue`. The whole block is agent-independent and verbatim-identical across all four agents. Non-blocking — every board op exits 0; a board miss never fails the calling operation. See Pattern 14.
+- `commitOp()` — the canonical pathspec-restricted commit (merge-state guard, index-lock retry, hash-pinned content-verify), exposed as the `commit` subcommand and invoked directly by the agent's `/publish` skill. Each agent supplies its own territory profile(s) as data; the `commitOp` body plus its support helpers (`git`, `indexMutate`, `inMergeState`) are parallel across agents. See Pattern 6 for the commit operation's canonical shape.
+- `pushOp()` — the canonical remote push (origin pre-check, idempotent `push -u origin HEAD`, extended network timeout, `[ahead N]` verify), exposed as the `push` subcommand and invoked directly by the skills that publish. Agent-independent — no territory profile; the `pushOp` body is verbatim-identical across all four agents.
+- **Board-sync helpers** — `LABEL_TO_COLUMN` (the label/event → board-column map), `resolveProjectId`, `boardSyncCore` (ensure the issue is a board item + set its Status column; pure — returns a `Board: …` string, no console, no exit), and `boardDragsCore` / `boardDragsOp` (the `board-drags <column> <expected-label>` query — the read-sync's drag detector). The board mirrors issue labels: these keep the Projects v2 Status field in sync via `addProjectV2ItemById` + `updateProjectV2ItemFieldValue`. The whole block is agent-independent and verbatim-identical across all four agents. Non-blocking — every board op exits 0; a board miss never fails the calling operation. See Pattern 14.
+- **Issue-operation subcommands** — `gh` (a no-shell `gh` runner mirroring `git`), `loadHandoffEntry`, `ghReason`, `issueCreate` (`issue-create`), and `issueTransition` (`issue-transition`) — agent-independent and verbatim-identical across all four agents. They perform every GitHub issue create / comment / relabel / close. `issueEditBody` (`issue-edit-body`, the issue-body rewrite) is **planner-only** — planner's `UPDATE_TASK` is the sole body-edit operation, so the subcommand lives only in `herd/planner/tools/dev-tools.cjs`. Each reads a JSON handoff file authored by a skill — usually the caller, or the compose skill in a split compose/ship flow (see Pattern 6) — and pipes bodies to `gh` via stdin (`--body-file -`), so no body transits a shell. `issueCreate` / `issueTransition` call `boardSyncCore`; `issueCreate` also owns sub-issue linkage. See Pattern 6 and Pattern 14.
 - Territory constant — `TERRITORY` (allow-list) or `FORBIDDEN` (deny-list) declared near top of file. Choice is per-agent: allow-list for narrow-scope agents (PM, UXUI, planner) and deny-list for broad-scope agents (builder).
 
 Required conventions:
@@ -106,7 +107,7 @@ Required conventions:
 - `run()` wraps `execSync` with 10–15s timeout and returns `null` on failure.
 - `PROJECT_DIR` is read from `process.env.PROJECT_DIR`.
 
-Optional (agent-specific): `checkFiles`, `inbox` subcommand, `detectDevServers`, `bundleFetch`, `issueCreate` (UXUI's fully-delegated `issue-create` subcommand — see Pattern 6), and anything else an agent's workflow needs.
+Optional (agent-specific): `checkFiles`, `inbox` subcommand, `detectDevServers`, `bundleFetch`, and anything else an agent's workflow needs.
 
 **Reference implementation.** `herd/pm/tools/dev-tools.cjs` (for TERRITORY-style allow-list) and `herd/builder/tools/dev-tools.cjs` (for FORBIDDEN-style deny-list).
 
@@ -193,39 +194,32 @@ Required conventions:
 
 Patterns that constrain how specific sub-agent and skill roles are written.
 
-### 6. Ops Agent
+### 6. Delegated Write Operation
 
-**Purpose.** Ops sub-agents own write operations (git, GitHub, bundle fetch) so the main agent stays read-only over shared state and every write is verified at the point of execution. A herd agent may have one ops sub-agent or several — the count follows the agent's write surface, not a structural rule. What every ops sub-agent shares is the canonical shape below.
+**Purpose.** Every git / GitHub write the herd performs is a `dev-tools.cjs` subcommand, invoked directly by the skill that needs it. The subcommand owns the whole procedure — pre-checks, the write, verification with retry, board sync — so each write is tested in one place and a skill cannot hand-roll a fragile `gh` / `git` call. There is no write-ops sub-agent: pure command-delegation does not earn one.
+
+**The sub-agent principle.** A sub-agent earns its place only by doing real reasoning in an isolated context — a checker that reads code and returns findings, a researcher, a verifier. "Run this command and report the result" is not reasoning; it is delegation, and delegation is inlined into the skill. Read-and-analyze sub-agents (`@check-*`, `@research`, `@*-reader`, `@design-evaluator`, `@auditor`, `@build-verify`, `@ui-verify`) keep their place — they reason. Write operations do not get one.
 
 **Canonical shape.**
 
-Frontmatter:
-- `tools: Bash` (minimum).
-- `model: sonnet` (standard operations; verification-heavy work uses opus).
-- `maxTurns: 20` or similar.
+A write operation is a `dev-tools.cjs` subcommand — `commit`, `push`, `issue-create`, `issue-edit-body`, `issue-transition`, `journal-update`, `bundle-fetch` (see Pattern 2 for the subcommand functions; `bundle-fetch` qualifies because it commits the captured bundle internally — a pure-read fetch like `design-fetch` is not a write operation and is not listed here). The skill that performs the write:
 
-Body structure:
-- `## Environment` — names `$PROJECT_DIR` and `$GH_REPO`.
-- `## Prerequisite` — **required for GitHub-touching ops.** Reads `.claude/rules/github-workflow.md` for canonical identity prefix and label definitions. Omitted for ops agents that don't touch GitHub or labels.
-- `## Operations` — introduces the per-op sections.
-- `### <OP_NAME>` — one section per operation, UPPER_SNAKE_CASE.
-- Each operation has `**Input from <agent>:**` listing accepted parameters (omit the line when the operation takes none), plus Execute and Report subsections. **Non-delegated** operations additionally carry Pre-check / Verify subsections. **Delegated** operations — those invoking a `dev-tools.cjs` subcommand, per the delegation bullets below — replace Pre-check/Verify with an Interpret-output table, since the subcommand owns the pre-checks and verification. **Single-operation exception:** an ops agent with exactly one operation may hoist its input declaration to a `## Input from <agent>` section between `## Environment` and `## Operations`, instead of the inline `**Input from <agent>:**` line — with one operation there is no per-op disambiguation to preserve. `@pm-bundle-ops` and `@uxui-bundle-ops` use this form.
+- For a **body-carrying** operation (issue text, comment, PRD), writes a JSON **handoff file** to `cowmoo/agent-files/<agent>/.op-handoff.json` — a single reused path, a JSON array of op objects — with its Write tool, then runs `node "$AGENT_DIR/tools/dev-tools.cjs" <subcommand> --from <handoff> --index <i>`. The body travels file → `JSON.parse` → `gh` stdin (`--body-file -`) and never transits a shell — backticks / `$()` / quotes / a literal `EOF` line are inert text. Usually the skill that authors the handoff file is also the one that invokes the subcommand. When a compose/validate skill and a ship skill are split — UXUI's `/design-draft` authors and validates the draft, `/design-publish` ships it — the compose skill owns the `Write`, the ship skill owns only the `Bash` invocation, and the handoff file is a skill-specific draft (`design-draft.json`) rather than `.op-handoff.json`. `loadHandoffEntry` accepts both a JSON op-array and an object with a `.tasks` array for this case.
+- For `commit` / `push`, runs the subcommand with inline args (no handoff file).
+- Reads the subcommand's one-line report (`✓` / `✗` / `skipped` / `Nothing to commit`) plus exit code, and reacts.
+- For a **multi-operation sequence**, runs the subcommands in order, stopping on the first `✗`. The skill body documents the sequence and the stop-on-failure rule.
 
 Required conventions:
-- Every git call uses `git -C "$PROJECT_DIR"`; never bare `git`.
-- Explicit staging paths only; never `git add .` or `git add -A`.
-- Every operation verifies its effect before reporting success.
-- **Commit operations delegate to the `dev-tools.cjs commit` subcommand.** Any operation that commits (PM/planner/UXUI `COMMIT`, UXUI `COMMIT_ROLES` and `ATTACH_DESIGN`, builder's scoped `COMMIT`) is a thin wrapper: it invokes `node "$AGENT_DIR/tools/dev-tools.cjs" commit ...` with the operation's mode/scope and message, then relays the printed report **verbatim** (the `✓` / `✗` / `Nothing to commit` markers and exit code drive the caller skill). The ops agent never hand-rolls `git add` / `git commit` for a commit operation. The subcommand (`commitOp` in `dev-tools.cjs`, see Pattern 2) owns the canonical procedure: merge-state guard (refuse cleanly mid-merge/rebase/cherry-pick/revert), pathspec-restricted commit (pre-existing foreign staged content cannot be swept in), index-lock retry (a concurrent agent's `index.lock` contention recovers transparently), and a **hash-pinned content-verify** — verify `git show --name-only` against the captured commit hash, never `HEAD`, because a concurrent agent committing right after moves `HEAD`. Foreign content in the commit is a hard fail. The reference territory profiles live in each agent's `dev-tools.cjs`.
-- **The `PUSH` operation delegates to the `dev-tools.cjs push` subcommand.** A thin wrapper: invoke `node "$AGENT_DIR/tools/dev-tools.cjs" push`, relay the printed report **verbatim** (the `✓` / `skipped` / `✗` markers drive the caller skill). The ops agent never hand-rolls `git push`. The subcommand (`pushOp` in `dev-tools.cjs`) owns the origin pre-check, the idempotent `push -u origin HEAD`, an extended network timeout, and the `[ahead N]` verify.
-- **Issue-creating, label-changing, and closing operations sync the board via the `dev-tools.cjs board-status` subcommand.** After `gh issue create` / a label edit / `gh issue close`, the operation runs `node "$AGENT_DIR/tools/dev-tools.cjs" board-status <number> <label|closed>` and splices the printed `Board: ...` line into its report (non-blocking — the subcommand always exits 0). The `gh project list` + `gh project item-add` CLI pattern stays forbidden, and an inline `addProjectV2ItemById` or `updateProjectV2ItemFieldValue` mutation in an ops-agent file is a violation (the mutations belong in `boardSyncCore`). See Pattern 14. Operations that create nested issues (story ↔ task) additionally use Pattern 14's sub-issue-linkage shape, which remains inline.
-- **A fully-deterministic issue-creation operation delegates the whole operation to a `dev-tools.cjs` `issue-create` subcommand.** Where the entire create→verify→board sequence carries no judgment (UXUI's `CREATE_DESIGN_TASK`), the operation is a thin wrapper of the same shape as the `commit` / `push` delegations above: it invokes `node "$AGENT_DIR/tools/dev-tools.cjs" issue-create --from <draft.json> --index <i>` and relays the printed one-line report **verbatim** (the `✓` / `✗` marker and `#<number>` drive the caller skill); Pre-check/Verify are replaced by an Interpret-output table. The subcommand owns the JSON-draft parse, the identity-prefix pre-check, body-via-stdin create (no shell — a body containing backticks / `$()` / a literal `EOF` line is inert), title/label verify with one retry, and a non-blocking `boardSyncCore` call. The ops agent never hand-rolls `gh issue create` / `gh issue view` for a delegated operation. Because the ops agent is `Bash`-only, this presupposes the task body already lives in a JSON file authored by a Write-capable skill. Issue-creation operations that still build the body inline (`CREATE_FOR_*`, `CREATE_STORY`, `CREATE_TASK`, `CREATE_ISSUE`) use the board-status delegation in the bullet above instead.
-- Comment bodies use identity prefix from Pattern 15.
+- Every git / GitHub write is a `dev-tools.cjs` subcommand — no skill hand-rolls `gh` or `git`. The subcommand owns pre-checks, the write, verification with retry, and board sync. If a procedure needs to change, change `dev-tools.cjs`.
+- A skill that **authors** a body-carrying handoff file declares `Bash` and `Write` in its `allowed-tools`. A skill that only **invokes** a subcommand `--from` a handoff file authored by a separate compose skill declares `Bash` alone.
+- The identity prefix (Pattern 15) on a title or comment is composed by the skill into the handoff entry.
+- The `gh project list` + `gh project item-add` CLI pattern is forbidden; an inline `gh issue create/comment/edit`, `addProjectV2ItemById`, `updateProjectV2ItemFieldValue`, or `addSubIssue` anywhere in a herd file is a violation — those belong in `dev-tools.cjs`. See Pattern 14.
 
-**Reference implementation.** `herd/pm/.claude/agents/pm-ops.md`
+**Reference implementation.** The `commit` / `issue-create` / `issue-transition` subcommands in `herd/pm/tools/dev-tools.cjs`; `herd/pm/.claude/skills/notify/SKILL.md` for the skill-side handoff-write + invoke shape.
 
-**Find instances.** `find herd -path '*/.claude/agents/*-ops.md'`
+**Find instances.** `rg --hidden 'dev-tools\.cjs\S* (commit|push|issue-create|issue-edit-body|issue-transition|journal-update|bundle-fetch)' -g '**/.claude/skills/**' herd/` — every skill that performs a write.
 
-**Declared exceptions.** None — count is per-agent. Planner and builder currently have one ops sub-agent each; PM has two (`@pm-ops` for GitHub/git, `@pm-bundle-ops` for transient Claude Designer share-URL fetch); UXUI has four (`@uxui-gh-ops`, `@uxui-git-ops`, `@uxui-bundle-ops`, `@uxui-journal-ops`). Each instance is checked against the canonical shape regardless of its agent's count.
+**Declared exceptions.** None.
 
 ---
 
@@ -375,24 +369,24 @@ Patterns that govern communication and shared protocols across agents.
 
 ### 13. Message Channel
 
-**Purpose.** Cross-agent messages are labeled GitHub issues. The full chain (sender skill → ops operation → label → receiver handler → response op) must exist end-to-end for every documented channel.
+**Purpose.** Cross-agent messages are labeled GitHub issues. The full chain (sender skill → `issue-create` → label → receiver handler → response write) must exist end-to-end for every documented channel.
 
 **Canonical shape.**
 
 - Sender skill: `/notify` (announcements) or `/ask` (blocked requests). Takes target as argument.
-- Sender ops operation: `CREATE_FOR_<TARGET>` with the matching label.
+- Sender handoff entry: the skill writes `op: CREATE_FOR_<TARGET>` with the matching `for-<target>` label and invokes the `issue-create` subcommand.
 - Label: `for-<target>` (`for-pm`, `for-uxui`, `for-planner`).
 - Receiver: `/catchup` reads issues with the label, routes by content category to the appropriate handler.
-- Response: handler spawns the receiver's own ops with `POST_COMMENT`, `RESOLVE_ISSUE`, or `RELABEL` as appropriate.
+- Response: the receiver's handler composes a handoff entry (`POST_COMMENT`, `RESOLVE_ISSUE`, or `RELABEL`) and runs the `issue-transition` subcommand.
 - Content is observational, not prescriptive (see `docs/COMMUNICATION.md`).
 
-Adding a new channel requires: sender skill, sender ops operation, receiver handler in `/catchup`, label-table updates in both agents' `github-workflow.md` rules, and a row in `docs/COMMUNICATION.md` Channels table.
+Adding a new channel requires: a sender skill (it composes the handoff entry and invokes `issue-create`), the `for-<target>` label, a receiver handler in `/catchup`, label-table updates in both agents' `github-workflow.md` rules, and a row in `docs/COMMUNICATION.md` Channels table.
 
 **Reference implementation.** The Channels table in `docs/COMMUNICATION.md`.
 
 **Find instances.** `docs/COMMUNICATION.md` is authoritative. Contract checks enumerate channels from there rather than hard-coding them in the skill.
 
-**Declared exceptions.** Builder ↔ PM, Builder ↔ UXUI, and Curator ↔ any project agent have no direct channels by design. Documented in `docs/COMMUNICATION.md` "Agents that never talk to each other directly". Additionally, the Designer → UXUI channel is an external-human handoff — no sender skill, `uxui:review` label (not `for-<target>`), handled by UXUI's `/catchup` dispatching to `/review-bundle`, with responses via `@uxui-gh-ops APPROVE_DESIGN` / `REJECT_DESIGN`. See `docs/COMMUNICATION.md` "the one external-human handoff" note; `/contracts` Section 5 walks a reduced chain (label + receiver handler + response ops) for this shape.
+**Declared exceptions.** Builder ↔ PM, Builder ↔ UXUI, and Curator ↔ any project agent have no direct channels by design. Documented in `docs/COMMUNICATION.md` "Agents that never talk to each other directly". Additionally, the Designer → UXUI channel is an external-human handoff — no sender skill, `uxui:review` label (not `for-<target>`), handled by UXUI's `/catchup` dispatching to `/review-bundle`, with the approve / reject responses sent by `/review-bundle` itself. See `docs/COMMUNICATION.md` "the one external-human handoff" note; `/contracts` Section 5 walks a reduced chain (label + receiver handler + response writes) for this shape.
 
 ---
 
@@ -402,14 +396,13 @@ Adding a new channel requires: sender skill, sender ops operation, receiver hand
 
 **Canonical shape — Board Status sync.**
 
-The board is a mirror of issue labels: labels are the source of truth, the Projects v2 **Status** field (the board columns) is kept in sync. Every ops operation that creates an issue, changes its label, or closes it also syncs the board.
+The board is a mirror of issue labels: labels are the source of truth, the Projects v2 **Status** field (the board columns) is kept in sync. Every operation that creates an issue, changes its label, or closes it also syncs the board.
 
-The sync is owned by `dev-tools.cjs` — not inline bash in the ops-agent file. `LABEL_TO_COLUMN` is the single label/event → column map, verbatim-identical across all four agents. The pure procedure `boardSyncCore(issueNumber, column)` honors `$GH_PROJECT_ID` (explicit override) or else queries the repo's first linked `projectsV2`, ensures the issue is a board item (`addProjectV2ItemById` — idempotent), looks up the Status single-select field, and sets it (`updateProjectV2ItemFieldValue`, retried once); it RETURNS one of `Board: <column>`, `Board: no board`, `Board: no such column "<x>"`, or `Board: failed`. It is reached two ways:
+The sync is owned by `dev-tools.cjs` — never inline bash in a skill body. `LABEL_TO_COLUMN` is the single label/event → column map, verbatim-identical across all four agents. The pure procedure `boardSyncCore(issueNumber, column)` honors `$GH_PROJECT_ID` (explicit override) or else queries the repo's first linked `projectsV2`, ensures the issue is a board item (`addProjectV2ItemById` — idempotent), looks up the Status single-select field, and sets it (`updateProjectV2ItemFieldValue`, retried once); it RETURNS one of `Board: <column>`, `Board: no board`, `Board: no such column "<x>"`, or `Board: failed`.
 
-- **Inline ops** (`CREATE_STORY`, `CREATE_TASK`, `CREATE_FOR_*`, `CREATE_ISSUE`, `RELABEL`, `RESOLVE_ISSUE`, `CLOSE_ISSUE`, `APPROVE_DESIGN`, `REJECT_DESIGN`, `COMPLETE`, `RETURN`, `CLAIM`) — after the label write or close, the operation runs `node "$AGENT_DIR/tools/dev-tools.cjs" board-status <issue-number> <label|closed>` (the `boardStatusOp` wrapper: maps label→column, logs the `Board:` line, always exits 0) and splices the line into its report.
-- **Delegated issue-creation** (UXUI's `CREATE_DESIGN_TASK`) — the `issue-create` subcommand calls `boardSyncCore` directly and splices its return value into the one-line report (see Pattern 6).
+Every operation that creates / relabels / closes an issue is delegated to the `issue-create` or `issue-transition` subcommand (see Pattern 6), and that subcommand calls `boardSyncCore` as its final step — splicing the `Board: …` segment into the same one-line report. There is no separate board-sync step, and no standalone `board-status` subcommand — `boardSyncCore` is reached only through `issueCreate` / `issueTransition`.
 
-The **read** direction — `boardDragsCore` / the `board-drags <column> <expected-label>` subcommand — lets `/catchup` and `/start` detect a human card-drag (a card in the column whose label doesn't match) and re-sync the label. **Ordering invariant:** a reading skill processes this board→label re-sync *before* any label→board write in the same run, or it would overwrite the human's drag.
+The **read** direction — `boardDragsCore` / the `board-drags <column> <expected-label>` subcommand — lets `/catchup` and `/start` detect a human card-drag (a card in the column whose label doesn't match) and re-sync the label via a `RELABEL` op (delegated to `issue-transition`, which mirrors the corrected label straight back onto the board). **Ordering invariant:** a reading skill processes this board→label re-sync *before* any label→board write in the same run, or it would overwrite the human's drag.
 
 Non-blocking everywhere: a board miss never fails the operation. The `gh project list` + `gh project item-add` CLI pattern is still forbidden — it silently picks the owner's first project.
 
@@ -417,35 +410,19 @@ Non-blocking everywhere: a board miss never fails the operation. The `gh project
 
 Used by planner's `CREATE_TASK` to attach a newly-created task issue to its parent story issue. No other agent currently creates nested issue structures.
 
-Link (atomic with issue creation — chain the whole block with `&&` so a partial failure is visible):
-```bash
-TASK_URL=$(gh issue create --title "<title>" --label "<label>" --body "$(cat <<'EOF'
-<body text>
-EOF
-)") \
-  && TASK_NUM=${TASK_URL##*/} \
-  && STORY_ID=$(gh issue view <story-number> --json id --jq .id) \
-  && TASK_ID=$(gh issue view "$TASK_NUM" --json id --jq .id) \
-  && gh api graphql -f query="mutation { addSubIssue(input: {issueId: \"$STORY_ID\", subIssueId: \"$TASK_ID\"}) { subIssue { number url } } }"
-```
+The linkage is owned by the `issue-create` subcommand, not inline bash. When the handoff entry carries a `parent` field (a story issue #), `issueCreate` — after its own create-and-verify — resolves the story and task node ids (`gh issue view --json id`) and runs the `addSubIssue` GraphQL mutation, then folds `Linked to story #<n>.` into its one-line report. If the create succeeded but the link failed, the subcommand reports `✗` with the task number named — the issue exists and can be linked to the story manually; it is not recreated on retry.
 
-Verify by enumerating the parent's sub-issues:
-```bash
-STORY_ID=$(gh issue view <story-number> --json id --jq .id) \
-  && gh api graphql -f query="{ node(id: \"$STORY_ID\") { ... on Issue { subIssues(first: 50) { nodes { number title } } } } }" --jq '.data.node.subIssues.nodes'
-```
-
-If linking fails but the issue was created, the task number is valid and the operation reports the failure so it can be linked manually.
+An `addSubIssue` mutation in any skill body or any `.claude/agents/*.md` file is a violation — the mutation belongs in `issueCreate`.
 
 **Reference implementation.**
-- Board Status sync: `LABEL_TO_COLUMN` / `boardSyncCore` / `boardStatusOp` / `boardDragsCore` in `herd/pm/tools/dev-tools.cjs` (the `## Board Status` section in `herd/pm/.claude/agents/pm-ops.md` is the inline thin-wrapper caller); `issueCreate` in `herd/uxui/tools/dev-tools.cjs` is the fully-delegated form that calls `boardSyncCore` directly.
-- Sub-issue linkage: `### CREATE_TASK` in `herd/planner/.claude/agents/plan-ops.md`.
+- Board Status sync: `LABEL_TO_COLUMN` / `boardSyncCore` / `boardDragsCore` in `herd/pm/tools/dev-tools.cjs`; `issueCreate` and `issueTransition` (same file) are the callers that splice the `Board: …` segment into their report.
+- Sub-issue linkage: the `parent` branch of `issueCreate` in `herd/pm/tools/dev-tools.cjs`.
 
 **Find instances.**
-- Board Status sync: `rg --hidden "board-status" -g '**/.claude/agents/*-ops.md' -g '**/.claude/agents/task-claim.md' herd/` finds the ops that sync the board after a label write or close — every create / relabel / close op must call it. UXUI's delegated `CREATE_DESIGN_TASK` instead has `issueCreate` call `boardSyncCore` directly (`rg --hidden "boardSyncCore" -g '**/tools/dev-tools.cjs' herd/`). `gh project list` / `gh project item-add` is a violation, and an `addProjectV2ItemById` or `updateProjectV2ItemFieldValue` mutation anywhere outside `boardSyncCore` is a violation.
-- Sub-issue: `rg --hidden "addSubIssue" -g '**/.claude/agents/*-ops.md' herd/` — currently only planner's `@plan-ops`. If another agent later creates nested structures, it must use this mutation rather than `gh issue edit` or hand-rolled cross-references.
+- Board Status sync: `rg --hidden "boardSyncCore" -g '**/tools/dev-tools.cjs' herd/` — `issueCreate` and `issueTransition` call it, and every create / relabel / close write is delegated to one of those subcommands. The standalone `board-status` subcommand was removed — `rg --hidden "board-status" herd/` should return nothing (a hit is stale). `gh project list` / `gh project item-add` is a violation, and an `addProjectV2ItemById` or `updateProjectV2ItemFieldValue` mutation anywhere outside `boardSyncCore` is a violation.
+- Sub-issue: `rg --hidden "addSubIssue" -g '**/tools/dev-tools.cjs' herd/` — only `issueCreate`. An `addSubIssue` mutation in any `.claude/agents/*.md` file is a violation.
 
-**Declared exceptions.** Ops agents that don't create issues (`@uxui-git-ops`, `@uxui-bundle-ops`, `@uxui-journal-ops`) don't need either half of this pattern.
+**Declared exceptions.** None. Board sync and sub-issue linkage are both internal to `dev-tools.cjs` — `boardSyncCore` (reached by `issueCreate` / `issueTransition`) and `issueCreate`'s `parent` handling — so there are no per-agent instances to exempt.
 
 ---
 
@@ -458,7 +435,7 @@ If linking fails but the issue was created, the task number is valid and the ope
 - Comments: `**[<Agent>]** <content>` (bold markdown prefix).
 - Titles: `[<Agent>] <title>` (plain prefix).
 - Agent labels: `[PM]`, `[UXUI]`, `[Planner]`, `[Builder]`. The curator is never a GitHub actor.
-- The canonical prefix lives in each agent's `.claude/rules/github-workflow.md` and is the source of truth. Ops agent Prerequisite Reads of `github-workflow.md` pull this in.
+- The canonical prefix lives in each agent's `.claude/rules/github-workflow.md` (an always-loaded rule) and is the source of truth. The skill composes the prefix into the title / comment it hands to the write subcommand.
 
 **Reference implementation.** `## Identity` section in `herd/pm/.claude/rules/github-workflow.md`.
 
@@ -528,7 +505,7 @@ If a rule would only be useful inside one specific skill, it's skill content —
 
 **Canonical shape.**
 
-Applies to any skill whose body invokes N > 1 side-effecting operations in sequence (ops operations, file writes that must pair with commits, sub-agent spawns that mutate state).
+Applies to any skill whose body invokes N > 1 side-effecting operations in sequence (`dev-tools.cjs` write subcommands, file writes that must pair with commits, sub-agent spawns that mutate state).
 
 - Each side-effecting step is numbered and named in the skill body.
 - After the happy-path steps, a dedicated "Partial-failure recovery" section (or per-step recovery notes) walks each failure point and documents:
@@ -543,7 +520,7 @@ Applies to any skill whose body invokes N > 1 side-effecting operations in seque
 - `herd/planner/.claude/skills/publish/SKILL.md` "Partial-failure recovery" section (clear-draft / commit / GitHub issue creation failure modes).
 - `herd/builder/.claude/skills/publish/SKILL.md` Step 4 "If any step fails" guidance.
 
-**Find instances.** Any skill whose body invokes ≥ 2 ops operations, spawns ≥ 2 sub-agents with side effects, or writes files AND creates issues. `rg -l --hidden "partial.failure|recovery|roll back" -g '**/.claude/skills/*/SKILL.md' herd/` surfaces the explicitly-documented ones; inspect the rest to confirm they don't need recovery guidance.
+**Find instances.** Any skill whose body invokes ≥ 2 side-effecting `dev-tools.cjs` subcommands, spawns ≥ 2 sub-agents with side effects, or writes files AND creates issues. `rg -l --hidden "partial.failure|recovery|roll back" -g '**/.claude/skills/*/SKILL.md' herd/` surfaces the explicitly-documented ones; inspect the rest to confirm they don't need recovery guidance.
 
 **Declared exceptions.** Skills with a single side-effecting operation (e.g., `/notify` creates one issue, `/draft` writes one file) don't need a recovery section — a retry is either idempotent or the user sees the failure immediately and knows what to do. The pattern applies when N > 1.
 
@@ -563,7 +540,7 @@ Applies to any skill whose body invokes N > 1 side-effecting operations in seque
 
 **Reference implementation.**
 - `herd/uxui/.claude/skills/design-draft/SKILL.md` Step 8 "HARD GATE" (before `/design-publish` ships N tasks to GitHub).
-- `herd/uxui/.claude/skills/design-publish/SKILL.md` Step 2 "Preview" (duplicate-title pre-check + explicit confirmation before `@uxui-gh-ops CREATE_DESIGN_TASK`).
+- `herd/uxui/.claude/skills/design-publish/SKILL.md` Step 2 "Preview" (duplicate-title pre-check + explicit confirmation before `/design-publish` creates the design tasks).
 - `herd/planner/.claude/skills/draft/SKILL.md` Step 5 "HARD GATE" (before `/review` consumes the draft).
 - `herd/builder/.claude/skills/publish/SKILL.md` Step 3 "Preview" (before code commit + Record post + task close).
 
@@ -614,7 +591,7 @@ Patterns that govern how the curator's own skills are written.
 **Canonical shape.**
 
 **Required for every detection skill:**
-- Skill body ends with a `## Verification phase` section that references the shared stanza (Pattern 23) rather than inlining it. The verifier filter is non-negotiable — this is what makes detection findings trustworthy.
+- Skill body contains a `## Verification phase` section — placed after the substantive checks, before the `## Report` / `## Rules` tail — that references the shared stanza (Pattern 23) rather than inlining it. (`/audit-agent` realizes it as `## Step 8 — Verification phase`; see the partial-conformance note under Declared exceptions.) The verifier filter is non-negotiable — this is what makes detection findings trustworthy.
 - No Self-Test section. No hardcoded inventory. No "known-good state" snapshot. No historical "don't reintroduce" fences. Inventory is discovered at runtime.
 
 **Body structure (two acceptable variants):**

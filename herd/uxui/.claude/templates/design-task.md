@@ -6,7 +6,7 @@ The body has two sections:
 1. **Instructions** — short, scannable bullets for the human designer. Tells them what to do with the prompt and how to submit results.
 2. **Claude Design Prompt** — long, dense, fully self-contained. The human copies this verbatim into `claude.ai/design`. Claude Design has no access to project files — every piece of context it needs must be inlined here.
 
-The skill `/design-draft` composes this body and stores it as the `body` field of a task object in `design-draft.json`. The skill `/design-publish` — via `@uxui-gh-ops CREATE_DESIGN_TASK`, which delegates to the `issue-create` subcommand — creates the GitHub issue.
+The skill `/design-draft` composes this body and stores it as the `body` field of a task object in `design-draft.json`. The skill `/design-publish` — via the `issue-create` subcommand — creates the GitHub issue.
 
 ---
 

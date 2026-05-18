@@ -4,7 +4,7 @@ description: Initiate spec work from an existing Claude Designer share URL — f
 user-invocable: true
 argument-hint: <share-url>
 disable-model-invocation: true
-allowed-tools: Read, Edit, Write, Glob, Agent
+allowed-tools: Read, Edit, Write, Glob, Agent, Bash
 ---
 
 # Import Design
@@ -67,31 +67,42 @@ Check if `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md` exists.
 
 ## Step 3: Fetch the Bundle (transient)
 
-Spawn `@pm-bundle-ops`:
+Run the `design-fetch` command directly — quote the URL (share URLs contain `?` and `&` the shell would otherwise interpret):
 
-```
-@pm-bundle-ops FETCH_DESIGN url=<share-url>
+```bash
+node "$AGENT_DIR/tools/dev-tools.cjs" design-fetch "<share-url>"
 ```
 
-The agent invokes `node "$AGENT_DIR/tools/dev-tools.cjs" design-fetch <url>`, which downloads the tarball and extracts it into `/tmp/pm-import-<timestamp>/`. No git commit, no project files. The bundle is transient — PM throws it away when this skill finishes.
+This downloads the tarball and extracts it into `/tmp/pm-import-<timestamp>/`. No git commit, no project files. The bundle is transient — PM throws it away when this skill finishes.
+
+The command prints exactly one line and sets an exit code:
+
+| Output | Exit | Meaning |
+|---|---|---|
+| `OK path=<abs-tmp-path> files=<M>` | 0 | Success |
+| `Usage: design-fetch ...` | 1 | Missing required args |
+| `FAIL url-unreachable — ...` | 2 | Share URL expired or network/DNS/HTTP error |
+| `FAIL url-timeout — ...` | 7 | Download exceeded 60s |
+| `FAIL extraction-failed — ...` | 3 | Tar could not extract |
+| `FAIL extraction-empty — ...` | 3 | Tarball had no contents |
 
 **Result handling:**
 
-- **Success** — agent reports `FETCH_DESIGN: ✓ path=<tmp-path> files=<N>`. Save the path in conversation; proceed to Step 4.
-- **URL expired or unreachable** — agent reports `FETCH_DESIGN: ✗ URL expired or unreachable. Re-share required.`
+- **`OK`** — save the `path=<tmp-path>` in conversation; proceed to Step 4.
+- **`FAIL url-unreachable`**
   ```
   The share URL appears expired or unreachable. Re-share the bundle from
   Claude Designer and run /import-design again with the fresh URL.
   ```
   Stop.
-- **Download timeout** — agent reports `FETCH_DESIGN: ✗ Download timed out (>60s).`
+- **`FAIL url-timeout`**
   ```
   Bundle download timed out (>60s). The URL is likely still valid — the
   bundle may be unusually large or the network slow. Retry /import-design
   with the same URL, or re-share if the issue persists.
   ```
   Stop.
-- **Other failure** — agent reports `FETCH_DESIGN: ✗ <error>`. Surface the error and stop.
+- **Any other `FAIL` (or `Usage:`)** — surface the error line and stop.
 
 ---
 
@@ -194,32 +205,52 @@ and UXUI can fetch the bundle for canonical use.
 Confirm or skip? (skip is fine if the user wants to handle this manually later)
 ```
 
-On confirm, spawn `@pm-ops`:
+On confirm, compose the title and body, write the handoff file, then run the `issue-create` command.
+
+**Compose the body** (the message UXUI will receive):
 
 ```
-@pm-ops CREATE_FOR_UXUI
-  title=Design import: <short URL fragment or "initial design">
-  body=
-    **Design import — share URL handed off from PM**
+**Design import — share URL handed off from PM**
 
-    **URL:** <full-share-url>
-    **Imported on:** <YYYY-MM-DD>
+**URL:** <full-share-url>
+**Imported on:** <YYYY-MM-DD>
 
-    PM ran /import-design against this URL to extract product specs into working notes (formalization pending /digest). The bundle was read transiently — it does NOT live in this repo yet.
+PM ran /import-design against this URL to extract product specs into working notes (formalization pending /digest). The bundle was read transiently — it does NOT live in this repo yet.
 
-    **Suggested next step (UXUI):** if you want a canonical design reference, fetch this URL into `cowmoo/design/bundles/` via your existing bundle-fetch tooling. Note: Claude Design share URLs may expire — if the fetch returns `url-unreachable`, re-share from the original Claude Designer session.
+**Suggested next step (UXUI):** if you want a canonical design reference, fetch this URL into `cowmoo/design/bundles/` via your existing bundle-fetch tooling. Note: Claude Design share URLs may expire — if the fetch returns `url-unreachable`, re-share from the original Claude Designer session.
 
-    **Working-notes extracts (pre-spec — not yet confirmed):**
-    - Entities being captured: [list]
-    - Features being captured: [list]
-    - Roles inferred: [list]
+**Working-notes extracts (pre-spec — not yet confirmed):**
+- Entities being captured: [list]
+- Features being captured: [list]
+- Roles inferred: [list]
 
-    These are still in PM's working notes — formalization happens via /digest + /review + /publish. The /notify uxui announcement below is the canonical signal that specs exist.
+These are still in PM's working notes — formalization happens via /digest + /review + /publish. The /notify uxui announcement below is the canonical signal that specs exist.
 
-    Once specs are formalized, PM will follow up with the standard /notify uxui announcement for spec changes — that's the signal to act on confirmed spec content.
+Once specs are formalized, PM will follow up with the standard /notify uxui announcement for spec changes — that's the signal to act on confirmed spec content.
 ```
 
-On `CREATE_FOR_UXUI ✓`, note the issue number for the final report. On failure, surface the error — the working-notes content is already saved, so no rollback needed; just report that the hand-off issue couldn't be created and suggest the user retry manually.
+**Write the handoff file.** Use the Write tool to write a one-element JSON array to `cowmoo/agent-files/pm/.op-handoff.json`. The title gets the `[PM] ` prefix composed in here:
+
+```json
+[
+  { "op": "CREATE_FOR_UXUI", "title": "[PM] Design import: <short URL fragment or \"initial design\">", "label": "for-uxui", "body": "<composed body above>" }
+]
+```
+
+**Run the `issue-create` command:**
+
+```bash
+node "$AGENT_DIR/tools/dev-tools.cjs" issue-create --from cowmoo/agent-files/pm/.op-handoff.json --index 0
+```
+
+The command owns the JSON-handoff parse, body-via-stdin create, title/label verify with one retry, and the non-blocking board sync. It prints exactly one report and sets the exit code:
+
+| Output | Exit | Meaning |
+|---|---|---|
+| `CREATE_FOR_UXUI: ✓ #<n> — <title>. Label: for-uxui. Board: <column>.` | 0 | Issue created, verified, board synced. |
+| `CREATE_FOR_UXUI: ✗ <reason>` | 1 | Create or verify failed. If a `#<number>` appears, the issue exists — do NOT recreate it. |
+
+On `CREATE_FOR_UXUI: ✓`, note the issue number for the final report. On `✗`, surface the error — the working-notes content is already saved, so no rollback needed; just report that the hand-off issue couldn't be created and suggest the user retry manually.
 
 If the user skipped the hand-off, write the URL to working notes under a `**Source URL (deferred handoff):**` heading so it isn't lost.
 

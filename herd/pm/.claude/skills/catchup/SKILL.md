@@ -22,7 +22,23 @@ A human can route an issue to PM by dragging its card into the "PM" column. Dete
 node "$AGENT_DIR/tools/dev-tools.cjs" board-drags "PM" for-pm
 ```
 
-This prints one `<number><TAB><current-labels>` line per card a human dragged into the "PM" column (cards there not already labelled `for-pm`) — or `Board: no board` (then skip this sub-step). For each, spawn `@pm-ops` **RELABEL** — remove its current label (taken from the `board-drags` line), add `for-pm`. Do this before spawning `@inbox-reader` below.
+This prints one `<number><TAB><current-labels>` line per card a human dragged into the "PM" column (cards there not already labelled `for-pm`) — or `Board: no board` (then skip this sub-step).
+
+For each dragged card, build a RELABEL op entry. Collect all of them into one array and write it to the handoff file:
+
+```json
+[
+  { "op": "RELABEL", "issue": <n>, "removeLabel": "<old>", "addLabel": "for-pm" }
+]
+```
+
+`<old>` is the current label taken from the `board-drags` line. Write this array to `cowmoo/agent-files/pm/.op-handoff.json` with the Write tool, then run one `issue-transition` command per entry, in index order:
+
+```bash
+node "$AGENT_DIR/tools/dev-tools.cjs" issue-transition --from cowmoo/agent-files/pm/.op-handoff.json --index <i>
+```
+
+Run `--index 0` first, read its stdout, then `--index 1`, and so on through `--index N-1`. Each prints one report — `RELABEL #<n>: ✓ ...` (exit 0) or `RELABEL #<n>: ✗ <reason>` (exit 1). **If one reports `✗`, stop — do not run the remaining indices** — and surface which RELABEL failed; the dragged cards past that point stay out of sync until the next `/catchup`. Do this whole sub-step before spawning `@inbox-reader` below.
 
 ### 1b. Load the inbox
 
@@ -58,24 +74,39 @@ Process each picked issue in order — handle by category, fully resolving each 
 
 ### Routing rule (applies to every inline resolution)
 
-When spawning `@pm-ops RESOLVE_ISSUE`, pick the action and target from origin:
+When resolving an issue via a `RESOLVE_ISSUE` op, pick the action and target from origin:
 
 - origin `planner` → action **transfer**, transfer-target **planner** (relabels `for-pm` → `for-planner` so planner's `/catchup` picks up the answer)
 - origin `uxui` → action **transfer**, transfer-target **uxui** (relabels `for-pm` → `for-uxui` so UXUI's `/catchup` picks up the answer)
 - origin `unknown` → action **close** (human-filed; no automated round-trip)
+
+### Invoking RESOLVE_ISSUE (handoff mechanics)
+
+The skill composes the resolution comment and writes the handoff file. For each issue being resolved, build a RESOLVE_ISSUE entry with the comment prefixed `**[PM]** `:
+
+- **close** (origin `unknown`): `{ "op": "RESOLVE_ISSUE", "issue": <n>, "comment": "**[PM]** Resolved: <summary>", "close": true }`
+- **transfer** (origin `planner`/`uxui`): `{ "op": "RESOLVE_ISSUE", "issue": <n>, "comment": "**[PM]** Resolved: <summary>", "removeLabel": "for-pm", "addLabel": "for-<planner|uxui>" }`
+
+Write the entry (or entries) as a JSON array to `cowmoo/agent-files/pm/.op-handoff.json` with the Write tool, then run:
+
+```bash
+node "$AGENT_DIR/tools/dev-tools.cjs" issue-transition --from cowmoo/agent-files/pm/.op-handoff.json --index <i>
+```
+
+The `issue-transition` command runs comment → relabel/close in order, verifies each step with one retry, and syncs the board. Read its stdout — `RESOLVE_ISSUE #<n>: ✓ ...` (exit 0) means resolved; `RESOLVE_ISSUE #<n>: ✗ <reason>` (exit 1) means a step failed (the report names what already succeeded so a retry doesn't double-post). Because issues are processed one at a time (see the "One at a time" rule), each resolution is normally a single-entry array at `--index 0` — the file is overwritten per resolution.
 
 ### Quick Question
 1. Read the full issue context from @inbox-reader's response
 2. Present your understanding of the question
 3. Propose an answer — with specifics, not vague responses
 4. Discuss with user until resolved
-5. On confirmation: spawn `@pm-ops` with operation **RESOLVE_ISSUE** — issue number, resolution summary, action and transfer-target per the **Routing rule** above.
+5. On confirmation: write the handoff file and run the **RESOLVE_ISSUE** op per the **Invoking RESOLVE_ISSUE** mechanics above — issue number, resolution summary, action and transfer-target per the **Routing rule** above.
 
 ### Spec Change Needed
 1. Read the full issue context
 2. Present the problem — what's being flagged, which specs are affected
 3. Assess scope:
-   - **Small fix** (typo in spec, missing edge case, clarification) — resolve inline. Read the relevant spec file, discuss the change with user, apply the fix, self-verify. Then spawn `@pm-ops` with **RESOLVE_ISSUE** — action and transfer-target per the **Routing rule** above.
+   - **Small fix** (typo in spec, missing edge case, clarification) — resolve inline. Read the relevant spec file, discuss the change with user, apply the fix, self-verify. Then write the handoff file and run the **RESOLVE_ISSUE** op per the **Invoking RESOLVE_ISSUE** mechanics above — action and transfer-target per the **Routing rule** above.
    - **Needs discussion** — "This needs a deeper discussion session. I'll load the context so we can work on it." Transition to discussion mode (see below). The eventual answer ships via `/notify`, which closes the original tracked issue with a link to the new announcement.
 
 ---
@@ -123,7 +154,7 @@ Before finishing, confirm:
 
 - [ ] All issues presented to user with categories
 - [ ] Each processed issue: discussed, resolved, confirmed by user
-- [ ] Quick resolutions: @pm-ops executed RESOLVE_ISSUE (verified)
+- [ ] Quick resolutions: RESOLVE_ISSUE run via `dev-tools.cjs issue-transition` (verified)
 - [ ] Spec changes (if any): self-verified after edit
 - [ ] Issues needing work: transitioned to discussion mode, issue left open
 - [ ] Report presented (or discussion session started)
@@ -135,9 +166,9 @@ Before finishing, confirm:
 - **Triage, don't force** — if an issue needs discussion, transition. Don't try to resolve complex spec problems inline.
 - **User decides** — present your recommendation, let the user confirm or adjust
 - **One at a time** — process each issue fully before moving to the next
-- **Quick resolve = comment + close/transfer** — always through @pm-ops with verification
+- **Quick resolve = comment + close/transfer** — always through `dev-tools.cjs issue-transition` with verification
 - **Needs work = discussion session** — stop catchup, start discussion, let /notify close the loop
-- **Always prefix comments** with `**[PM]**` (handled by @pm-ops)
+- **Always prefix comments** with `**[PM]** ` — the skill composes the prefix into the handoff entry's `comment`
 - **Conflicting for-pm issues** — if two planner questions touch the same domain, resolve them together before responding separately. Handling them in isolation risks contradictory spec answers.
 - **For-pm issue references a spec you just changed** — check if the question is already answered by the change. If so, respond with the update rather than re-discussing.
 - **Inbox issue requires extended discussion** — the issue number is tracked in `.inbox-context` (see Step 4). Complete the discussion, then use `/notify` to announce the spec update and resolve tracked issues.

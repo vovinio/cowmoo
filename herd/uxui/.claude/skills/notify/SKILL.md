@@ -3,7 +3,7 @@ name: notify
 description: Announce cowmoo/design/ file changes via for-planner issue when active tasks may consume them. Closes tracked inbox items the work resolves.
 user-invocable: true
 disable-model-invocation: true
-allowed-tools: Bash, Read, Glob, Agent
+allowed-tools: Bash, Read, Glob, Agent, Write
 ---
 
 # Notify
@@ -41,7 +41,7 @@ gh issue list --label "todo" --state open --json number,title,body --limit 50
 gh issue list --label "in-progress" --state open --json number,title,body --limit 20
 ```
 
-For each open task, check whether its PRD body references any of the changed `cowmoo/design/` file paths or screen names. **When `cowmoo/design/roles.md` is among the changed files, also diff the file to identify which specific role entries were modified.** Use the `PUBLISH_SHA` captured in Step 1 — not `HEAD` — because intermediate commits (a `@uxui-bundle-ops` fetch, a manual hotfix, another agent committing in the same project) may have landed between `/publish` and `/notify`, so HEAD is not guaranteed to be the publish commit:
+For each open task, check whether its PRD body references any of the changed `cowmoo/design/` file paths or screen names. **When `cowmoo/design/roles.md` is among the changed files, also diff the file to identify which specific role entries were modified.** Use the `PUBLISH_SHA` captured in Step 1 — not `HEAD` — because intermediate commits (a bundle-fetch commit, a manual hotfix, another agent committing in the same project) may have landed between `/publish` and `/notify`, so HEAD is not guaranteed to be the publish commit:
 
 ```bash
 git -C "$PROJECT_DIR" diff "${PUBLISH_SHA}^" "$PUBLISH_SHA" -- cowmoo/design/roles.md
@@ -76,11 +76,26 @@ Present the composed message to the user for approval.
 
 After user approval:
 
-Spawn `@uxui-gh-ops` with **CREATE_FOR_PLANNER**:
-- Title: `[UXUI] UI updated: <concise summary>`
-- Body: the composed message
+The `issue-create` command reads its issue body and title from a JSON handoff file you write first. The title carries the `[UXUI] ` identity prefix. **Write** a one-element array to `$PROJECT_DIR/cowmoo/agent-files/uxui/.op-handoff.json` (a single reused path, overwritten each use):
 
-Wait for confirmation that the issue was created and verified.
+```json
+[
+  { "op": "CREATE_FOR_PLANNER", "title": "[UXUI] UI updated: <concise summary>", "label": "for-planner", "body": "<composed message>" }
+]
+```
+
+Then run the command directly:
+
+```bash
+node "$AGENT_DIR/tools/dev-tools.cjs" issue-create --from cowmoo/agent-files/uxui/.op-handoff.json --index 0
+```
+
+It owns the JSON-handoff parse, body-via-stdin create, title/label verify with one retry, and the non-blocking board sync. Read the command's one-line stdout — key on the `✓` / `✗` marker:
+
+- `CREATE_FOR_PLANNER: ✓ #<n> — <title>. …` — issue created and verified.
+- `CREATE_FOR_PLANNER: ✗ <reason>` — create or verify failed. If a `#<number>` appears, the issue exists — do NOT re-run.
+
+Do NOT retry on `✗` — the command already retried internally; a second run would risk a duplicate issue.
 
 ---
 
@@ -94,7 +109,16 @@ If no tracked issues — skip to report.
 
 If tracked issues exist, present each to the user:
 - "Tracked issue #N: [title]. Has this been resolved by the recent cowmoo/design/ work?"
-- If user confirms → spawn `@uxui-gh-ops` with operation **RESOLVE_ISSUE** — issue number, resolution summary (reference the new `for-planner` issue number). RESOLVE_ISSUE always closes the issue.
+- If user confirms → **Write** the handoff array to `$PROJECT_DIR/cowmoo/agent-files/uxui/.op-handoff.json` (overwriting Step 4's handoff — it's already been consumed), then run the `issue-transition` command directly. Compose the resolution summary (reference the new `for-planner` issue number) with the `**[UXUI]** ` identity prefix. RESOLVE_ISSUE always closes the issue:
+  ```json
+  [
+    { "op": "RESOLVE_ISSUE", "issue": <number>, "comment": "**[UXUI]** Resolved: <summary>", "close": true }
+  ]
+  ```
+  ```bash
+  node "$AGENT_DIR/tools/dev-tools.cjs" issue-transition --from cowmoo/agent-files/uxui/.op-handoff.json --index 0
+  ```
+  The command runs comment → close in order, verifies each step with one retry, and syncs the board. Read its one-line stdout — `RESOLVE_ISSUE #<n>: ✓ …` means done; `RESOLVE_ISSUE #<n>: ✗ <reason>` means a step failed. Do NOT retry on `✗`. Process tracked issues one at a time — re-Write the handoff and re-run for each, since the file is overwritten per use.
 - After resolving, remove from tracking:
   ```bash
   node "$AGENT_DIR/tools/dev-tools.cjs" inbox remove <number>
@@ -129,9 +153,9 @@ Before finishing, confirm:
 - [ ] Message includes necessary content
 - [ ] Impact description is observational (facts, not instructions)
 - [ ] User approved the message before sending
-- [ ] Planner notified via `@uxui-gh-ops CREATE_FOR_PLANNER` (verified)
+- [ ] Planner notified via `issue-create` (verified)
 - [ ] Tracked inbox issues presented to user
-- [ ] Resolved issues closed via `@uxui-gh-ops RESOLVE_ISSUE` (verified)
+- [ ] Resolved issues closed via `issue-transition` RESOLVE_ISSUE (verified)
 - [ ] Resolved issues removed from tracking
 - [ ] Report presented
 
@@ -154,4 +178,4 @@ Before finishing, confirm:
 - **Observational, not prescriptive** — the impact description states facts about what changed, not instructions for what the recipient should do.
 - **User decides** — present your recommendation, let the user confirm or adjust.
 - **Inbox resolution belongs here** — `/catchup` tracks items; `/notify` closes them when the cowmoo/design/ work that addresses them ships.
-- **Always resolve through `@uxui-gh-ops`** — never close or transfer issues directly.
+- **Always resolve through the `issue-transition` command** — never close or transfer issues with hand-rolled `gh` calls.

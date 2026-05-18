@@ -4,7 +4,7 @@ description: Send a for-pm (spec gaps) or for-planner (response to a for-uxui me
 user-invocable: true
 disable-model-invocation: true
 argument-hint: <pm | planner>
-allowed-tools: Bash, Read, Glob, Agent, AskUserQuestion
+allowed-tools: Bash, Read, Glob, Agent, AskUserQuestion, Write
 ---
 
 # Ask
@@ -30,7 +30,7 @@ Check `node "$AGENT_DIR/tools/dev-tools.cjs" inbox list` — if there's an activ
 
 **Render the target choice via `AskUserQuestion`** (single-select). Recommended option first with `(Recommended)` suffix — pick PM when the discussion concerns a spec gap, contradiction, or business-logic question; pick planner when the session diagnosed a tracked `for-uxui` item and the response requires planner action. Each option's `description` carries the consequence ("creates a `for-pm` issue addressed to PM" vs "creates a `for-planner` issue responding to the tracked `for-uxui` item"). Per CLAUDE.md's picker rule. Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker.
 
-The target determines which label and which `@uxui-gh-ops` operation to use.
+The target determines which label and which handoff `op` to use.
 
 ---
 
@@ -94,19 +94,40 @@ Context: <2–3 lines — omit if observation is self-explanatory>
 
 ## Step 4: Create GitHub Issue
 
+The `issue-create` command reads its issue body and title from a JSON handoff file you write first. Compose the entry, **Write** it as a one-element array to `$PROJECT_DIR/cowmoo/agent-files/uxui/.op-handoff.json` (a single reused path, overwritten each use), then run the command at `--index 0`.
+
 ### `for-pm`
 
-Spawn `@uxui-gh-ops` with **CREATE_FOR_PM**:
-- Title: `[UXUI] <summary>`
-- Body: the composed message
+Write the handoff array — the title carries the `[UXUI] ` identity prefix; the body is the composed message from Step 3 (the fielded preview verbatim, minus the chat-only `→ Send…` line and `## Message preview` heading):
+
+```json
+[
+  { "op": "CREATE_FOR_PM", "title": "[UXUI] <summary>", "label": "for-pm", "body": "<composed message>" }
+]
+```
 
 ### `for-planner`
 
-Spawn `@uxui-gh-ops` with **CREATE_FOR_PLANNER**:
-- Title: `[UXUI] <summary>`
-- Body: the composed message
+Write the handoff array — same shape, `for-planner` label:
 
-Wait for confirmation that the issue was created and verified.
+```json
+[
+  { "op": "CREATE_FOR_PLANNER", "title": "[UXUI] <summary>", "label": "for-planner", "body": "<composed message>" }
+]
+```
+
+### Run the command (both targets)
+
+```bash
+node "$AGENT_DIR/tools/dev-tools.cjs" issue-create --from cowmoo/agent-files/uxui/.op-handoff.json --index 0
+```
+
+It owns the JSON-handoff parse, body-via-stdin create, title/label verify with one retry, and the non-blocking board sync. Read its one-line stdout — key on the `✓` / `✗` marker:
+
+- `CREATE_FOR_PM: ✓ #<n> — …` / `CREATE_FOR_PLANNER: ✓ #<n> — …` — issue created and verified.
+- `… ✗ <reason>` — create or verify failed. If a `#<number>` appears, the issue exists — do NOT re-run.
+
+Do NOT retry on `✗` — the command already retried internally; a second run would risk a duplicate issue.
 
 ---
 
@@ -115,7 +136,16 @@ Wait for confirmation that the issue was created and verified.
 If the current session is in response to a tracked `for-uxui` issue (check `node "$AGENT_DIR/tools/dev-tools.cjs" inbox list`), present each tracked item to the user:
 
 - "Tracked issue #N: [title]. Did this `/ask` address it?"
-- If yes → spawn `@uxui-gh-ops` with **RESOLVE_ISSUE** — issue number, resolution summary (a short note pointing at the new `for-planner` or `for-pm` issue). RESOLVE_ISSUE always closes the issue.
+- If yes → **Write** the handoff array to `$PROJECT_DIR/cowmoo/agent-files/uxui/.op-handoff.json` (overwriting Step 4's handoff — it's already been consumed), then run the `issue-transition` command at `--index 0`. Compose the resolution summary (a short note pointing at the new `for-planner` or `for-pm` issue) with the `**[UXUI]** ` identity prefix. RESOLVE_ISSUE always closes the issue:
+  ```json
+  [
+    { "op": "RESOLVE_ISSUE", "issue": <number>, "comment": "**[UXUI]** Resolved: <summary>", "close": true }
+  ]
+  ```
+  ```bash
+  node "$AGENT_DIR/tools/dev-tools.cjs" issue-transition --from cowmoo/agent-files/uxui/.op-handoff.json --index 0
+  ```
+  The command runs comment → close in order, verifies each step with one retry, and syncs the board. Read its stdout — `RESOLVE_ISSUE #<n>: ✓ …` means done; `RESOLVE_ISSUE #<n>: ✗ <reason>` means a step failed. Do NOT retry on `✗`.
 - After resolving, remove from tracking: `node "$AGENT_DIR/tools/dev-tools.cjs" inbox remove <number>`.
 - If no → leave tracked for future.
 
@@ -140,7 +170,7 @@ If the current session is in response to a tracked `for-uxui` issue (check `node
 - [ ] Message includes necessary content for the target
 - [ ] Observations are factual, not prescriptive
 - [ ] User approved the message
-- [ ] GitHub issue created via `@uxui-gh-ops` (`CREATE_FOR_PM` or `CREATE_FOR_PLANNER`) — verified
+- [ ] GitHub issue created via `issue-create` (`CREATE_FOR_PM` or `CREATE_FOR_PLANNER`) — verified
 - [ ] Tracked inbox items resolved if applicable — verified
 - [ ] Report presented
 

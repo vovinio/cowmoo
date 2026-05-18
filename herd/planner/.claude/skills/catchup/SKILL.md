@@ -22,7 +22,25 @@ A human can route an issue to the planner by dragging its card into the "Planner
 node "$AGENT_DIR/tools/dev-tools.cjs" board-drags "Planner" for-planner
 ```
 
-This prints one `<number><TAB><current-labels>` line per card a human dragged into the "Planner" column (cards there not already labelled `for-planner`) — or `Board: no board` (then skip this sub-step). For each, spawn `@plan-ops` **RELABEL** — remove its current status label (taken from the `board-drags` line), add `for-planner`. Do this before spawning `@plan-reader` below so the dragged cards appear in the message list.
+This prints one `<number><TAB><current-labels>` line per card a human dragged into the "Planner" column (cards there not already labelled `for-planner`) — or `Board: no board` (then skip this sub-step).
+
+Ops are delegated through a JSON handoff file: the skill writes the op array to `$PROJECT_DIR/cowmoo/agent-files/planner/.op-handoff.json` with the `Write` tool, then runs the matching `dev-tools.cjs` subcommand itself with the `Bash` tool, passing `--from` the handoff file and the `--index` of the entry. The handoff file is a single reused path — each run overwrites it. The subcommand prints exactly one report line; read its `✓`/`✗` marker and exit code to know what happened.
+
+For each dragged card, write the handoff file with a single-element array — remove its current status label (taken from the `board-drags` line), add `for-planner`:
+
+```json
+[
+  { "op": "RELABEL", "issue": <number>, "removeLabel": "<current-status-label>", "addLabel": "for-planner" }
+]
+```
+
+Then run:
+
+```bash
+node "$AGENT_DIR/tools/dev-tools.cjs" issue-transition --from cowmoo/agent-files/planner/.op-handoff.json --index 0
+```
+
+A `RELABEL #<n>: ✓ ...` line means the label was swapped, verified, and board-synced; a `RELABEL #<n>: ✗ <reason>` line means relabel or verify failed. Handle one card at a time (each gets its own handoff overwrite + run). Do this before spawning `@plan-reader` below so the dragged cards appear in the message list.
 
 ### 1b. Load the inbox
 
@@ -60,16 +78,25 @@ If the inbox has only 1 message, skip the picker and prose-confirm: "Handle #N �
 
 ## Step 3: Handle Each Message
 
-For each message the user picks, handle by type:
+For each message the user picks, handle by type.
+
+**Ops handoff mechanics (applies to every handler below).** Ops are delegated through a JSON handoff file: the skill composes each op's body/comment/title, writes the op array to `$PROJECT_DIR/cowmoo/agent-files/planner/.op-handoff.json` with the `Write` tool, then runs the matching `dev-tools.cjs` subcommand itself with the `Bash` tool, passing `--from` the handoff file and the `--index` of each entry. The handoff file is a single reused path — each handler overwrites it. A handler carrying N independent ops gets an N-element array (indices 0..N-1). The skill owns the identity prefix — comments get `**[Planner]** ` and titles get `[Planner] ` composed into the handoff entry; `dev-tools.cjs` does not add it. Op-entry shapes and the subcommand each maps to:
+- `UPDATE_TASK`: `{ "op": "UPDATE_TASK", "issue": <n>, "body": "<new PRD body>" }` — run with `issue-edit-body`.
+- `POST_COMMENT`: `{ "op": "POST_COMMENT", "issue": <n>, "comment": "**[Planner]** <text>" }` — run with `issue-transition`.
+- `CLOSE_ISSUE`: `{ "op": "CLOSE_ISSUE", "issue": <n>, "close": true }` — run with `issue-transition`. Add `"comment": "**[Planner]** <text>"` only if a closing comment is wanted; the handlers below post their comment via a separate `POST_COMMENT` op, so `CLOSE_ISSUE` omits `comment`.
+- `RELABEL`: `{ "op": "RELABEL", "issue": <n>, "removeLabel": "<old>", "addLabel": "<new>" }` — run with `issue-transition`.
+
+The command form is `node "$AGENT_DIR/tools/dev-tools.cjs" <subcommand> --from cowmoo/agent-files/planner/.op-handoff.json --index <i>`.
+
+**Running a multi-op handler.** When a handler writes an N-element array, run the ops in order — `--index 0`, then `--index 1`, … — checking each report before the next. If a report starts with `✗`, stop immediately: do NOT run the remaining indices, and report which op failed and why. The subcommand already retried internally, so do NOT re-run a failed op — a second attempt risks a duplicate (double-posted comment, etc.). Only when an op reports `✓` do you proceed to the next index.
 
 ### Spec update
 1. Read the updated spec files referenced in the message
 2. Check: does this affect only the next story, or existing planned stories too?
-3. If existing `todo` tasks are affected → update their PRDs via `@plan-ops` **UPDATE_TASK**
+3. If existing `todo` tasks are affected → update their PRDs: write a handoff array with one `UPDATE_TASK` entry per affected task, then run `issue-edit-body` at each index (0..N-1) in order.
 4. **If `in-progress` tasks are affected** → assess impact. Don't update the PRD silently under a working builder. Post a comment on the `in-progress` task summarizing what changed, then let the builder decide whether to continue or `/return` for a PRD rewrite.
 5. If product facts changed → note for knowledge.md update (will be captured in next `/draft`)
-6. Respond: spawn `@plan-ops` **POST_COMMENT** on the issue — "**[Planner]** Acknowledged. [summary of impact]."
-7. Close the issue via `@plan-ops` **CLOSE_ISSUE**
+6. Respond and close: write a handoff array `[ POST_COMMENT, CLOSE_ISSUE ]` on the issue — the `POST_COMMENT` comment is `"**[Planner]** Acknowledged. [summary of impact]."` — then run `issue-transition` at index 0, then at index 1.
 
 ### Deviation report
 1. Read the full Record — what was planned vs what was built
@@ -77,16 +104,16 @@ For each message the user picks, handle by type:
 3. **Render the accept/reject choice via `AskUserQuestion`** (single-select). Recommended option first with `(Recommended)` suffix — base the recommendation on your scan of downstream impact (accept when minor or an improvement, reject when the deviation breaks downstream PRDs). Each option's `description` states the consequence in planning terms ("propagate the deviation to N downstream tasks" vs "send back with changes needed; task returns to `todo`"). Per CLAUDE.md's picker rule. Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker.
 4. If accepted and downstream tasks are affected:
    - Identify `todo` tasks that reference old paths/names/shapes
-   - For each: update PRD via `@plan-ops` **UPDATE_TASK**
-5. Execute user's decision via `@plan-ops`:
-   - **Accept:** `POST_COMMENT` with "**[Planner]** Deviation accepted. [reason]", then `CLOSE_ISSUE`
-   - **Reject:** `POST_COMMENT` with "**[Planner]** Changes needed: [what to fix]", then `RELABEL` to `todo`
+   - For each: update PRD — write a handoff array with one `UPDATE_TASK` entry per affected task, then run `issue-edit-body` at each index in order.
+5. Execute user's decision — write a two-element handoff array and run both ops in order (stop on `✗`):
+   - **Accept:** `[ POST_COMMENT, CLOSE_ISSUE ]` — `POST_COMMENT` comment is `"**[Planner]** Deviation accepted. [reason]"`. Run `issue-transition` at index 0, then at index 1.
+   - **Reject:** `[ POST_COMMENT, RELABEL ]` — `POST_COMMENT` comment is `"**[Planner]** Changes needed: [what to fix]"`; `RELABEL` removes the current label and adds `todo`. Run `issue-transition` at index 0, then at index 1.
 
 ### Blocked task
 1. Read the RETURN comment — the observational report with Issue/Tried/Needed fields
 2. **Diagnose within your scope.** The message is observational; you decide what it means and how to resolve it. Classify the issue into one of three categories:
    - **PRD clarity issue** → The PRD itself is ambiguous, contradictory, incomplete, or assumes preconditions that don't hold in the project (e.g., missing test framework, missing build tooling, missing dev dependency). Two remediations depending on shape:
-     - **Rewrite the PRD in place** when the fix lives inside the same task — clarify wording, fix a contradiction, or fold a small bit of setup into the task. Use `@plan-ops` **UPDATE_TASK**, then `POST_COMMENT` with "**[Planner]** Changes needed: [what changed in PRD]", then `RELABEL` to `todo`.
+     - **Rewrite the PRD in place** when the fix lives inside the same task — clarify wording, fix a contradiction, or fold a small bit of setup into the task. This is a three-op sequence: write a handoff array `[ UPDATE_TASK, POST_COMMENT, RELABEL ]` — `UPDATE_TASK` carries the rewritten PRD body, `POST_COMMENT` comment is `"**[Planner]** Changes needed: [what changed in PRD]"`, `RELABEL` removes the current label and adds `todo` — then run, in order, stopping on `✗`: `issue-edit-body --index 0`, `issue-transition --index 1`, `issue-transition --index 2`.
      - **Add a prerequisite task** when the missing scaffolding is substantial enough to deserve its own task (installing and configuring a test framework, adding a CI pipeline, setting up a dev-tooling dependency). This needs planning work, not a quick fix — track via `node "$AGENT_DIR/tools/dev-tools.cjs" inbox add <number> "<title>"` and tell the user "Needs `/start` to plan the prerequisite task before this one can proceed."
    - **Spec issue** → The underlying spec is missing, wrong, or contradictory. "This needs PM. Run `/ask pm` to escalate." Track the issue so `/ask pm` sees it and clears it when the escalation is created:
      ```bash
@@ -109,16 +136,16 @@ For each message the user picks, handle by type:
 Changes were committed to `cowmoo/design/` files that active task PRDs may consume.
 1. Read the message — which design files changed, which tasks may be affected
 2. Check: do any open `todo` or `in-progress` tasks reference the changed design files or screens?
-3. If yes → update affected PRDs via `@plan-ops` **UPDATE_TASK** (refresh design references, screen states)
-4. Respond and close the issue via `@plan-ops` **POST_COMMENT** + **CLOSE_ISSUE**
+3. If yes → update affected PRDs: write a handoff array with one `UPDATE_TASK` entry per affected task, then run `issue-edit-body` at each index in order (refresh design references, screen states).
+4. Respond and close the issue: write a handoff array `[ POST_COMMENT, CLOSE_ISSUE ]`, then run `issue-transition` at index 0, then at index 1.
 
 ### UI response
 A `for-uxui` message was processed and the response requires action (e.g., "not a real gap — task scope was wrong").
 1. Read the message — what was found and which `for-uxui` issue triggered it
 2. **Diagnose within your scope.** The message is observational; you decide what it means. Typical cases:
-   - **Task scope was wrong** → rewrite the affected task PRD via `@plan-ops` **UPDATE_TASK**, relabel to `todo`
-   - **The gap was confirmed as fake** → the triggering task can proceed as-is, update the PRD to remove the design dependency or clarify the state
-3. Respond and close the issue via `@plan-ops` **POST_COMMENT** + **CLOSE_ISSUE**
+   - **Task scope was wrong** → rewrite the affected task PRD: write a handoff array `[ UPDATE_TASK, RELABEL ]` (`RELABEL` adds `todo`), then run `issue-edit-body --index 0`, then `issue-transition --index 1`.
+   - **The gap was confirmed as fake** → the triggering task can proceed as-is, update the PRD to remove the design dependency or clarify the state: write a single-element `UPDATE_TASK` handoff array and run `issue-edit-body --index 0`.
+3. Respond and close the issue: write a handoff array `[ POST_COMMENT, CLOSE_ISSUE ]`, then run `issue-transition` at index 0, then at index 1.
 
 ### Other
 The message didn't fit the five named categories — e.g., a builder out-of-scope notice, an answer to a prior `for-pm` escalation relabeled as `for-planner`, or a manually-created `for-planner` issue. Never guess the category and run a wrong handler — the silent-close handlers (spec update, UI update, UI response) would lose real work.
@@ -126,7 +153,7 @@ The message didn't fit the five named categories — e.g., a builder out-of-scop
 2. **Render the routing choice via `AskUserQuestion`** (single-select). Recommended option first with `(Recommended)` suffix; each option's `description` carries the consequence in planning terms. Per CLAUDE.md's picker rule. Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker. Typical options:
    - **Identify as a named type** — re-route to the matching handler (Spec update / Deviation report / Blocked task / UI definition update / UI response). Pick the type after asking the user.
    - **Track for later planning** — substantial item that needs `/start` work. Adds to the inbox via `node "$AGENT_DIR/tools/dev-tools.cjs" inbox add <number> "<title>"`.
-   - **Close as noise** — no action needed. `@plan-ops` **POST_COMMENT** + **CLOSE_ISSUE** with the user's wording.
+   - **Close as noise** — no action needed. Write a handoff array `[ POST_COMMENT, CLOSE_ISSUE ]` with the user's wording in the `POST_COMMENT` comment, then run `issue-transition` at index 0, then at index 1.
 3. Never auto-close or silently acknowledge an `other` message — the user confirms the resolution.
 
 ---

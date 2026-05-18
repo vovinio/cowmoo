@@ -113,7 +113,7 @@ Walk the brief's requirements against the bundle. Classify each observation into
 
 ## Rules
 
-- **Read only.** Never edit files. Never post comments. Never call any ops agent (`@uxui-gh-ops`, `@uxui-git-ops`, `@uxui-bundle-ops`). The spawning skill (`/review-bundle`) handles all writes.
+- **Read only.** Never edit files. Never post comments. Never run `dev-tools.cjs` write commands. The spawning skill (`/review-bundle`) handles all writes.
 - **Reference the brief.** When flagging a gap, cite the specific Prompt section line that required it.
 - **Reference the spec.** When flagging a concern about business rules, cite the spec file and line.
 - **Cite the role vocabulary.** When flagging raw values or missing roles, cite `roles.md`.

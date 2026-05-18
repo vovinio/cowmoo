@@ -4,7 +4,7 @@ description: Announce spec changes via for-planner or for-uxui issue, and resolv
 user-invocable: true
 disable-model-invocation: true
 argument-hint: <planner | uxui>
-allowed-tools: Bash, Read, Glob, Agent
+allowed-tools: Bash, Read, Glob, Agent, Write
 ---
 
 # Notify
@@ -34,7 +34,7 @@ If the user picks `both`, run the notify flow twice — once per target — sequ
 
 If the user picks `none`, they are declining to notify — skip to Step 5 (inbox check). Tracked inbox issues, if any, still get processed; no issue is created.
 
-The target determines which label and which `@pm-ops` operation to use.
+The target determines which label and which `dev-tools.cjs` op to use.
 
 ---
 
@@ -69,21 +69,48 @@ Present the composed message to the user for approval.
 
 ## Step 4: Create GitHub Issue
 
-After user approval:
+After user approval, write the handoff file then run the `issue-create` command. The title gets the `[PM] ` prefix composed in by this skill.
 
 ### Target: `planner`
 
-Spawn `@pm-ops` with **CREATE_FOR_PLANNER**:
-- Title: `[PM] Specs updated: <concise summary>`
-- Body: the message composed in Step 3
+Use the Write tool to write this one-element array to `cowmoo/agent-files/pm/.op-handoff.json`:
+
+```json
+[
+  { "op": "CREATE_FOR_PLANNER", "title": "[PM] Specs updated: <concise summary>", "label": "for-planner", "body": "<message composed in Step 3>" }
+]
+```
+
+Then run:
+
+```bash
+node "$AGENT_DIR/tools/dev-tools.cjs" issue-create --from cowmoo/agent-files/pm/.op-handoff.json --index 0
+```
 
 ### Target: `uxui`
 
-Spawn `@pm-ops` with **CREATE_FOR_UXUI**:
-- Title: `[PM] Specs updated: <concise summary>`
-- Body: the message composed in Step 3
+Use the Write tool to write this one-element array to `cowmoo/agent-files/pm/.op-handoff.json`:
 
-Wait for confirmation that the issue was created and verified.
+```json
+[
+  { "op": "CREATE_FOR_UXUI", "title": "[PM] Specs updated: <concise summary>", "label": "for-uxui", "body": "<message composed in Step 3>" }
+]
+```
+
+Then run:
+
+```bash
+node "$AGENT_DIR/tools/dev-tools.cjs" issue-create --from cowmoo/agent-files/pm/.op-handoff.json --index 0
+```
+
+The `issue-create` command owns the JSON-handoff parse, body-via-stdin create, title/label verify with one retry, and the non-blocking board sync. Read its stdout — it prints exactly one report and sets the exit code:
+
+| Output | Exit | Meaning |
+|---|---|---|
+| `CREATE_FOR_PLANNER: ✓ #<n> — ...` / `CREATE_FOR_UXUI: ✓ #<n> — ...` | 0 | Issue created, verified, board synced. |
+| `CREATE_FOR_*: ✗ <reason>` | 1 | Create or verify failed. If a `#<number>` appears, the issue exists — do NOT recreate it. |
+
+The `✓` / `✗` marker and `#<number>` drive the report in Step 6.
 
 ---
 
@@ -98,9 +125,23 @@ If no tracked issues — skip to report.
 If tracked issues exist, the `inbox list` output is `<number>\t<title>` per line. For each line:
 
 1. Present to user: "Tracked issue #<number>: <title>. Has this been resolved by the recent spec work?"
-2. If user confirms:
-   - **If a fresh announcement was created in Step 4** (target was `planner`, `uxui`, or `both`, AND Step 2 found spec changes) → spawn `@pm-ops` with operation **RESOLVE_ISSUE** — issue number, resolution summary that includes a link to the announcement (e.g., `Resolved by spec update — see #<announcement-number>`), action **close**. The new announcement is the canonical answer the originator receives via their `/catchup`; the original `for-pm` just gets a closing comment for traceability.
-   - **If no announcement was created** (Step 1 target was `none`, OR Step 2 found no spec changes) → resolve with action **close** and a plain resolution comment. The originator will see the closed issue with PM's comment but no fresh inbox notification — flag this trade-off to the user.
+2. If user confirms, resolve the issue with action **close**. The skill composes the resolution comment — prefixed `**[PM]** ` — and writes a one-element handoff array to `cowmoo/agent-files/pm/.op-handoff.json` with the Write tool:
+
+   ```json
+   [
+     { "op": "RESOLVE_ISSUE", "issue": <n>, "comment": "**[PM]** Resolved: <summary>", "close": true }
+   ]
+   ```
+
+   Then run:
+
+   ```bash
+   node "$AGENT_DIR/tools/dev-tools.cjs" issue-transition --from cowmoo/agent-files/pm/.op-handoff.json --index 0
+   ```
+
+   The `issue-transition` command runs comment → close in order, verifies each step with one retry, and syncs the board. Read its stdout — `RESOLVE_ISSUE #<n>: ✓ ...` (exit 0) means resolved; `RESOLVE_ISSUE #<n>: ✗ <reason>` (exit 1) means a step failed (the report names what already succeeded so a retry doesn't double-post). The handoff file is overwritten per resolution — issues are processed one at a time, so each is a fresh single-entry array. Compose the `<summary>` per the two cases:
+   - **If a fresh announcement was created in Step 4** (target was `planner`, `uxui`, or `both`, AND Step 2 found spec changes) → the summary includes a link to the announcement (e.g., `Resolved by spec update — see #<announcement-number>`). The new announcement is the canonical answer the originator receives via their `/catchup`; the original `for-pm` just gets a closing comment for traceability.
+   - **If no announcement was created** (Step 1 target was `none`, OR Step 2 found no spec changes) → a plain resolution comment. The originator will see the closed issue with PM's comment but no fresh inbox notification — flag this trade-off to the user.
 3. After resolving, remove from tracking:
    ```bash
    node "$AGENT_DIR/tools/dev-tools.cjs" inbox remove <number>
@@ -133,9 +174,9 @@ Before finishing, confirm:
 - [ ] Message includes necessary content
 - [ ] Impact description is observational (facts, not instructions)
 - [ ] User approved the message before sending
-- [ ] Target notified via `@pm-ops CREATE_FOR_PLANNER` or `CREATE_FOR_UXUI` (verified)
+- [ ] Target notified via `dev-tools.cjs issue-create` (CREATE_FOR_PLANNER or CREATE_FOR_UXUI, verified)
 - [ ] Tracked inbox issues presented to user
-- [ ] Resolved issues closed or transferred via `@pm-ops RESOLVE_ISSUE` (verified)
+- [ ] Resolved issues closed or transferred via `dev-tools.cjs issue-transition` (RESOLVE_ISSUE, verified)
 - [ ] Resolved issues removed from tracking
 - [ ] Report presented
 
@@ -156,7 +197,7 @@ Before finishing, confirm:
 
 - **One target per invocation** — if both planner and UXUI need messages, run `/notify` twice with different targets (or accept the "both" offer in Step 1).
 - **Check session context** — review what was committed this session (you were there when `/publish` ran).
-- **Always resolve through `@pm-ops`** — never close or transfer issues directly.
+- **Always resolve through `dev-tools.cjs issue-transition`** — never close or transfer issues with hand-rolled `gh` calls.
 - **Observational, not prescriptive** — the impact description states facts about what changed, not instructions for what the recipient should do.
 - **User decides** — present your recommendation, let the user confirm or adjust.
 - **Inbox resolution belongs here** — `/catchup` tracks items; `/notify` closes them when the work that addresses them ships.

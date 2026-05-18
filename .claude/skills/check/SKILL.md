@@ -165,68 +165,35 @@ for agent in pm uxui planner builder; do
 done
 ```
 
-**4c — Within-agent slash-command references.**
+Both sub-steps run independently. Missing `@<name>` → CRITICAL; missing `rules/<name>.md` → CRITICAL.
 
-Every `/<skill>` mentioned in a skill or sub-agent body must either (a) be a skill of the same agent, (b) be a skill of another herd agent (legitimate cross-agent workflow references — see 4a), (c) be the universal `/propose`, or (d) be caught by Step 7's de-curation check (curator skills aren't allowed in herd files anyway).
+> **No body-level `/<skill>` check.** A herd skill/agent body referencing a `/<skill>` that doesn't exist is *not* mechanically decidable — herd bodies legitimately contain slash-prefixed example content (URL routes like `/login`, paths like `/path`), and a regex cannot tell an example route from a real skill reference. That distinction needs comprehension, which violates this skill's "mechanical only" rule. The real cases are covered elsewhere: stale herd-skill references are caught by `/rename-sweep` (on rename) and `/patterns` / `/audit-agent` (body-reading passes); curator-skill references in herd files are a hard FAIL in Step 7's de-curation check.
 
-```bash
-for agent in pm uxui planner builder; do
-  base="herd/$agent"
-  # Same lookbehind-anchored regex as 4a, including the trailing
-  # (?![a-z0-9/-]) lookahead to reject path fragments and prevent the
-  # greedy `*` from producing partial-match noise. rg needs --pcre2 for
-  # lookbehind/lookahead and --hidden to descend into .claude/.
-  rg -N --pcre2 --hidden -o '(?:^|(?<=[\s`]))/[a-z][a-z0-9-]*(?![a-z0-9/-])' "$base/.claude/skills/" "$base/.claude/agents/" 2>/dev/null \
-    | sed 's|^.*:||; s|^/||' | sort -u | while read name; do
-    [ -z "$name" ] && continue
-    [ "$name" = "propose" ] && continue
-    [ -d "$base/.claude/skills/$name" ] && continue
-    # Cross-agent skill reference is legitimate (see 4a) — only flag a
-    # /<skill> that exists in no herd agent at all.
-    in_herd=""
-    for other in pm uxui planner builder; do
-      [ -d "herd/$other/.claude/skills/$name" ] && in_herd=1
-    done
-    [ -n "$in_herd" ] && continue
-    echo "  WARN: $agent body references /$name but no herd agent has a skills/$name/ directory (may be a curator skill — caught by Step 7, or may be stale)"
-  done
-done
-```
+### Step 5 — Skill → dev-tools subcommand existence
 
-All three sub-steps run independently. Missing `@<name>` → CRITICAL; missing `rules/<name>.md` → CRITICAL; missing `/<skill>` → WARN (de-curation Step 7 makes the real decision).
-
-### Step 5 — Ops operation existence
-
-For every `@<agent>-ops OPERATION` spawn in a skill body, the operation must exist as a `### OPERATION` header in the referenced ops agent file.
-
-**Matching only adjacent invocations.** The regex below deliberately requires the `OP` token to sit immediately after `@<agent>-ops` (only whitespace — or a single closing backtick — between). Prose like "spawn `@task-ops` with RETURN operation" is NOT matched, and that's intentional: a bare prose mention can't be mechanically distinguished from "`@uxui-gh-ops`. You do NOT do GitHub", where "NOT" is an English word. Skills should use the direct `@agent-ops OP` form (Pattern 2); anything that doesn't fit the direct form is out of scope for this mechanical check.
-
-The trailing `(?!-)` rejects hyphenated words like `BUILD-NOTES` (a filename, not an op).
+Every git / GitHub write is a `dev-tools.cjs` subcommand a skill invokes directly (Pattern 6 — Delegated Write Operation). For every `node "$AGENT_DIR/tools/dev-tools.cjs" <subcommand>` invocation in a skill or sub-agent body, `<subcommand>` must be a real dispatcher `case` in that agent's `dev-tools.cjs`.
 
 ```bash
 setopt NULL_GLOB 2>/dev/null || shopt -s nullglob 2>/dev/null || true  # zsh: unmatched globs → empty, not fatal
-# Extract (agent, op) pairs from adjacent invocations only.
-# -P enables PCRE2 (needed for the negative lookahead (?!-)).
-rg -N -P -o '@[a-z-]+-ops`?[[:space:]]+[A-Z][A-Z_]{2,}\b(?!-)' \
-   herd/*/.claude/skills/*/SKILL.md herd/*/.claude/agents/*.md 2>/dev/null \
-  | sed -E 's|.*@([a-z-]+)-ops`?[[:space:]]+([A-Z][A-Z_]+).*|\1 \2|' \
-  | sort -u | while read opsagent opname; do
-  [ -z "$opsagent" ] && continue
-  # Locate the ops sub-agent file
-  found=""
-  for ag in pm uxui planner builder; do
-    [ -f "herd/$ag/.claude/agents/${opsagent}-ops.md" ] && { found="herd/$ag/.claude/agents/${opsagent}-ops.md"; break; }
+for agent in pm uxui planner builder; do
+  dt="herd/$agent/tools/dev-tools.cjs"
+  [ -f "$dt" ] || continue
+  # Every dispatcher case label (top-level and nested-inner alike).
+  cases=$(grep -oE "case '[a-z-]+':" "$dt" | sed "s/case '//; s/'://" | sort -u)
+  # First token after the anchored `dev-tools.cjs"` path in any invocation. The
+  # closing `"` of "$AGENT_DIR/tools/dev-tools.cjs" then whitespace then the
+  # subcommand — prose `` `dev-tools.cjs` `` (backtick, not `"`) does not match.
+  rg -No --hidden 'dev-tools\.cjs"[[:space:]]+[a-z][a-z-]+' \
+       "herd/$agent/.claude/skills/" "herd/$agent/.claude/agents/" 2>/dev/null \
+    | sed -E 's|.*dev-tools\.cjs"[[:space:]]+||' | sort -u | while read sub; do
+    [ -z "$sub" ] && continue
+    echo "$cases" | grep -qx "$sub" \
+      || echo "  FAIL: $agent invokes dev-tools.cjs '$sub' but no matching case in $dt"
   done
-  if [ -z "$found" ]; then
-    echo "  FAIL: @${opsagent}-ops referenced but no such sub-agent file found"
-    continue
-  fi
-  grep -qE "^### +$opname\b" "$found" \
-    || echo "  FAIL: @${opsagent}-ops $opname — no matching \"### $opname\" in $found"
 done
 ```
 
-Missing op = CRITICAL. Parameter matching lives in `/contracts` — this check only verifies existence.
+A skill invoking a subcommand its agent's `dev-tools.cjs` does not define = CRITICAL. The reverse direction — every `case` has a caller — is Step 6.
 
 ### Step 6 — Dev-tools subcommand round-trip
 
@@ -271,7 +238,7 @@ rg --hidden "^paths:" herd/ && echo "  FAIL: herd/ rule files must not use paths
 
 **Herd files don't reference curator skills or docs:**
 ```bash
-rg --hidden "docs/(COMMUNICATION|ARCHITECTURE|PATTERNS|PATTERN-CATALOG)\.md" herd/ && echo "  FAIL: herd references curator docs"
+rg --hidden "docs/(COMMUNICATION|ARCHITECTURE|PATTERN-CATALOG)\.md" herd/ && echo "  FAIL: herd references curator docs"
 rg --hidden "/(check|patterns|contracts|coherence|rename-sweep|scaffold-subagent|audit-agent|audit-hygiene|curate|pressure-test|validate|align|contract-check|coherence-check|symmetry-check|audit-0[1-6])\b" herd/ && echo "  FAIL: herd references a curator skill (current or historical)"
 rg --hidden "\.claude/asymmetries/" herd/ && echo "  FAIL: herd references curator-only asymmetries/"
 rg --hidden "\.claude/audit-decisions/" herd/ && echo "  FAIL: herd references curator-only audit-decisions/"
@@ -332,7 +299,7 @@ Run the canonical verification phase. Read `.claude/templates/verification-phase
 ### Regex Portability: [PASS / N warnings]
 ### Frontmatter: [PASS / N missing]
 ### Cross-references: [PASS / N broken]
-### Ops operation existence: [PASS / N missing]
+### Skill → dev-tools subcommand: [PASS / N missing]
 ### Dev-tools round-trip: [PASS / N orphans]
 ### Architectural invariants: [PASS / N regressions]
 ### Sub-agent Prerequisite placement: [PASS / N violations]

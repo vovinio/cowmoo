@@ -228,8 +228,6 @@ The specs are written in business language, not technical language. A developer 
 | Agent | Purpose |
 |-------|---------|
 | `@inbox-reader` | Read for-pm GitHub issues with full context. Used by `/catchup`. |
-| `@pm-ops` | Execute GitHub and git write operations with verification (commits, comments, labels, CREATE_FOR_PLANNER / CREATE_FOR_UXUI). Used by `/publish`, `/catchup`, `/notify`, `/import-design`. |
-| `@pm-bundle-ops` | Download a Claude Designer share URL into a transient `/tmp/pm-import-<timestamp>/` directory for `/import-design` to read. No project artifacts, no git. |
 | `@research` | Research external topics — industry standards, competitor approaches, best practices. Saves to RESEARCH.md. |
 | `@proposal-writer` | Write proposal files to `cowmoo/agent-files/pm/proposals/`. Background agent — used by `/propose`. |
 | `@check-terms` | Scan spec files against glossary for terminology inconsistencies. Used by `/review`. |

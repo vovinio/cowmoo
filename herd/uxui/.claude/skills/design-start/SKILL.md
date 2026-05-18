@@ -46,7 +46,7 @@ Read in parallel where possible. Each of these sources contributes to "what's th
 - `$PROJECT_DIR/cowmoo/design/domains/*.md` — per-domain screen definitions
 
 **What's been approved (the learning loop):**
-- `$PROJECT_DIR/cowmoo/design/VISUAL-JOURNAL.md` (if exists) — one ~15-line entry per approved bundle: character, layout, state handling, roles established/used, patterns set up, deviations. This is the pre-digested source of "visual direction already established" — written at approval time by `@uxui-journal-ops`.
+- `$PROJECT_DIR/cowmoo/design/VISUAL-JOURNAL.md` (if exists) — one ~15-line entry per approved bundle: character, layout, state handling, roles established/used, patterns set up, deviations. This is the pre-digested source of "visual direction already established" — written at approval time by `/review-bundle`.
 - Do NOT read `cowmoo/design/bundles/<ticket>/` contents here. Those are the full design artifacts (HTML, chats, READMEs) — intended for `@design-evaluator` at review time (and human-reference for designers). Reading N bundles here would blow the context budget as the project matures; the journal is the purpose-built summary.
 - If `VISUAL-JOURNAL.md` doesn't exist yet (project has no approved bundles, or you're mid-migration), treat as "no prior visual direction established — first batch will set direction."
 - **Escape hatch:** if synthesis needs richer context on a specific prior bundle (e.g. exact token names from an earlier approval the journal summarized tersely), you MAY read that one bundle's `chats/*.md` directly — targeted, one bundle, not bulk. This mirrors the pattern in `/design-draft` Step 2.

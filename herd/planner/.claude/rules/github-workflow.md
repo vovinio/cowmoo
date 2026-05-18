@@ -12,16 +12,16 @@ Always prefix GitHub comments with `**[Planner]**` and issue titles with `[Plann
 
 | Label | What it means | Who manages it |
 |-------|---------------|----------------|
-| `story` | Parent issue grouping related tasks | You create (via @plan-ops) |
+| `story` | Parent issue grouping related tasks | You create (via `/publish`) |
 | `todo` | Task is ready to be picked up and built | You create, or you relabel after rejecting work |
 | `in-progress` | Task is actively being worked on | Builder sets |
 | `for-planner` | Needs your attention — completed work with deviations, blocked tasks (builder RETURN), UXUI responses/updates, or PM answers to your `/ask pm` escalations (relabeled by PM from `for-pm` → `for-planner`) | Builder, UXUI, or PM sets |
-| `for-pm` | Spec question or clarification needed | You create (via `/ask pm` → @plan-ops) |
+| `for-pm` | Spec question or clarification needed | You create (via `/ask pm`) |
 | `for-uxui` | **Incoming:** ignore (addressed to UXUI, not you). **Outgoing:** how you ask UXUI about UI definition issues via `/ask uxui` (missing UI states, UI questions) | You create via `/ask uxui` when a task surfaces a UI issue |
 
 ## Board columns
 
-Each label maps to a Projects v2 board column. The herd keeps each card's Status column in sync with its issue label automatically — every create / relabel / close runs `dev-tools.cjs board-status`, and a human dragging a card to another column is read back as a label change on the next `/catchup` (or `/start`). You never set the column by hand.
+Each label maps to a Projects v2 board column. The herd keeps each card's Status column in sync with its issue label automatically — every create / relabel / close is mirrored to the board by the `issue-create` / `issue-transition` subcommands, and a human dragging a card to another column is read back as a label change on the next `/catchup` (or `/start`). You never set the column by hand.
 
 | Label / event | Column |
 |---|---|

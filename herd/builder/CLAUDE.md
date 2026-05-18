@@ -81,11 +81,9 @@ discuss problem with user → /return → task goes back to planner
 ## Available Agents
 
 - `@task-check` — Quick check: is there a task in progress? Lightweight prerequisite.
-- `@task-claim` — Claim a task (swap labels todo → in-progress).
 - `@git-status` — Check git working tree state (changed files, diff summary).
 - `@build-verify` — Run the project's test suite and report structured results: PASS / FAIL / NO_TESTS / ERROR. Best-effort parses failures to `file:line` + reason. Prerequisite for /review — execution, not static analysis.
 - `@task-reader` — Query GitHub Issues: PRDs, siblings, Records, project status. Pure GitHub.
-- `@task-ops` — Execute GitHub and git write operations (comments, commits, close, relabel).
 - `@auditor` — Full OWASP Top 10 deep audit. Auto-invoked by `/review` Step 1b when `@auditor-quick` confirms cross-cutting security patterns.
 - `@auditor-quick` — Fast project-wide vulnerability scan. Auto-invoked by `/review` Step 1b when `@check-security` surfaces a CRITICAL finding.
 - `@check-criteria` — Verify code implements all PRD acceptance criteria.
@@ -135,7 +133,7 @@ This agent is invoked via `moo builder`. It runs from a fixed working directory 
 
 ## Git
 
-All git and GitHub operations go through `@task-ops`.
+Git and GitHub operations run through `dev-tools.cjs` subcommands (`commit`, `push`, `issue-create`, `issue-transition`) — the skills that need them invoke them directly. The subcommands own the procedure (pathspec-restricted commit, verification, board sync).
 
 ## Communication
 

@@ -92,7 +92,6 @@ No code-map step is required here. The builder maintains `cowmoo/codebase/codeba
 
 - `@plan-check` — Quick project state check (files, GitHub status, story/task counts). Lightweight.
 - `@plan-reader` — Query GitHub Issues with reasoning (for-planner items, completed work Records).
-- `@plan-ops` — Execute GitHub and git write operations (create stories/tasks, post comments, change labels, close issues, commit).
 - `@research` — Deep research with web access. Findings go to `cowmoo/agent-files/planner/research/`.
 - `@proposal-writer` — Write proposal files (background, used by /propose).
 - `@notes-health` — Assess techstack.md, knowledge.md condition; report codebase.md status (which may not exist on greenfield — builder owns it).
@@ -138,7 +137,7 @@ Treat `cowmoo/design/` as read-only input, same as `cowmoo/specs/`. You don't re
 
 ## Git
 
-All git operations go through `@plan-ops`.
+Git and GitHub write operations run through `dev-tools.cjs` subcommands (`commit`, `push`, `issue-create`, `issue-edit-body`, `issue-transition`) — the skills that need them invoke them directly. The subcommands own the procedure (verification, board sync, sub-issue linkage).
 
 ## Communication
 

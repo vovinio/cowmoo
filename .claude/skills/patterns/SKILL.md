@@ -9,7 +9,7 @@ disable-model-invocation: false
 
 For every pattern in `docs/PATTERN-CATALOG.md`, find current instances in the herd and verify each one matches the canonical shape. Report violations; respect declared asymmetries; do not fix.
 
-This skill is principle-based: it reads the catalog as the source of truth and applies each pattern's definition to the instances it discovers. There are no hardcoded tables of parallel pairs, ops agents, rule-reading sub-agents, or expected counts. If a new instance of a pattern appears in the repo, this skill finds and checks it automatically. If a pattern is added to or removed from the catalog, this skill's coverage updates without any edits to the skill body.
+This skill is principle-based: it reads the catalog as the source of truth and applies each pattern's definition to the instances it discovers. There are no hardcoded tables of parallel pairs, rule-reading sub-agents, or expected counts. If a new instance of a pattern appears in the repo, this skill finds and checks it automatically. If a pattern is added to or removed from the catalog, this skill's coverage updates without any edits to the skill body.
 
 ---
 
@@ -30,7 +30,7 @@ If `docs/PATTERN-CATALOG.md` doesn't exist, stop and report: "No pattern catalog
 
 Walk `docs/PATTERN-CATALOG.md` and extract, for each pattern:
 
-- Its number and name (e.g., "6. Ops Agent").
+- Its number and name (e.g., "6. Delegated Write Operation").
 - Its Canonical shape (the bulleted invariants).
 - Its Find instances recipe (the shell command or glob pattern).
 - Its Declared exceptions pointer (which asymmetry files might rewrite the shape for specific agents).
@@ -44,7 +44,7 @@ For each pattern in the list:
 1. Run the Find instances recipe exactly as given. Record the set of matching files or components.
 2. Note each instance's owning agent (the `herd/<agent>/` prefix).
 3. If the pattern has an Exceptions pointer and the owning agent has a matching entry in `.claude/asymmetries/<agent>.md`, load that entry's "Curator implication" — that is the canonical shape for this instance.
-4. If the instance set is empty and the pattern declares it should have instances (e.g., "every herd agent has an ops sub-agent"), flag the absence as a finding.
+4. If the instance set is empty and the pattern declares it should have instances (e.g., "every herd agent has a proposal-writer sub-agent"), flag the absence as a finding.
 
 ### Step 3 — For each instance, check canonical shape
 

@@ -92,17 +92,37 @@ if (isSubagent) {
     }
   }
 
-  // Pattern 14 (GitHub GraphQL Patterns) — the old `gh project list` /
-  // `gh project item-add` pattern is unambiguously wrong. No prose ambiguity.
-  if (/\-ops\.md$/.test(rel)) {
-    if (/\bgh project list\b|\bgh project item-add\b/.test(content)) {
-      advise(`${rel}: uses the old \`gh project list\`/\`gh project item-add\` pattern. Use the \`addProjectV2ItemById\` GraphQL mutation instead (Pattern 14 — GitHub GraphQL Patterns).`);
-    }
+  // Pattern 6 (Delegated Write Operation) — git/GitHub writes are
+  // `dev-tools.cjs` subcommands invoked directly by SKILLS, never by a
+  // sub-agent. Post-refactor, sub-agents are reasoning/analysis only; a
+  // write in a sub-agent body is an architectural regression.
+  // Caveat (cf. the `git add .` note below): a string match can't tell a
+  // real invocation from a prose mention of the skill→dev-tools handoff.
+  // No current sub-agent trips it; a future false positive is acceptable
+  // advisory noise — the deeper /patterns audit confirms with context.
+  if (/dev-tools\.cjs"?\s+(?:commit|push|issue-create|issue-transition|issue-edit-body|journal-update)\b/.test(content)) {
+    advise(`${rel}: a sub-agent body invokes a \`dev-tools.cjs\` write subcommand. Git/GitHub writes belong in SKILLS, invoked directly (Pattern 6 — Delegated Write Operation). Sub-agents are reasoning/analysis only.`);
+  }
+  if (/\bgh issue (?:create|edit|comment|close)\b|\bgit(?:\s+-C\s+\S+)?\s+(?:commit|push)\b/.test(content)) {
+    advise(`${rel}: a sub-agent body contains a bare \`gh\`/\`git\` write command. Writes go through a \`dev-tools.cjs\` subcommand invoked by a SKILL, not a sub-agent (Pattern 6 — Delegated Write Operation).`);
   }
 
-  // Bare git / `git add .` / `git add -A` checks belong in the deeper audit.
-  // A fast hook can't distinguish a prose example ("never use `git add .`") from
-  // a real bare command. The /patterns skill handles this with context.
+  // Bare `git add .` / `git add -A` staging checks belong in the deeper
+  // audit. A fast hook can't distinguish a prose example ("never use
+  // `git add .`") from a real bare command. /patterns handles it with context.
+}
+
+// ── dev-tools.cjs checks (Pattern 14) ────────────────────────────────
+//
+// Pattern 14 (GitHub GraphQL Patterns) — the old `gh project list` /
+// `gh project item-add` CLI pattern is unambiguously wrong. Board sync
+// lives in `dev-tools.cjs` (`boardSyncCore`) and must use the
+// `addProjectV2ItemById` GraphQL mutation.
+
+if (/\/tools\/dev-tools\.cjs$/.test(rel)) {
+  if (/\bgh project list\b|\bgh project item-add\b/.test(content)) {
+    advise(`${rel}: uses the old \`gh project list\`/\`gh project item-add\` pattern. Board sync must use the \`addProjectV2ItemById\` GraphQL mutation (Pattern 14 — GitHub GraphQL Patterns).`);
+  }
 }
 
 // ── Skill checks (Pattern 16) ────────────────────────────────────────
@@ -165,7 +185,7 @@ if (isRule) {
 // and `curator` may appear inside a code fence as part of a user-facing URL
 // or example. Those belong in /patterns / /check where context is available.
 const decurationPatterns = [
-  { re: /docs\/(ARCHITECTURE|COMMUNICATION|PATTERNS|PATTERN-CATALOG)\.md/, msg: `references a curator doc. Herd files must not reference docs/ (de-curation).` },
+  { re: /docs\/(ARCHITECTURE|COMMUNICATION|PATTERN-CATALOG)\.md/, msg: `references a curator doc. Herd files must not reference docs/ (de-curation).` },
   { re: /\.claude\/asymmetries\//, msg: `references .claude/asymmetries/ — that's curator-only.` },
   { re: /\.claude\/audit-decisions\//, msg: `references .claude/audit-decisions/ — that's curator-only.` },
   { re: /\bprojects\.md\b/, msg: `references projects.md — that's the curator-only project registry.` },

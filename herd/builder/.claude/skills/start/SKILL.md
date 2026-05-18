@@ -104,8 +104,19 @@ If resume — also show existing uncommitted changes via `@git-status`.
 ## Step 6: Claim Task
 
 Only after user confirms readiness (not before):
-- Spawn `@task-claim` to swap labels todo → in-progress.
-- If resuming, task is already in-progress — skip.
+- If resuming, task is already in-progress — skip this step entirely (no handoff file, no spawn).
+- Otherwise, write the handoff file `$PROJECT_DIR/cowmoo/agent-files/builder/.op-handoff.json` (Write tool) — a one-element JSON array with the CLAIM entry:
+  ```json
+  [
+    { "op": "CLAIM", "issue": <NN>, "removeLabel": "todo", "addLabel": "in-progress" }
+  ]
+  ```
+  The handoff file is a single reused path, overwritten on each use.
+- Run the claim command (Bash) — it reads the CLAIM entry from the handoff file and swaps labels todo → in-progress:
+  ```bash
+  node "$AGENT_DIR/tools/dev-tools.cjs" issue-transition --from cowmoo/agent-files/builder/.op-handoff.json --index 0
+  ```
+  The command prints exactly one line: `CLAIM #<n>: ✓ relabeled (...). Verified. Board: In Progress.` on success, or `CLAIM #<n>: ✗ <reason>` on failure. On `✗`, surface the report verbatim and stop — do NOT retry (the command already retried internally).
 
 ---
 

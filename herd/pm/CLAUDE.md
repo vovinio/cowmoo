@@ -163,8 +163,6 @@ Confirmed and deferred items in working notes get a tag. Untagged items are impl
 ## Available Agents
 
 - `@inbox-reader` — Read for-pm GitHub issues with full context and categorize them.
-- `@pm-ops` — Execute GitHub and git write operations (commits, comments, labels, CREATE_FOR_PLANNER / CREATE_FOR_UXUI). Verifies every step.
-- `@pm-bundle-ops` — Download a Claude Designer share URL into a transient `/tmp/pm-import-<timestamp>/` directory for `/import-design` to read. No project artifacts, no git. Wraps `node "$AGENT_DIR/tools/dev-tools.cjs" design-fetch`.
 - `@research` — Research external topics, industry standards, competitor approaches. Saves findings to `cowmoo/agent-files/pm/RESEARCH.md`.
 - `@check-terms` — Terminology consistency against glossary.
 - `@check-refs` — Cross-reference integrity between files.
@@ -213,7 +211,7 @@ This agent is invoked via `moo pm`. It runs from a fixed working directory — i
 
 ## Git
 
-All git operations go through `@pm-ops`.
+Git operations run through the `dev-tools.cjs` `commit` and `push` subcommands — `/publish` invokes them directly. The subcommands own the pathspec-restricted commit and the safe push.
 
 ## Communication
 

@@ -187,9 +187,21 @@ Stop and explain to the user. If unresolvable, user runs `/return`.
 
 Problems you notice but shouldn't fix (different domain, not in this task) — don't break your coding flow:
 
-Spawn `@task-ops` **in background** with operation **CREATE_ISSUE**: title "[Builder] [description]", label "for-planner", body with details and context.
+1. Compose the issue title (`[Builder] [description]`) and a body with details and context.
+2. **Confirm before posting.** Show the user a one-line preview — the composed title and the `for-planner` label — and ask: "Post this out-of-scope issue, or skip?" A `for-planner` issue is externally visible (it posts a `[Builder]` comment and moves a board card), so it never goes out silently. On **skip**, just mention the observation in conversation (per the "No scope creep" rule below) and continue the task — do not write the handoff or run the create.
+3. On confirmation, write the handoff file `$PROJECT_DIR/cowmoo/agent-files/builder/.op-handoff.json` (Write tool) — a one-element JSON array with the CREATE_ISSUE entry:
+   ```json
+   [
+     { "op": "CREATE_ISSUE", "title": "[Builder] <description>", "label": "for-planner", "body": "<body>" }
+   ]
+   ```
+4. Run the create command (Bash) — it reads the CREATE_ISSUE entry from the handoff file:
+   ```bash
+   node "$AGENT_DIR/tools/dev-tools.cjs" issue-create --from cowmoo/agent-files/builder/.op-handoff.json --index 0
+   ```
+   The command prints exactly one line: `CREATE_ISSUE: ✓ #<n> — <title>. Label: <label>. Board: <column>.` on success, or `CREATE_ISSUE: ✗ <reason>` on failure (if a `#<number>` appears in a `✗` report, the issue exists — do NOT recreate it). Do not retry on `✗` — the command already retried internally.
 
-Continue working on the current task.
+The handoff file is a single reused path, overwritten on each use. Continue working on the current task.
 
 ---
 

@@ -39,7 +39,16 @@ Wait for explicit approval before proceeding.
 
 ## Step 3: Commit and Push
 
-Spawn `@pm-ops` with operation **COMMIT** and the approved message. Wait for the COMMIT report.
+Run the `commit` command directly, passing the approved message inline:
+
+```bash
+node "$AGENT_DIR/tools/dev-tools.cjs" commit "$(cat <<'EOF'
+<approved message>
+EOF
+)"
+```
+
+The command owns the whole procedure — merge-state guard, pathspec-restricted staging, index-lock retry, hash-pinned content-verify. It prints exactly one report (`COMMIT: ✓ <hash> <subject>` / `COMMIT: Nothing to commit.` / `COMMIT: ✗ <reason>`, plus an optional `Note:` line) and sets the exit code. Read its stdout.
 
 **If the report begins with `COMMIT: ✗`** — the operation either refused to run (mid-merge/rebase/cherry-pick state) or failed during verification (foreign content in the commit). Surface the report verbatim to the user and **stop the publish flow** — do NOT proceed to PUSH. The user resolves the underlying state (finish the merge, investigate the foreign content with the recovery command in the report) then re-runs `/publish`.
 
@@ -47,7 +56,13 @@ Spawn `@pm-ops` with operation **COMMIT** and the approved message. Wait for the
 
 **On `COMMIT: ✓`** — proceed. If the success report includes a `Note:` line about pre-existing foreign staged content, surface that line to the user so they know it stayed staged.
 
-Then spawn `@pm-ops` with operation **PUSH** to publish the commit to the remote. Wait for the PUSH report.
+Then run the `push` command to publish the commit to the remote:
+
+```bash
+node "$AGENT_DIR/tools/dev-tools.cjs" push
+```
+
+It prints exactly one report (`PUSH: ✓ to origin/<branch>` / `PUSH: skipped — no git remote 'origin' configured.` / `PUSH: ✗ <reason>`) and sets the exit code. Read its stdout.
 
 If the project has no `origin` remote, PUSH reports `skipped` and the publish completes locally — that's expected on a fresh project that hasn't been linked to GitHub yet.
 
@@ -88,8 +103,8 @@ Before finishing, confirm:
 
 - [ ] Conversation captured via `/draft` (or confirmed already current)
 - [ ] Changes reviewed and approved by user
-- [ ] Code committed via @pm-ops (verified)
-- [ ] Pushed via @pm-ops (or `PUSH: skipped` reported when no remote configured)
+- [ ] Code committed via `dev-tools.cjs commit` (verified)
+- [ ] Pushed via `dev-tools.cjs push` (or `PUSH: skipped` reported when no remote configured)
 - [ ] Report presented with next steps
 
 ---

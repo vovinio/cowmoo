@@ -96,7 +96,7 @@ What do you do? Be specific — describe your exact actions, what you'd write/ed
 
 Run scenarios sequentially (each one's result informs whether the skill held).
 
-**Sub-agent caveat:** if the skill being tested spawns sub-agents that apply canonical rule content (e.g., ops agents reading `github-workflow.md`; builder check agents reading `test-files.md`, `frontend.md`, `database.md`, `security-on-api.md`; UXUI check agents reading `ui-vocabulary.md`), the pressure-test prompt must include those rule files explicitly — sub-agents don't inherit always-loaded rules from the main agent. Pasting just the main agent's CLAUDE.md + skill will produce false PASSes in scenarios that hinge on sub-agent rule compliance.
+**Sub-agent caveat:** if the skill being tested spawns sub-agents that apply canonical rule content (e.g., builder check agents reading `test-files.md`, `frontend.md`, `database.md`, `security-on-api.md`; UXUI check agents reading `ui-vocabulary.md`), the pressure-test prompt must include those rule files explicitly — sub-agents don't inherit always-loaded rules from the main agent. Pasting just the main agent's CLAUDE.md + skill will produce false PASSes in scenarios that hinge on sub-agent rule compliance.
 
 ---
 

@@ -18,8 +18,8 @@ You see only this prompt. No prior conversation, no edit history. That's deliber
 
 The requester provides:
 
-- **What changed** — one sentence on the canonical content removed, renamed, or restructured. Example: "Removed UXUI's 4-way ops split asymmetry from `.claude/asymmetries/uxui.md` and dropped Pattern 6's count constraint from `docs/PATTERN-CATALOG.md`."
-- **Search terms** — specific strings or names that should no longer appear (or should appear differently). Example: `UXUI's 4-way split`, `four ops sub-agents`, `4-way ops`, `single ops agent`.
+- **What changed** — one sentence on the canonical content removed, renamed, or restructured. Example: "Renamed the `@foo-helper` sub-agent to `@foo-checker` and dropped Pattern N's count constraint from `docs/PATTERN-CATALOG.md`."
+- **Search terms** — specific strings or names that should no longer appear (or should appear differently). Example: `@foo-helper`, `foo-helper`, `the foo helper`, `Foo Helper`.
 - **Files already updated** — the list of files the requester edited as part of this change, so you don't re-flag the requester's own edits as findings.
 
 If any of these is missing or vague, do your best with what's given but say so in your report.
@@ -32,7 +32,7 @@ The requester's term list is a starting point, not the complete query. Derive va
 
 - Hyphenated and non-hyphenated forms (`4-way` / `4 way` / `four-way` / `four way`).
 - Plurals and conjugations (`splits` / `splitting` / `split`).
-- Anchor / fragment variants for markdown links — if the removed thing had a header like "## Four ops sub-agents", search for `#four-ops-sub-agents` too.
+- Anchor / fragment variants for markdown links — if the removed thing had a header like "## Some Section Name", search for `#some-section-name` too.
 - Path references — if a file was deleted, search for the path (`.claude/asymmetries/uxui.md` etc.).
 - Common synonyms in this codebase (e.g., "asymmetry" / "deviation" / "exception").
 
