@@ -1,16 +1,28 @@
 ---
 name: review
-description: Verify spec integrity — terminology, references, scope, completeness, structure, product risk. Run after /digest to verify before shipping.
+description: Verify spec integrity — terminology, references, scope, completeness, structure, product risk. Run after /digest. Light single-pass review by default; /review full runs the deep six-agent audit.
 user-invocable: true
 disable-model-invocation: false
+argument-hint: [full]
 allowed-tools: Agent, Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion
 ---
 
 # Review
 
-Verify spec integrity after digest. Run all six checks in parallel, collect findings, present a unified report, discuss with user, and apply agreed fixes.
+Verify spec integrity after digest — terminology, references, scope, completeness, structure, and product risk. Collect findings, present a unified report, discuss with the user, and apply agreed fixes.
 
 Like the builder's `/review` verifies code against acceptance criteria, this verifies specs against templates, glossary, references, and structural integrity.
+
+---
+
+## Modes
+
+`/review` runs in one of two modes — same six concerns, same report, same discussion and fix flow (Steps 3–7). Only the scan in Step 2 differs.
+
+- **Light** (default — bare `/review`) — one `@check-light` sub-agent reads the spec corpus once and does a single combined scan-depth pass over all six concerns. Fast and cheap. Good enough for everyday changes — a label rename, a rule tweak, a new feature in an existing domain.
+- **Full** (`/review full`) — the six dedicated check agents (`@check-terms`, `@check-refs`, `@check-scope`, `@check-completeness`, `@check-structure`, `@check-risk`) run in parallel, each doing an exhaustive audit of its concern. Slower and more thorough. Run it periodically, after large structural changes (a new domain, an entity reorganization), or when a light review flags something it couldn't settle.
+
+Both modes are state-based — they review the spec files as they are now, not a diff of what changed. The argument selects the mode: `full` → full mode; anything else, including no argument → light mode.
 
 ---
 
@@ -32,9 +44,17 @@ Read all spec files so you have full product context for understanding agent fin
 
 ---
 
-## Step 2: Run All Checks and Collect Results
+## Step 2: Run Checks and Collect Results
 
-Launch all six checks in a single response using six parallel Agent tool calls. Each agent already has its full instructions — keep the prompt brief:
+The mode (see `## Modes`) decides what to spawn. Either way, the result is a set of findings under the six headings `## Terminology Check`, `## Reference Check`, `## Scope Check`, `## Completeness Check`, `## Structure Check`, `## Risk Check`.
+
+**Light mode** — spawn one `@check-light` agent. It already has its full instructions — keep the prompt brief:
+
+- @check-light → `subagent_type: "check-light"`, prompt: `"Run the light combined review on all spec files."`
+
+It returns a single report containing all six headings.
+
+**Full mode** — launch all six checks in a single response using six parallel Agent tool calls. Each agent already has its full instructions — keep the prompt brief:
 
 - @check-terms → `subagent_type: "check-terms"`, prompt: `"Run terminology check on all spec files."`
 - @check-refs → `subagent_type: "check-refs"`, prompt: `"Run reference integrity check on all spec files."`
@@ -45,14 +65,17 @@ Launch all six checks in a single response using six parallel Agent tool calls. 
 
 All six must be in the same response so they run in parallel.
 
-**Before consolidating**, verify each agent returned a usable findings report. Each agent runs with `maxTurns: 50` and can truncate or error out on projects with many domain files. Presence/non-empty check only — don't deeply parse:
+**Before consolidating**, verify the check returned a usable findings report. Agents run with `maxTurns: 50` and can truncate or error out on projects with many domain files. Presence/non-empty check only — don't deeply parse:
 
-- Each result is non-empty and contains the agent's expected heading: `## Terminology Check`, `## Reference Check`, `## Scope Check`, `## Completeness Check`, `## Structure Check`, `## Risk Check`.
+- **Light mode** — the single `@check-light` result is non-empty and contains all six headings (`## Terminology Check` … `## Risk Check`).
+- **Full mode** — each of the six results is non-empty and contains its agent's expected heading.
 - No result is an error message, a refusal, or unstructured prose with no findings section.
 
-If any agent returned an error, empty output, or unrecognizable format: stop, name which agent failed, and ask the user whether to re-spawn that agent or proceed knowingly without its coverage. A silent missing report would look identical to "no issues found" — always surface the gap.
+If a check returned an error, empty output, or unrecognizable format: stop, name which check failed, and ask the user whether to re-spawn it or proceed knowingly without its coverage. A silent missing report would look identical to "no issues found" — always surface the gap.
 
-Once all six reports are verified present and usable, read the results, deduplicate overlapping findings, and proceed to the report. Re-launching a successfully-completed agent would duplicate work.
+Once the report(s) are verified present and usable, read the results, deduplicate overlapping findings, and proceed to the report. Re-launching a successfully-completed agent would duplicate work.
+
+**`Needs full review` notes (light mode).** `@check-light` may mark a concern with a `Needs full review:` line when a light pass couldn't settle it. These are not findings to fix — collect them and carry them to Step 7's hand-off picker so the user can choose to escalate to `/review full`.
 
 ---
 
@@ -102,7 +125,7 @@ Present a single merged report:
 [Summary of what passed — how many terms consistent, how many refs valid, etc.]
 ```
 
-**Expanding agent findings.** The sub-agents are specialized scanners — they return accurate but terse labels. Your job as coordinator is to expand each finding with the full product context needed for decision-making. Don't pass agent output through verbatim. For every quick fix and structural item, present:
+**Expanding agent findings.** The check sub-agent(s) are scanners — they return accurate but terse labels. Your job as coordinator is to expand each finding with the full product context needed for decision-making. Don't pass agent output through verbatim. For every quick fix and structural item, present:
 
 1. **What the spec says** — quote the actual text from the file(s)
 2. **What's wrong** — explain the conflict, gap, or inconsistency in plain language
@@ -218,6 +241,8 @@ State the outcome as a prose stamp:
 
 Then render an `AskUserQuestion` hand-off picker of concrete next actions — never close on a prose "Run /publish" line. Build the options from context: `/publish` first with `(Recommended)` — *commits the reviewed specs and pushes to the remote*; other live continuations (e.g. continue discussing a structural item routed to working notes); and `Done for now` last. Each option's `description` names what it leads to.
 
+**If this was a light review and `@check-light` returned any `Needs full review` notes** (Step 2), add a `/review full` option to the picker — *re-runs the review with the six dedicated agents for the concerns the light pass couldn't settle* — placed above `Done for now`. If the light review came back with no such notes, don't offer it: a clean light review is a sufficient gate for everyday changes.
+
 Do NOT include `/notify` as an option here. `/publish` Step 4 owns that decision — it runs the `downstream-engaged` check and only suggests `/notify` when planner or UXUI has actually run. Offering it from `/review` would fire unconditionally, landing as noise on greenfield projects where no downstream agent exists yet.
 
 ---
@@ -226,7 +251,7 @@ Do NOT include `/notify` as an option here. `/publish` Step 4 owns that decision
 
 Before finishing, confirm:
 
-- [ ] All six check agents ran in parallel
+- [ ] The check ran — `@check-light` (light mode) or all six check agents in parallel (full mode)
 - [ ] Findings deduplicated across agents
 - [ ] Classified by effort (auto-fix / quick fix / structural)
 - [ ] Each finding expanded with product context, options, recommendation
@@ -241,8 +266,8 @@ Before finishing, confirm:
 
 ## Rules
 
-- **Parallel execution** — always run all six agents simultaneously, never sequentially
-- **One run only per successful agent** — re-launch only agents whose output was empty/malformed. Don't re-launch a successfully-completed agent.
+- **Mode selects the scan** — light mode spawns one `@check-light`; full mode runs all six agents simultaneously in one response, never sequentially. Steps 3–7 are identical for both.
+- **One run only per successful agent** — re-launch only a check whose output was empty/malformed. Don't re-launch a successfully-completed agent.
 - **Deduplicate** — same issue found by multiple checks should appear once in the report
 - **Classify by effort** — auto-fix, quick fix, structural. Handle each tier differently.
 - **Expand findings** — don't pass agent output verbatim. Add product context, quotes, options, and recommendations.

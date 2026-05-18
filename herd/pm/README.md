@@ -66,7 +66,7 @@ This is where working notes become formal specs. Run this as a **dedicated sessi
 ```
 
 1. **`/digest`** — reads your working notes, transforms confirmed items into spec format using templates, proposes completions for gaps, writes to spec files, cleans processed items from notes
-2. **`/review`** — runs 6 integrity checks in parallel (terminology, references, scope, completeness, structure, risk), presents findings, applies fixes
+2. **`/review`** — verifies spec integrity across six concerns (terminology, references, scope, completeness, structure, risk), presents findings, applies fixes. A light single-pass review by default; **`/review full`** runs the deeper six-agent audit for periodic or post-restructure checks
 3. **`/publish`** — commits all changes to git
 4. **`/notify`** — announces spec changes to the planner or UXUI (inference will propose targets based on which downstream files exist) and resolves any tracked inbox issues
 
@@ -192,7 +192,7 @@ The specs are written in business language, not technical language. A developer 
 | `/start` | Load the project and orient the session — greet a fresh project, or resume an existing one (assesses notes condition, suggests focus area). |
 | `/draft` | Extract decisions from the current conversation and save to working notes. |
 | `/digest` | Formalize confirmed working notes into spec files. Run as a dedicated session. |
-| `/review` | Verify spec integrity — terminology, references, scope, completeness, structure, risk. Run after digest. |
+| `/review` | Verify spec integrity — terminology, references, scope, completeness, structure, risk. Light single-pass review by default; `/review full` runs the deeper six-agent audit. Run after digest. |
 | `/publish` | Commit PM file changes to git — specs, working notes, proposals. Run after /review or anytime. |
 | `/notify` | Announce spec changes to the planner or UXUI, and resolve tracked inbox issues. Run after /publish. |
 
@@ -230,12 +230,13 @@ The specs are written in business language, not technical language. A developer 
 | `@inbox-reader` | Read for-pm GitHub issues with full context. Used by `/catchup`. |
 | `@research` | Research external topics — industry standards, competitor approaches, best practices. Saves to RESEARCH.md. |
 | `@proposal-writer` | Write proposal files to `cowmoo/agent-files/pm/proposals/`. Background agent — used by `/propose`. |
-| `@check-terms` | Scan spec files against glossary for terminology inconsistencies. Used by `/review`. |
-| `@check-refs` | Verify cross-reference integrity between files. Used by `/review`. |
-| `@check-scope` | Verify scope boundaries between active specs and backlog. Used by `/review`. |
-| `@check-completeness` | Verify specs follow templates, flag missing sections and vague language. Used by `/review`. |
-| `@check-structure` | Verify domain cohesion, feature/domain classification, and spec self-containment. Used by `/review`. |
-| `@check-risk` | Examine specs for product-level risks — implicit assumptions, unaddressed scenarios, fragile dependencies. Used by `/review`. |
+| `@check-light` | Single-pass scan-depth review of all six concerns in one read. Used by `/review` (light mode). |
+| `@check-terms` | Scan spec files against glossary for terminology inconsistencies. Used by `/review full`. |
+| `@check-refs` | Verify cross-reference integrity between files. Used by `/review full`. |
+| `@check-scope` | Verify scope boundaries between active specs and backlog. Used by `/review full`. |
+| `@check-completeness` | Verify specs follow templates, flag missing sections and vague language. Used by `/review full`. |
+| `@check-structure` | Verify domain cohesion, feature/domain classification, and spec self-containment. Used by `/review full`. |
+| `@check-risk` | Examine specs for product-level risks — implicit assumptions, unaddressed scenarios, fragile dependencies. Used by `/review full`. |
 | `@recon-scout-chrome` | Quick scout of a live web platform via Claude in Chrome — maps navigation, identifies entities, detects UI patterns. Used by `/recon-chrome`. |
 | `@recon-scout-pw` | Quick scout of a live web platform via Playwright CLI. Used by `/recon-playwright`. |
 | `@recon-research` | Research a platform from public sources after scouting — company info, docs, features, pricing. Shared by both recon skills. |

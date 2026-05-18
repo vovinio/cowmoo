@@ -155,6 +155,7 @@ Confirmed and deferred items in working notes get a tag. Untagged items are impl
 
 - `@inbox-reader` — Read for-pm GitHub issues with full context and categorize them.
 - `@research` — Research external topics, industry standards, competitor approaches. Saves findings to `cowmoo/agent-files/pm/RESEARCH.md`.
+- `@check-light` — Single-pass combined review of all six concerns; used by `/review` light mode.
 - `@check-terms` — Terminology consistency against glossary.
 - `@check-refs` — Cross-reference integrity between files.
 - `@check-scope` — Scope boundary integrity (active specs vs backlog).
