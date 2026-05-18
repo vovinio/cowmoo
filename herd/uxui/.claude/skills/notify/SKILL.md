@@ -2,7 +2,7 @@
 name: notify
 description: Announce cowmoo/design/ file changes via for-planner issue when active tasks may consume them. Closes tracked inbox items the work resolves.
 user-invocable: true
-disable-model-invocation: true
+disable-model-invocation: false
 allowed-tools: Bash, Read, Glob, Agent, Write
 ---
 

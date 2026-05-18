@@ -77,28 +77,34 @@ Iterative, small-batch flow with three phases of thinking:
                                 ↓
             (designer works in claude.ai/design, submits)
                                 ↓
-            /catchup sees uxui:review → dispatches /review-bundle
+   /catchup (reconcile board + scan) → /process-inbox presents & routes
                                 ↓
-                    APPROVE → bundle attached to domain file,
-                              issue flipped to uxui:done and closed
-                    REJECT  → feedback comment, flipped back to uxui:todo
+   bundle → /review-bundle → evaluate →
+              APPROVE → /approve-design: bundle attached to domain file,
+                        journal written, issue flipped uxui:done + closed
+              REJECT  → feedback comment, flipped back to uxui:todo
+   no bundle → /resolve-review → treat comments →
+              resolve & close (no design needed) /
+              send back to uxui:todo / fix a UI definition
 ```
 
 1. `/design-start` — Agent-led synthesis: reads specs + design defs + closed `uxui:done` tasks + bundle dirs to learn what's been approved and what visual direction has emerged. Proposes 1-3 next tasks with reasoning (why these together, why now, what they inherit, what they establish). Conversational; nothing written.
 2. `/design-draft` — Composes each task body inline (main agent, full conversation context); validates via `@design-task-checker`; refines until clean; writes `design-draft.json`. Rerunnable.
 3. `/design-publish` — Pure ship: preview + confirm + create N independent `uxui:todo` tasks via the `issue-create` subcommand.
 4. Designer picks up a `uxui:todo`, iterates in `claude.ai/design`, exports share URL, comments on issue, relabels `uxui:review`.
-5. `/catchup` notices `uxui:review` and dispatches `/review-bundle <issue>`.
-6. `/review-bundle` — Fetches the bundle (runs `node "$AGENT_DIR/tools/dev-tools.cjs" bundle-fetch`), runs `@design-evaluator`, triages with you, then approves (commits the domain-file edit, flips the issue to `uxui:done` and closes) or rejects (flips back to `uxui:todo`).
-7. When a meaningful chunk of related screens has reached `uxui:done`, suggest `/notify planner` — judgment call, never automatic.
+5. `/catchup` (lean gate) reconciles the board, scans the inbox, classifies each `uxui:review` card; if there is work it hands off to `/process-inbox`, which presents the inbox and dispatches each item to its resolution skill.
+6. `/review-bundle` (bundle path) — fetches the bundle (`bundle-fetch`), runs `@design-evaluator`, triages with you. On reject: feedback comment, flipped back to `uxui:todo`. On approve: hands off to `/approve-design`.
+7. `/approve-design` — the approval transaction: attaches the bundle to the domain file, writes the visual journal, commits, flips the issue to `uxui:done` and closes. Re-invocable to resume a partial run.
+8. `/resolve-review` (no-bundle path) — treats the comments and resolves with you: close as no-longer-needed (without `uxui:done`), send back to `uxui:todo`, or fix a UI definition. A bundle is one possible input, not a requirement.
+9. When a meaningful chunk of related screens has reached `uxui:done`, suggest `/notify planner` — judgment call, never automatic.
 
 ### Messages Flow
 
 ```
-/catchup → (work) → /notify or /ask
+/catchup → /process-inbox → (/process-message | /review-bundle | /resolve-review) → /notify or /ask
 ```
 
-`/catchup` handles both `for-uxui` agent messages (inline) and `uxui:review` designer submissions (dispatched to `/review-bundle`).
+`/catchup` is the lean inbox gate — reconcile the board, scan, report counts. `/process-inbox` presents the inbox and routes each item: `for-uxui` agent messages to `/process-message`, `uxui:review` bundles to `/review-bundle`, no-bundle review tasks to `/resolve-review`.
 
 ### Utilities
 
@@ -110,14 +116,14 @@ Iterative, small-batch flow with three phases of thinking:
 
 **Phase A — UI definitions:** `/start` (load context, assess coverage), `/draft` (capture discussion), `/define` (formalize into cowmoo/design/ files), `/review` (verify coverage against specs), `/publish` (commit changes)
 **Phase B — Design tasks:** `/design-start` (synthesize state, propose 1-3 next tasks with reasoning — no writes), `/design-draft` (compose task bodies inline + validate + write design-draft.json — rerunnable), `/design-publish` (preview + ship N uxui:todo issues — pure publication)
-**Submission review:** `/review-bundle` (process a `uxui:review` submission — fetch bundle, evaluate, approve or reject; dispatched by `/catchup` or invoked directly)
-**Messages:** `/catchup` (process `for-uxui` agent messages inline; dispatch `uxui:review` designer submissions to `/review-bundle`), `/ask pm` (ask PM about spec gaps), `/ask planner` (respond to a for-uxui message), `/notify planner` (announce cowmoo/design/ changes to planner)
+**Review tasks:** `/review-bundle` (bundle path — fetch, `@design-evaluator`, triage, reject; hands approval to `/approve-design`), `/approve-design` (the approval transaction — attach bundle, write journal, commit, close as `uxui:done`; re-invocable to resume a partial run), `/resolve-review` (no-bundle path — treat the comments, resolve/send-back/fix a UI definition)
+**Inbox & messages:** `/catchup` (lean gate — reconcile the board, scan, report counts), `/process-inbox` (present the inbox + route each item), `/process-message` (handle one `for-uxui` agent message — spec update / UI gap / UI question), `/ask pm` (ask PM about spec gaps), `/ask planner` (respond to a for-uxui message), `/notify planner` (announce cowmoo/design/ changes to planner)
 **Utilities:** `/status` (read-only snapshot), `/propose` (suggest system improvements)
 
 ## Available Agents
 
 - `@research` — Research industry UX conventions, accessibility standards, design system references, comparable product patterns. Saves findings to `cowmoo/agent-files/uxui/RESEARCH.md`. Spawn on demand during discussion when the user asks about interaction conventions, accessibility standards, or comparable-product patterns — not wired into any skill flow. Example: "how do dashboards typically handle empty states?" is a good `@research` moment.
-- `@check-coverage` — Verify UI definitions cover all spec entities, features, flows, states, and edge cases.
+- `@check-coverage` — Verify UI definitions cover one spec domain (entities, features, flows, states, edge cases). `/review` fans it out in parallel, one per domain; product-wide checks are the `/review` coordinator's.
 - `@design-task-checker` — Validate `design-draft.json` before publish — each task self-contained, no file references in prompts, all required states inlined, batch context present. Returns classified findings. Used by `/design-draft`.
 - `@design-evaluator` — Evaluate a designer's submitted Claude Design bundle against task brief, specs, and roles. Returns classified findings (GAPS, CONCERNS, OBSERVATIONS, ROLE_ADDITIONS). Used by `/review-bundle`.
 - `@proposal-writer` — Write proposal files (background, used by /propose).
@@ -160,8 +166,8 @@ You define the product's UI structure: design intent, navigation, user journeys,
 | `cowmoo/design/journeys.md` | End-to-end user arcs that span multiple screens or domains | Committed via /publish |
 | `cowmoo/design/roles.md` | Role vocabulary reference — abstract role names domain files reference, no values | Committed via /publish |
 | `cowmoo/design/screen-index.md` | Master list of all screens organized by domain, with 1-line descriptions and pointers to domain files | Committed via /publish |
-| `cowmoo/design/domains/*.md` | Per-domain screen definitions, flows, states — reference roles from `cowmoo/design/roles.md`. Approved bundles attached as `**Bundle:**` lines per screen. | Committed via /publish, or via /review-bundle's bundle-attach commit |
-| `cowmoo/design/VISUAL-JOURNAL.md` | Running record of approved design bundles — one ~15-line entry per ticket capturing character, layout, state handling, roles, patterns, deviations. **Latest-only**: re-approvals replace the prior entry in place. Read by `/design-start` as the pre-digested source for "visual direction already established." | Written by `/review-bundle` (the `journal-update` subcommand), committed together with the domain file |
+| `cowmoo/design/domains/*.md` | Per-domain screen definitions, flows, states — reference roles from `cowmoo/design/roles.md`. Approved bundles attached as `**Bundle:**` lines per screen. | Committed via /publish, or via /approve-design's bundle-attach commit |
+| `cowmoo/design/VISUAL-JOURNAL.md` | Running record of approved design bundles — one ~15-line entry per ticket capturing character, layout, state handling, roles, patterns, deviations. **Latest-only**: re-approvals replace the prior entry in place. Read by `/design-start` as the pre-digested source for "visual direction already established." | Written by `/approve-design` (the `journal-update` subcommand), committed together with the domain file |
 | `cowmoo/design/bundles/<ticket>/` | Extracted Claude Design exports — README, project/*.html, chats/*.md, meta.json. One folder per `uxui:todo` ticket. Read by `@design-evaluator` at review time; designer/human reference otherwise. NOT read by `/design-start` (that reads `VISUAL-JOURNAL.md`) and NOT consumed by the build chain — `@check-design` works from the domain file + role vocabulary, not the bundle. | Written + committed by `/review-bundle` (the `bundle-fetch` subcommand) |
 | `cowmoo/agent-files/uxui/WORKING-NOTES.md` | Discussion capture, UI decisions in progress | Consumed by /define |
 | `cowmoo/agent-files/uxui/design-draft.json` | Phase B draft — JSON: `batch` context + a `tasks` array of `{title, label, body}` objects, before publish. Rewritten by `/design-draft`, consumed by `/design-publish`, optionally cleared after publish. | Created by /design-draft |

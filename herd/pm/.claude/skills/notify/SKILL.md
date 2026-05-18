@@ -2,7 +2,7 @@
 name: notify
 description: Announce spec changes via for-planner or for-uxui issue, and resolve tracked inbox issues. Run after /publish when specs changed.
 user-invocable: true
-disable-model-invocation: true
+disable-model-invocation: false
 argument-hint: <planner | uxui>
 allowed-tools: Bash, Read, Glob, Agent, Write
 ---

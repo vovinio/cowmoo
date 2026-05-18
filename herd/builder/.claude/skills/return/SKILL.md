@@ -2,7 +2,7 @@
 name: return
 description: Return current task to planner with structured explanation. Preview before executing.
 user-invocable: true
-disable-model-invocation: true
+disable-model-invocation: false
 allowed-tools: Read, Write, Agent, Bash
 ---
 

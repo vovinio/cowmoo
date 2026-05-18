@@ -2,7 +2,7 @@
 name: status
 description: Quick read-only project snapshot — file states, tagged-item counts, inbox, domains, backlog size
 user-invocable: true
-disable-model-invocation: true
+disable-model-invocation: false
 allowed-tools: Read, Glob, Agent, Bash
 ---
 

@@ -2,7 +2,7 @@
 name: review
 description: Verify implementation using 4 parallel check agents, then verify acceptance criteria with evidence. Run after /build.
 user-invocable: true
-disable-model-invocation: true
+disable-model-invocation: false
 allowed-tools: Agent, Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion
 ---
 

@@ -76,7 +76,7 @@ If a role you need doesn't exist in `cowmoo/design/roles.md`, add it there first
 
 - [Action]: [trigger] → [what user sees] → [where they end up]
 
-**Bundle:** [Attached post-approval by `/review-bundle`. Format: `cowmoo/design/bundles/<ticket>/` (approved YYYY-MM-DD, ticket #N). Absent until a Claude Design submission is approved for this screen. Multiple lines if the screen has been re-designed.]
+**Bundle:** [Attached post-approval by `/approve-design`. Format: `cowmoo/design/bundles/<ticket>/` (approved YYYY-MM-DD, ticket #N). Absent until a Claude Design submission is approved for this screen. Multiple lines if the screen has been re-designed.]
 
 ---
 
@@ -116,4 +116,4 @@ arcs belong in `cowmoo/design/journeys.md`, not here.]
 - **No raw values.** No hex codes, no pixel numbers, no `rgb()/rgba()`, no specific font sizes or weights. Concrete values are resolved downstream (src/, framework defaults, BUILD-NOTES.md).
 - **Cross-domain arcs belong in `cowmoo/design/journeys.md`** — domain flows stay within a single domain. When a user journey crosses domains, move it to journeys.
 - **Screens listed here must appear in `cowmoo/design/screen-index.md`** — every screen defined in a domain file has an entry in the master screen index. `/define` handles this sync.
-- **Bundle: lines are post-approval only** — never write a `**Bundle:**` line speculatively. Only `/review-bundle` writes them, after a designer's submission has been reviewed and approved.
+- **Bundle: lines are post-approval only** — never write a `**Bundle:**` line speculatively. Only `/approve-design` writes them, after a designer's submission has been reviewed and approved.

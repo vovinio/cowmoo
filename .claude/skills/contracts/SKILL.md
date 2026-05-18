@@ -61,7 +61,7 @@ A `/catchup` that loads its inbox through a reader sub-agent (planner's `@plan-r
 
 Producer→receiver channel pairing is *not* checked here — Section 5's channel trace covers it end-to-end on the `for-<target>` label axis. Section 2 checks only the reader→`/catchup` seam inside a single agent.
 
-One thing neither section checks mechanically: an *orphan handler* — a `/catchup` `### category` handler that no message ever lands in. `/catchup` handlers are category-keyed (`Spec update`, `UI gap`, …) while channels and labels are `for-<target>`-keyed, so the two can't be paired by string match. A dead handler is left to `/audit-agent`'s judgement pass, which reads the skill in context. This is a deliberate scope boundary, not an oversight.
+One thing neither section checks mechanically: an *orphan handler* — a `### category` handler that no message ever lands in. These handlers are category-keyed (`Spec update`, `UI gap`, … — in `/catchup`, or, for UXUI, in `/process-message`) while channels and labels are `for-<target>`-keyed, so the two can't be paired by string match. A dead handler is left to `/audit-agent`'s judgement pass, which reads the skill in context. This is a deliberate scope boundary, not an oversight.
 
 ### Discovery
 
@@ -176,8 +176,9 @@ Sender skill file exists →
     `issue-transition` (a transfer relabel of an existing issue) →
       the handoff entry carries the expected `for-<target>` label →
         the issue ends up with that label (created fresh, or relabeled) →
-          the receiver's /catchup reads that label →
-            the handler for the category exists →
+          the receiver's /catchup reads that label (directly, or routes it onward) →
+            the category handler exists — in /catchup, or in a skill /catchup dispatches to
+              (UXUI: `/catchup` → `/process-inbox` → `/process-message`) →
               the handler performs its response write (a `dev-tools.cjs` invocation)
 ```
 

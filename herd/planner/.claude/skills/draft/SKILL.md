@@ -2,7 +2,7 @@
 name: draft
 description: Compile the current conversation into draft.md — PRDs for the next story plus file update notes. Run after /start discussion, can run multiple times.
 user-invocable: true
-disable-model-invocation: true
+disable-model-invocation: false
 allowed-tools: Write, Read, Glob, AskUserQuestion
 ---
 

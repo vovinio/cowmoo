@@ -2,7 +2,7 @@
 name: ask
 description: Send a for-pm (spec gaps) or for-planner (response to a for-uxui message) issue. Closes tracked inbox items when the response ships.
 user-invocable: true
-disable-model-invocation: true
+disable-model-invocation: false
 argument-hint: <pm | planner>
 allowed-tools: Bash, Read, Glob, Agent, AskUserQuestion, Write
 ---

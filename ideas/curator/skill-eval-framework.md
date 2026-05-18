@@ -53,7 +53,7 @@ A curator skill that:
 **UXUI:**
 - `/define` without specs → should block: "No specs to read"
 - `/design-publish` without draft → should block
-- `/review-bundle` against missing bundle → should block with clear error
+- `/review-bundle` against a card with no share URL → should redirect to `/resolve-review` (a no-bundle card is a valid state, resolved from its comments — not an error)
 
 **PM:**
 - `/digest` → should move [ready] items to specs, [future] to BACKLOG

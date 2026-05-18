@@ -145,8 +145,10 @@ UXUI works in two phases. **Phase A** defines UI structure directly from specs. 
 /design-draft       # Compose task bodies, validate, write draft.md
 /design-publish     # Create uxui:todo issues for the designer
 
-# Review a designer's submission
-/review-bundle      # Fetch bundle, evaluate, approve (→ uxui:done) or reject
+# Resolve a UX: Review task
+/review-bundle      # Bundle path: fetch, evaluate, triage, reject
+/approve-design     # The approval transaction: attach bundle, journal, close uxui:done
+/resolve-review     # No-bundle path: treat the comments, resolve / send back / fix
 ```
 
 See `herd/uxui/CLAUDE.md` → **Workflow** for the complete flow.
@@ -253,10 +255,10 @@ Planner /catchup               →  approves (close) or rejects (todo + comment)
 | `/review` | Verify definitions cover all specs |
 | `/publish` | Commit UI definition changes and push to remote |
 | `/design-start` · `/design-draft` · `/design-publish` | Phase B: synthesize, draft, and publish design tasks for a human designer |
-| `/review-bundle` | Phase B: fetch a designer's submission, evaluate, approve or reject |
+| `/review-bundle` · `/approve-design` · `/resolve-review` | Phase B: resolve a `uxui:review` task — evaluate a designer's bundle, run the approval transaction, or treat a no-bundle card |
 | `/ask [pm\|planner]` | Ask PM about spec gaps, or respond to a planner `for-uxui` finding |
 | `/notify planner` | Announce `cowmoo/design/` file changes when active tasks may consume them |
-| `/catchup` | Process incoming `for-uxui` issues |
+| `/catchup` · `/process-inbox` · `/process-message` | Inbox: `/catchup` gates (reconcile board + scan), `/process-inbox` presents & routes, `/process-message` handles one `for-uxui` agent message |
 | `/status` | Show UXUI project status |
 | `/propose [idea]` | Propose an agent system improvement |
 

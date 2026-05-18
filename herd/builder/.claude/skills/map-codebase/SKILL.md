@@ -2,7 +2,7 @@
 name: map-codebase
 description: Scan the project codebase — structure, patterns, conventions. Write findings to codebase.md. Flag techstack discrepancies. Optional — run when the project has enough code worth documenting.
 user-invocable: true
-disable-model-invocation: true
+disable-model-invocation: false
 allowed-tools: Read, Write, Glob, Grep
 ---
 

@@ -2,7 +2,7 @@
 name: build
 description: Implement the current task using TDD — RED (write failing tests) → GREEN (implement), with opportunistic refactor when warranted. Run after /start.
 user-invocable: true
-disable-model-invocation: true
+disable-model-invocation: false
 allowed-tools: Agent, Read, Write, Edit, Glob, Grep, Bash
 ---
 

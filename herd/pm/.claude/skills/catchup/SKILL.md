@@ -2,7 +2,7 @@
 name: catchup
 description: Triage pending for-pm issues from GitHub — quick-resolve or transition into a working session.
 user-invocable: true
-disable-model-invocation: true
+disable-model-invocation: false
 allowed-tools: Agent, Read, Glob, Bash, Edit, Write
 ---
 

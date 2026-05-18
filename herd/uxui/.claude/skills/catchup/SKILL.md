@@ -1,199 +1,64 @@
 ---
 name: catchup
-description: Walk through pending UXUI inbox — `for-uxui` agent messages (handled inline) and `uxui:review` designer submissions (dispatched to `/review-bundle`).
+description: Lean UXUI inbox gate — reconcile the board, scan for pending uxui:review tasks and for-uxui messages, report counts; hand off to /process-inbox when there is work.
 user-invocable: true
-disable-model-invocation: true
-allowed-tools: Agent, Read, Glob, Bash, Edit, Write, AskUserQuestion
+disable-model-invocation: false
+allowed-tools: Bash, Read, Skill
 ---
 
 # Catch Up
 
-Process all pending UXUI inbox items in one sweep. Two kinds:
-- **Agent messages** (`for-uxui`) — spec updates, UI gaps, UI questions. Handled inline by this skill.
-- **Designer submissions** (`uxui:review`) — Claude Design bundles awaiting review. ALWAYS dispatched to `/review-bundle` — never handled inline here.
+The lean gate for the UXUI inbox. It does the cheap, always-safe work — reconcile the board, scan for pending items, report what is waiting — and nothing else. If the inbox is empty you are done, having loaded only this short skill. If there is work, it hands off to `/process-inbox`, which presents and routes.
 
-You pick what to handle next.
+Two kinds of inbox item:
+- **Review tasks** (`uxui:review`) — cards in the "UX: Review" board column.
+- **Agent messages** (`for-uxui`) — spec updates, UI gaps, UI questions from PM or planner.
 
 ---
 
-## Step 1: Load Inbox
+## Step 1: Reconcile the board
 
-### 1a. Detect designer card-moves (board → label)
-
-A designer submits a finished task by posting the Claude Design share URL as an issue comment **and dragging the card from "UX: Todo" to "UX: Review"** on the project board. Detect those drags first and re-sync the label, so the card-moved submission shows up in the query below (and the statuslines stay correct):
+A human dragging a card on the project board is the authority on its status — the label follows the column. Reconcile any drift first, before anything reads labels:
 
 ```bash
-node "$AGENT_DIR/tools/dev-tools.cjs" board-drags "UX: Review" uxui:review
+node "$AGENT_DIR/tools/dev-tools.cjs" board-reconcile
 ```
 
-This prints one `<number><TAB><current-labels>` line per card sitting in "UX: Review" that is **not** yet labelled `uxui:review` — designer card-moves the herd hasn't picked up — or `Board: no board` (then skip this sub-step). For each, confirm it's a genuine submission — a posted share-URL comment — with a `--jq`-filtered read (the filter keeps the comment bodies out of context; you get only `true` / `false`):
+Read every line of its output:
 
-```bash
-gh issue view <number> --json comments --jq '[.comments[].body] | map(test("https?://")) | any'
-```
+- `RECONCILE: aligned #<n> <old> → <new> ("<column>")` — a drag was mechanically aligned; the label now matches the board. No action needed.
+- `RECONCILE: flag #<n> …` — a drag that **cannot** be aligned mechanically: a card dragged into "Done" (that needs a real approval, not a relabel), a cross-domain drag, or a card carrying multiple UXUI labels. **Surface every flag line to the user** — these are likely mistakes or need a deliberate skill. Never act on a flag automatically.
+- `RECONCILE: ok` — nothing drifted. `RECONCILE: no board` — no project board; continue.
 
-- **`true`** → a genuine submission (the card-move is the designer's submission ritual; it replaces the old `uxui:review` label-flip). The `issue-transition` command reads its parameters from a JSON handoff file. **Write** a one-element array to `$PROJECT_DIR/cowmoo/agent-files/uxui/.op-handoff.json` (a single reused path, overwritten each use) — remove the card's current `uxui:*` label (taken from the `board-drags` line), add `uxui:review`:
-  ```json
-  [
-    { "op": "RELABEL", "issue": <number>, "removeLabel": "<current uxui:* label>", "addLabel": "uxui:review" }
-  ]
-  ```
-  Then run the command at `--index 0`:
-  ```bash
-  node "$AGENT_DIR/tools/dev-tools.cjs" issue-transition --from cowmoo/agent-files/uxui/.op-handoff.json --index 0
-  ```
-  The command relabels, verifies, and syncs the board. Read its stdout — `RELABEL #<n>: ✓ …` means done; `RELABEL #<n>: ✗ <reason>` means relabel or verify failed. Do NOT retry on `✗`. If multiple card-moves were detected, handle them one at a time — re-Write the handoff and re-run for each, since the file is overwritten per use.
-- **`false`** → not a submission (designer mid-work, or a stray drag). Leave it; do not act.
+## Step 2: Scan the inbox
 
-### 1b. Query the inbox
-
-Query both kinds in parallel:
+Query both kinds — `for-uxui` messages, and a structured scan of every `uxui:review` task:
 
 ```bash
 gh issue list --label "for-uxui" --state open --json number,title,body,labels --limit 20
-gh issue list --label "uxui:review" --state open --json number,title,body,labels --limit 20
+node "$AGENT_DIR/tools/dev-tools.cjs" review-scan
 ```
 
-If both lists are empty, report "Inbox empty — nothing to catch up on." and stop.
+`review-scan` returns a JSON array — one object per open `uxui:review` issue: `{number, title, labels, hasShareUrl, shareUrl, comments}`. `comments` is the card's full comment thread; `hasShareUrl` reflects a Claude Design URL anywhere in it. One call; it saves a per-issue `gh issue view` for every card. Classify each card: `hasShareUrl: true` → **bundle**, `hasShareUrl: false` → **no-bundle** (a card moved to "UX: Review" with comments that are not a submission).
 
----
+## Step 3: Report and gate
 
-## Step 2: Present Inbox
-
-Show all items, grouped by kind:
+Report what is waiting:
 
 ```
-## Inbox — [N] Items
-
-**Designer submissions (uxui:review)** — dispatched to /review-bundle:
-1. #<number> — <title>
-
-**Agent messages (for-uxui)** — handled inline:
-2. #<number> — <title> → **<type>**
-   <one-line summary>
-3. ...
+## Inbox — <N> review task(s) · <M> message(s)
+  Review tasks: <X> bundle, <Y> no-bundle
+  Messages: <M> for-uxui
+<any RECONCILE: flag lines from Step 1>
 ```
 
-Designer submissions take priority — they block the design pipeline.
-
-**Render the inbox-selection choice via `AskUserQuestion`** with `multiSelect: true`. Each option is one inbox item (`#N — title → <designer submission | agent message: type> (from <origin>)`); the user picks the items to handle in this pass. Recommended option first with `(Recommended)` suffix — pick the highest-priority item (any `uxui:review` designer submission before `for-uxui` agent messages, since submissions block the design pipeline; within each kind, oldest first) as the recommendation. Each option's `description` carries the one-line summary. Per CLAUDE.md's picker rule. Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker.
-
-If the inbox has only 1 item, skip the picker and prose-confirm: "Handle #N — <title>?" — a 1-option picker is degenerate.
-
----
-
-## Step 3: Route the picked items
-
-For each item the user picked, process in priority order: `uxui:review` items first (designer submissions block the design pipeline, per Step 2), then `for-uxui` items. Check each item's label and route:
-
-- If `uxui:review` → **dispatch to `/review-bundle <number>`**. Tell the user: "Dispatching #<number> to `/review-bundle`. Run that skill now to evaluate the bundle." Do NOT attempt to fetch, evaluate, or comment inline. The `/review-bundle` skill handles fetch + evaluate + approve/reject end-to-end. When multiple `uxui:review` items were picked, produce a list of `/review-bundle <number>` commands the user runs separately.
-- If `for-uxui` → process inline using the routing below (Spec update / UI gap / UI question), one at a time.
-
----
-
-## Step 4: Process Agent Messages (for-uxui only)
-
-For each `for-uxui` message the user wants to handle, read the issue body to understand what's being communicated. Route based on the sender and content.
-
-**Two flavors of `for-uxui`:**
-- **Fresh issue** — sender created a new `for-uxui` issue (e.g., PM's `/notify uxui` announcing spec changes; planner's `/ask uxui` reporting a UI definition problem). Title prefix shows the sender (`[PM]`, `[Planner]`).
-- **Relabeled answer** — PM resolved a UXUI-originated `for-pm` by relabeling it `for-uxui` (PM's `/catchup` resolved it with a `transfer` relabel to `uxui`). The issue body is the original UXUI question; PM's answer is in the most recent comment. The title still has UXUI's `[UXUI]` prefix from the original `/ask pm`.
-
-The three handlers below cover both flavors. Relabeled answers most often map to **Spec update** (PM's answer clarifies a spec) or **UI question** (PM's answer is the clarification you asked for, no further work needed). Read the latest comment thread before picking a handler.
-
-Route based on sender and content:
-
-### Spec update
-
-Specs were updated. Read the message to understand what changed:
-
-1. Read the relevant cowmoo/design/ domain file
-2. Read the updated spec files referenced in the message
-3. Assess impact: do existing UI definitions need updating? **You own this diagnosis** — the change is reported as fact, you decide whether UI needs updating.
-4. **Small fix** (quick update, no cross-screen impact) → discuss changes with user, update cowmoo/design/ files, self-verify, then close the issue via the `issue-transition` RESOLVE_ISSUE command (see "Resolving via RESOLVE_ISSUE" below).
-5. **Extended work** (multi-screen redesign, spans sessions) → track the issue for later resolution and transition to discussion mode:
-   ```bash
-   node "$AGENT_DIR/tools/dev-tools.cjs" inbox add <number> "<title>"
-   ```
-   Do NOT close the issue. The user will run `/draft` → `/define` → `/publish` → `/notify planner` in normal flow; `/notify` will see the tracked issue and close it.
-
-### UI gap
-
-A task needs a UI state or definition that isn't in `cowmoo/design/` files.
-
-1. Read the message — which screen, which state or definition is missing
-2. **Diagnose:** is this a real gap (missed during extraction) or a misunderstanding (the task scope was wrong, or the screen doesn't need that state)?
-3. **Real gap** → add the missing state/definition to `cowmoo/design/domains/*.md`, self-verify, then either:
-   - Quick update (one screen, one state) → run `/publish`, then close the issue via the `issue-transition` RESOLVE_ISSUE command (see "Resolving via RESOLVE_ISSUE" below).
-   - Extended update (multi-screen, spans sessions) → track the issue for later:
-     ```bash
-     node "$AGENT_DIR/tools/dev-tools.cjs" inbox add <number> "<title>"
-     ```
-     Do NOT close. `/notify planner` later closes it after `/publish`.
-4. **Misunderstanding** (task scope is wrong) → UXUI's response requires planner action, not a cowmoo/design/ file change. Track the issue for later:
-   ```bash
-   node "$AGENT_DIR/tools/dev-tools.cjs" inbox add <number> "<title>"
-   ```
-   The user will run `/ask planner` to send a response with the finding. `/ask` will see the tracked issue and close it as part of sending the response.
-
-### UI question
-
-Clarification about an existing UI definition.
-
-1. Read the question
-2. Answer inline — reference the cowmoo/design/ file and explain
-3. If the question reveals a documentation gap in cowmoo/design/, fix it
-4. Close the issue via the `issue-transition` RESOLVE_ISSUE command with the answer (see "Resolving via RESOLVE_ISSUE" below)
-
----
-
-## Resolving via RESOLVE_ISSUE
-
-The `issue-transition` command reads its parameters from a JSON handoff file. To close a `for-uxui` issue: compose the resolution summary, prefix it with the `**[UXUI]** ` identity marker, **Write** a one-element array to `$PROJECT_DIR/cowmoo/agent-files/uxui/.op-handoff.json` (a single reused path, overwritten each use), then run the command at `--index 0`:
-
-```json
-[
-  { "op": "RESOLVE_ISSUE", "issue": <number>, "comment": "**[UXUI]** Resolved: <summary>", "close": true }
-]
-```
-
-```bash
-node "$AGENT_DIR/tools/dev-tools.cjs" issue-transition --from cowmoo/agent-files/uxui/.op-handoff.json --index 0
-```
-
-The command runs comment → close in order, verifies each step with one retry, and syncs the board. RESOLVE_ISSUE always closes the issue. Process inbox items one at a time (per the "One at a time" rule) — re-Write the handoff and re-run for each issue, since the file is overwritten per use. Read the command's stdout and key on the `✓` / `✗` marker (`RESOLVE_ISSUE #<n>: ✓ …` / `✗ <reason>`). Do NOT retry on `✗` — the command already retried internally.
-
----
-
-## Step 5: Report
-
-```
-## Inbox Processed
-
-- [N] designer submissions dispatched to /review-bundle
-  - #<number>: <title>
-- [N] agent messages resolved
-  - #<number>: <resolution> — closed
-- [N] agent messages tracked for extended work
-  - #<number>: <summary> — will be closed by `/notify` or `/ask` after response ships
-
-<If uxui:review items present:>
-**Next:** Run /review-bundle <number> for each dispatched item.
-<If cowmoo/design/ files changed:>
-**Next:** Run /publish to commit and push changes, then /notify planner to announce and close tracked items.
-<If a ui-gap was diagnosed as task-scope-wrong:>
-**Next:** Run /ask planner to send the response and close the tracked item.
-```
+- **If N + M == 0** — report "Inbox empty — nothing to catch up on." (still surface any reconcile flags). Stop. You are done.
+- **If there is work** — invoke **`/process-inbox`** to present the inbox in full and route each item. `/process-inbox` runs in this same conversation, so the `review-scan` JSON, the `for-uxui` list, and the bundle/no-bundle classifications above are already in its context — it does not re-scan.
 
 ---
 
 ## Rules
 
-- **One at a time** — process each item fully before moving to the next.
-- **uxui:review always dispatches** — never review a bundle inline. `/review-bundle` is the only path; this skill only routes.
-- **User decides** — present your recommendation, let the user confirm.
-- **Close through the `issue-transition` command** — never close issues with hand-rolled `gh` calls.
-- **Spec updates may cascade** — a spec change might affect multiple screens. Check all related UI definitions.
-- **Conflicting for-uxui issues** — when multiple messages touch the same domain, process them together in one pass. Handling them in isolation risks contradictory UI updates.
-- **UI work reveals a spec gap** — don't guess at missing business logic. Track the issue and route to `/ask pm` with specific questions.
-- **Deduplicate if both labels somehow coexist** — an issue with both `for-uxui` AND `uxui:review` is a bug in the upstream flow. Process it as a designer submission (prioritize `uxui:review`) and flag it to the user.
+- **`board-reconcile` runs first, always.** The board is the human's intent; labels are reconciled to it before anything else reads them.
+- **Reconcile flags are surfaced, never auto-actioned.** A flagged drag is a human decision — show it, let the user choose.
+- **This skill gates; it never routes or resolves.** Presenting the inbox and dispatching items is `/process-inbox`'s job — keep this skill lean so an empty check stays cheap.

@@ -2,7 +2,7 @@
 name: compare
 description: Guided competitive comparison — reads analyzed platforms and your specs, suggests where to focus, leads domain-by-domain comparison discussion
 user-invocable: true
-disable-model-invocation: true
+disable-model-invocation: false
 allowed-tools: Read, Write, Edit, Glob, Grep
 ---
 

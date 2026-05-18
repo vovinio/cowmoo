@@ -2,7 +2,7 @@
 name: tech-stack
 description: Analyze specs and decide tech stack through conversation. Use when starting a new project or when user says /tech-stack.
 user-invocable: true
-disable-model-invocation: true
+disable-model-invocation: false
 allowed-tools: Read, Write, Agent, Glob, Grep, Bash, AskUserQuestion
 ---
 

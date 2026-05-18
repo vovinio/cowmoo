@@ -2,7 +2,7 @@
 name: tidy
 description: Verify and clean up techstack.md and knowledge.md — remove stale entries, fix inaccuracies, organize. codebase.md is builder-owned; @notes-health reports its status but planner does not tidy it.
 user-invocable: true
-disable-model-invocation: true
+disable-model-invocation: false
 allowed-tools: Agent, Read, Write, Edit, Glob, Grep
 ---
 

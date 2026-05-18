@@ -2,7 +2,7 @@
 name: copywrite
 description: Review and improve all user-facing text — terminology, messages, labels, descriptions — informed by domain research
 user-invocable: true
-disable-model-invocation: true
+disable-model-invocation: false
 allowed-tools: Write, Edit, Read, Glob, Agent, Bash
 ---
 

@@ -134,7 +134,7 @@ function hookSessionStart() {
 
   if (forUxui.length > 0 || review.length > 0) {
     console.log(`\nInbox: ${forUxui.length} for-uxui, ${review.length} uxui:review`);
-    review.forEach(i => console.log(`  #${i.number} ${i.title} → /review-bundle`));
+    review.forEach(i => console.log(`  #${i.number} ${i.title} → /catchup`));
     forUxui.forEach(i => console.log(`  #${i.number} ${i.title}`));
     console.log('\nRun /catchup to process them.');
   }
@@ -168,7 +168,7 @@ function hookSessionStart() {
 // --- Workflow Step Tracking ---
 
 const SEQUENCE = ['start', 'draft', 'define', 'review', 'publish'];
-const UNTRACKED = new Set(['status', 'propose', 'catchup', 'ask', 'notify', 'design-start', 'design-draft', 'design-publish', 'review-bundle']);
+const UNTRACKED = new Set(['status', 'propose', 'catchup', 'process-inbox', 'process-message', 'ask', 'notify', 'design-start', 'design-draft', 'design-publish', 'review-bundle', 'approve-design', 'resolve-review']);
 const ANYTIME = new Set([]);
 
 function workflowPath() {
@@ -445,7 +445,7 @@ function territoryCheck() {
 //
 // One tested implementation of the canonical commit procedure: merge-state
 // guard, pathspec-restricted commit, index-lock retry, hash-pinned
-// content-verify. The /publish and /review-bundle skills invoke one of:
+// content-verify. The /publish, /approve-design, and /resolve-review skills invoke one of:
 //   node "$AGENT_DIR/tools/dev-tools.cjs" commit general "<message>"
 //   node "$AGENT_DIR/tools/dev-tools.cjs" commit roles "<message>"
 //   node "$AGENT_DIR/tools/dev-tools.cjs" commit attach-design <domain> "<message>"
@@ -1140,6 +1140,173 @@ function journalUpdate() {
   process.exit(0);
 }
 
+// --- Review scan + resume state (classification + partial-run detection) ---
+//
+// UXUI-specific, like bundle-fetch / journal-update. Two read-only helpers
+// that move mechanical work out of the review skills:
+//
+//   review-scan                       — facts /catchup classifies from
+//   review-resume-state <issue> <dom>  — partial-run detection for /approve-design
+
+// SHARE_URL_RE — a Claude Design share URL (api.anthropic.com export host or
+// the claude.ai/design viewer). Global so `.match` returns every hit.
+const SHARE_URL_RE = /https:\/\/(?:api\.anthropic\.com\/v1\/design\/h\/|claude\.ai\/design\/)[^\s)\]]+/g;
+
+// reviewScan — one GraphQL call returning every OPEN `uxui:review` issue with
+// the facts /catchup needs to classify it: title, labels, whether a Claude
+// Design share URL is present anywhere in the comments (and the most recent
+// such URL), and the full comment thread. Comments are read in full (`last:100`
+// — effectively the whole thread for a review card) so URL detection never
+// misses a URL posted in an older comment, and so the agent sees the task's
+// full context. Saves /catchup from N per-issue `gh issue view` reads. Prints
+// a JSON array (`[]` when none / no repo). Always exits 0.
+function reviewScan() {
+  const repo = process.env.GH_REPO || '';
+  const slash = repo.indexOf('/');
+  if (slash < 1 || slash === repo.length - 1) { console.log('[]'); process.exit(0); }
+  const owner = repo.slice(0, slash);
+  const name = repo.slice(slash + 1);
+  const q = `query { repository(owner:"${owner}",name:"${name}") { issues(first:50, states:OPEN, labels:["uxui:review"]) { nodes { number title labels(first:20){nodes{name}} comments(last:100){nodes{author{login} body}} } } } }`;
+  const raw = run(`gh api graphql -f query=${JSON.stringify(q)}`);
+  if (!raw) { console.log('[]'); process.exit(0); }
+  let nodes;
+  try { nodes = JSON.parse(raw).data.repository.issues.nodes; } catch { console.log('[]'); process.exit(0); }
+  if (!Array.isArray(nodes)) { console.log('[]'); process.exit(0); }
+  const out = nodes.map((n) => {
+    const comments = ((n.comments && n.comments.nodes) || []).map((c) => ({
+      author: (c && c.author && c.author.login) || '-',
+      body: (c && c.body) || '',
+    }));
+    let shareUrl = null;
+    for (let i = comments.length - 1; i >= 0 && shareUrl === null; i--) {
+      const m = comments[i].body.match(SHARE_URL_RE);
+      if (m && m.length) shareUrl = m[m.length - 1];
+    }
+    return {
+      number: n.number,
+      title: n.title || '',
+      labels: ((n.labels && n.labels.nodes) || []).map((l) => l.name),
+      hasShareUrl: shareUrl !== null,
+      shareUrl,
+      comments,
+    };
+  });
+  console.log(JSON.stringify(out, null, 2));
+  process.exit(0);
+}
+
+// reviewResumeState — given an issue number and domain, report whether a prior
+// /approve-design run already attached a `**Bundle:**` line for this ticket,
+// the `### ` screen heading that line sits under, and whether the domain file
+// has uncommitted changes. Replaces the grep+porcelain detection the approval
+// skill used to carry inline. The caller compares `heading` to the target
+// screen to tell uncommitted / committed / misattributed apart. Prints exactly
+// one line; always exits 0.
+//   RESUME: none
+//   RESUME: found line=<n> heading="<heading>" porcelain=<clean|dirty>
+//   RESUME: error — <reason>
+function reviewResumeState(issue, domain) {
+  if (!issue || !/^[0-9]+$/.test(String(issue)) || !domain) {
+    console.log('RESUME: error — usage: review-resume-state <issue> <domain>');
+    process.exit(0);
+  }
+  if (!PROJECT_DIR) { console.log('RESUME: error — PROJECT_DIR unset.'); process.exit(0); }
+  const domainPath = path.join(PROJECT_DIR, 'cowmoo', 'design', 'domains', `${domain}.md`);
+  if (!fs.existsSync(domainPath)) { console.log(`RESUME: error — domain file not found: ${domain}.md`); process.exit(0); }
+  let lines;
+  try { lines = fs.readFileSync(domainPath, 'utf8').split('\n'); } catch (e) { console.log(`RESUME: error — ${e.message}`); process.exit(0); }
+  const marker = '`cowmoo/design/bundles/' + issue + '/`';
+  let hitLine = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].includes(marker)) { hitLine = i; break; }
+  }
+  if (hitLine < 0) { console.log('RESUME: none'); process.exit(0); }
+  let heading = '(none)';
+  for (let i = hitLine; i >= 0; i--) {
+    if (/^###\s+/.test(lines[i])) { heading = lines[i].replace(/^###\s+/, '').trim(); break; }
+  }
+  const porc = run(`git -C ${JSON.stringify(PROJECT_DIR)} status --porcelain -- cowmoo/design/domains/${domain}.md`);
+  const state = (porc && porc.trim()) ? 'dirty' : 'clean';
+  console.log(`RESUME: found line=${hitLine + 1} heading=${JSON.stringify(heading)} porcelain=${state}`);
+  process.exit(0);
+}
+
+// --- Board reconcile (mechanical label↔column alignment) ---
+//
+// The project board's Status column is the human's intent; the issue label
+// follows it. boardReconcile aligns every OPEN card in a UXUI status column
+// (UX: Todo / UX: In Progress / UX: Review) to the matching `uxui:*` label,
+// and FLAGS — without changing — the two cases a blind align would corrupt:
+//   - a `uxui:*` card dragged into "Done": `uxui:done` means the bundle is
+//     attached + the journal written (only /approve-design produces those);
+//     a mechanical relabel would fake-approve it.
+//   - a cross-domain drag: a `uxui:*` card in a non-UXUI column, or a foreign
+//     card in a UXUI column — almost always a mistake.
+// Closed issues are skipped. UXUI-specific, like bundle-fetch / review-scan.
+
+const UX_COLUMN_TO_LABEL = {
+  'UX: Todo': 'uxui:todo',
+  'UX: In Progress': 'uxui:in-progress',
+  'UX: Review': 'uxui:review',
+};
+const UXUI_LABELS = ['uxui:todo', 'uxui:in-progress', 'uxui:review', 'uxui:done'];
+
+// boardReconcile — align labels to board columns; flag what cannot be aligned
+// mechanically. Prints one line per action (`RECONCILE: aligned …` /
+// `RECONCILE: flag …`), `RECONCILE: ok` when nothing drifted, or
+// `RECONCILE: no board`. Always exits 0 — a reconcile miss never blocks /catchup.
+function boardReconcile() {
+  const projectId = resolveProjectId();
+  if (!projectId) { console.log('RECONCILE: no board'); process.exit(0); }
+  const q = `query { node(id: "${projectId}") { ... on ProjectV2 { items(first: 100) { nodes { content { ... on Issue { number state labels(first: 20) { nodes { name } } } } fieldValueByName(name: "Status") { ... on ProjectV2ItemFieldSingleSelectValue { name } } } } } } }`;
+  const raw = run(`gh api graphql -f query=${JSON.stringify(q)}`);
+  if (!raw) { console.log('RECONCILE: no board'); process.exit(0); }
+  let nodes;
+  try { nodes = JSON.parse(raw).data.node.items.nodes; } catch { console.log('RECONCILE: no board'); process.exit(0); }
+  if (!Array.isArray(nodes)) { console.log('RECONCILE: no board'); process.exit(0); }
+
+  let actions = 0;
+  for (const n of nodes) {
+    if (!n || !n.content || typeof n.content.number !== 'number') continue;
+    if (n.content.state === 'CLOSED') continue;
+    const column = n.fieldValueByName && n.fieldValueByName.name;
+    if (!column) continue;
+    const num = n.content.number;
+    const labels = ((n.content.labels && n.content.labels.nodes) || []).map((l) => l.name);
+    const uxuiLabels = labels.filter((l) => UXUI_LABELS.includes(l));
+
+    if (uxuiLabels.length > 1) {
+      console.log(`RECONCILE: flag #${num} carries ${uxuiLabels.join(' + ')} — multiple UXUI labels; left as-is`);
+      actions++;
+      continue;
+    }
+    const cur = uxuiLabels[0] || null;
+    const target = UX_COLUMN_TO_LABEL[column];
+
+    if (target) {
+      if (!cur) {
+        console.log(`RECONCILE: flag #${num} (no uxui label) in "${column}" — foreign card in a UXUI column; left as-is`);
+        actions++;
+      } else if (cur !== target) {
+        const r = run(`gh issue edit ${num} --remove-label ${JSON.stringify(cur)} --add-label ${JSON.stringify(target)}`);
+        if (r === null) console.log(`RECONCILE: flag #${num} — relabel ${cur} → ${target} failed; left as-is`);
+        else console.log(`RECONCILE: aligned #${num} ${cur} → ${target} ("${column}")`);
+        actions++;
+      }
+    } else if (column === 'Done') {
+      if (cur && cur !== 'uxui:done') {
+        console.log(`RECONCILE: flag #${num} ${cur} in "Done" — dragged to Done; run /review-bundle to approve it (a mechanical relabel would skip the bundle attachment); left as-is`);
+        actions++;
+      }
+    } else if (cur) {
+      console.log(`RECONCILE: flag #${num} ${cur} in "${column}" — cross-domain drag (UXUI card outside the UXUI columns); left as-is`);
+      actions++;
+    }
+  }
+  if (actions === 0) console.log('RECONCILE: ok — board matches labels');
+  process.exit(0);
+}
+
 // --- Main ---
 
 const [,, command, subcommand] = process.argv;
@@ -1203,6 +1370,15 @@ switch (command) {
   case 'board-drags':
     boardDragsOp(process.argv[3], process.argv[4]);
     break;
+  case 'board-reconcile':
+    boardReconcile();
+    break;
+  case 'review-scan':
+    reviewScan();
+    break;
+  case 'review-resume-state':
+    reviewResumeState(process.argv[3], process.argv[4]);
+    break;
   case 'issue-create':
     issueCreate();
     break;
@@ -1213,5 +1389,5 @@ switch (command) {
     journalUpdate();
     break;
   default:
-    console.log('Usage: node "$AGENT_DIR/tools/dev-tools.cjs" <hook|git-check|territory-check|check-files|inbox|design-draft|workflow-check|next-step|bundle-fetch|commit|push|board-drags|issue-create|issue-transition|journal-update>');
+    console.log('Usage: node "$AGENT_DIR/tools/dev-tools.cjs" <hook|git-check|territory-check|check-files|inbox|design-draft|workflow-check|next-step|bundle-fetch|commit|push|board-drags|board-reconcile|review-scan|review-resume-state|issue-create|issue-transition|journal-update>');
 }

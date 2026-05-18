@@ -2,7 +2,7 @@
 name: review
 description: Verify spec integrity — terminology, references, scope, completeness, structure, product risk. Run after /digest to verify before shipping.
 user-invocable: true
-disable-model-invocation: true
+disable-model-invocation: false
 allowed-tools: Agent, Read, Write, Edit, Glob, Grep, Bash
 ---
 

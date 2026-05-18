@@ -2,7 +2,7 @@
 name: status
 description: Show project status — what's in progress, blocked, ready, and done.
 user-invocable: true
-disable-model-invocation: true
+disable-model-invocation: false
 allowed-tools: Agent
 ---
 

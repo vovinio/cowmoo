@@ -2,7 +2,7 @@
 name: status
 description: Quick read-only snapshot — cowmoo/design/ coverage, working notes, design tasks, inbox
 user-invocable: true
-disable-model-invocation: true
+disable-model-invocation: false
 allowed-tools: Read, Glob, Bash
 ---
 

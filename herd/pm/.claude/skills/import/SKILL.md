@@ -3,7 +3,7 @@ name: import
 description: Import existing specs or docs from a folder — understand, walk through with user, populate working notes
 user-invocable: true
 argument-hint: [folder path]
-disable-model-invocation: true
+disable-model-invocation: false
 allowed-tools: Write, Edit, Read, Glob
 ---
 

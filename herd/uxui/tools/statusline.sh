@@ -371,7 +371,7 @@ line4=""
 
 # ── Untracked skills check ──
 
-known="start draft define review publish ask notify catchup status propose design-start design-draft design-publish review-bundle"
+known="start draft define review publish ask notify catchup process-inbox process-message status propose design-start design-draft design-publish review-bundle approve-design resolve-review"
 if [ -d .claude/skills ]; then
     for skill in $(ls .claude/skills/ 2>/dev/null); do
         [ -d ".claude/skills/$skill" ] || continue

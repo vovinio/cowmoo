@@ -2,7 +2,7 @@
 name: draft
 description: Extract all decisions, open questions, edge cases, and terminology from the current discussion and append to working notes
 user-invocable: true
-disable-model-invocation: true
+disable-model-invocation: false
 allowed-tools: Write, Edit, Read, Glob, Bash
 ---
 

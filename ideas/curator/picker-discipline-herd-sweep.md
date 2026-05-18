@@ -47,7 +47,7 @@ For each skill in each herd agent, identify every action-site question. For each
 ## Expected strong priors
 
 - **PM** — already largely correct after the 2026-05-12 audit. One known fix went in (`/catchup`). Expect at most 1-2 additional gaps in less-traveled skills (`/copywrite`, `/migrate`, `/import-design` walkthrough forks).
-- **UXUI** — moderate exposure. UXUI has its own `/catchup`, its own design-decision forks during `/define`, and the bundle-fetch flow. Expect 2-4 gaps.
+- **UXUI** — moderate exposure. UXUI has its inbox-selection picker in `/process-inbox`, design-decision forks during `/define`, and the bundle-fetch flow. Expect 2-4 gaps.
 - **Planner** — moderate exposure. PRD-shaping and task-breakdown decisions naturally branch into 2-4 paths. Expect 2-4 gaps.
 - **Builder** — lower exposure. Most builder action-site questions are technical yes/no ("apply this fix?", "tests pass — commit?") which correctly stay prose. Some plausible picker moments around fix-strategy forks during `/review`. Expect 0-2 gaps.
 

@@ -2,7 +2,7 @@
 name: design-draft
 description: Compose task bodies for the batch agreed in /design-start, validate via @design-task-checker, write to design-draft.json. Rerunnable.
 user-invocable: true
-disable-model-invocation: true
+disable-model-invocation: false
 allowed-tools: Read, Glob, Grep, Write, Edit, Agent
 ---
 

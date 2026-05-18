@@ -2,7 +2,7 @@
 name: catchup
 description: Read and handle incoming for-planner messages — spec updates, deviations, blocks, UI updates. Quick-fix or prepare context for planning.
 user-invocable: true
-disable-model-invocation: true
+disable-model-invocation: false
 allowed-tools: Agent, Read, Write, Glob, Bash, AskUserQuestion
 ---
 

@@ -2,7 +2,7 @@
 name: migrate
 description: Align existing specs from a previous agent version to current templates
 user-invocable: true
-disable-model-invocation: true
+disable-model-invocation: false
 allowed-tools: Write, Edit, Read, Glob
 ---
 

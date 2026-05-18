@@ -2,7 +2,7 @@
 name: recon-playwright
 description: "Reverse-engineer a live web platform using Playwright CLI. Token-efficient for long sessions (150-200 turns). Scouts, researches, inspects entities and operations, then writes domain-based product analysis."
 user-invocable: true
-disable-model-invocation: true
+disable-model-invocation: false
 argument-hint: [url]
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent
 ---

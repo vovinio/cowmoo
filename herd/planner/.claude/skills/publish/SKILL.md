@@ -2,7 +2,7 @@
 name: publish
 description: Preview and ship all pending changes — commit files, push to remote, create GitHub issues if draft exists. The single command for persisting work.
 user-invocable: true
-disable-model-invocation: true
+disable-model-invocation: false
 allowed-tools: Agent, Read, Write, Edit, Glob, Bash
 ---
 

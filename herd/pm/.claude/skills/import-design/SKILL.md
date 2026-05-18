@@ -3,7 +3,7 @@ name: import-design
 description: Initiate spec work from an existing Claude Designer share URL — fetch the bundle to a temp dir, walk the screens, populate working notes, then hand the URL to UXUI for canonical capture.
 user-invocable: true
 argument-hint: <share-url>
-disable-model-invocation: true
+disable-model-invocation: false
 allowed-tools: Read, Edit, Write, Glob, Agent, Bash
 ---
 

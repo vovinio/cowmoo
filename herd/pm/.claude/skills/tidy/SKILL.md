@@ -2,7 +2,7 @@
 name: tidy
 description: Organize and clean working notes — group related items, tag confirmed decisions as [ready], remove superseded content, prepare notes for /digest
 user-invocable: true
-disable-model-invocation: true
+disable-model-invocation: false
 allowed-tools: Write, Edit, Read, Glob, Bash
 ---
 

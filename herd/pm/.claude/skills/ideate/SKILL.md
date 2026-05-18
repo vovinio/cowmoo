@@ -2,7 +2,7 @@
 name: ideate
 description: Research-informed product ideation — identify gaps, automation opportunities, and new capabilities based on current specs and industry context
 user-invocable: true
-disable-model-invocation: true
+disable-model-invocation: false
 allowed-tools: Write, Edit, Read, Glob, Agent, Bash
 ---
 

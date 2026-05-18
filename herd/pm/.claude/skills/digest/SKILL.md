@@ -2,7 +2,7 @@
 name: digest
 description: Dedicated session — formalize working notes into specs, move deferred items to backlog
 user-invocable: true
-disable-model-invocation: true
+disable-model-invocation: false
 allowed-tools: Write, Edit, Read, Glob, Bash
 ---
 

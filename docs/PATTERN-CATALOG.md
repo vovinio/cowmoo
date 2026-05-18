@@ -359,7 +359,7 @@ The statusline and `known`-list check don't care which bucket a skill is in — 
 
 **Find instances.** `rg --hidden 'dev-tools\.cjs[^ ]* inbox' -g '**/.claude/skills/**' herd/` — `[^ ]*` skips the closing quote of the anchored `"$AGENT_DIR/tools/dev-tools.cjs"` path.
 
-**Declared exceptions.** Builder does not have an inbox tracker — its communication is task-comment-based (builder ↔ planner via task comments), not cross-agent labeled issues. See `.claude/asymmetries/builder.md`.
+**Declared exceptions.** Builder does not have an inbox tracker — its communication is task-comment-based (builder ↔ planner via task comments), not cross-agent labeled issues. See `.claude/asymmetries/builder.md`. UXUI's inbox-tracker populator is `/process-message` (not `/catchup`) — UXUI's inbox handling is split across `/catchup` → `/process-inbox` → `/process-message`. See `.claude/asymmetries/uxui.md`.
 
 ---
 
@@ -386,7 +386,7 @@ Adding a new channel requires: a sender skill (it composes the handoff entry and
 
 **Find instances.** `docs/COMMUNICATION.md` is authoritative. Contract checks enumerate channels from there rather than hard-coding them in the skill.
 
-**Declared exceptions.** Builder ↔ PM, Builder ↔ UXUI, and Curator ↔ any project agent have no direct channels by design. Documented in `docs/COMMUNICATION.md` "Agents that never talk to each other directly". Additionally, the Designer → UXUI channel is an external-human handoff — no sender skill, `uxui:review` label (not `for-<target>`), handled by UXUI's `/catchup` dispatching to `/review-bundle`, with the approve / reject responses sent by `/review-bundle` itself. See `docs/COMMUNICATION.md` "the one external-human handoff" note; `/contracts` Section 5 walks a reduced chain (label + receiver handler + response writes) for this shape.
+**Declared exceptions.** Builder ↔ PM, Builder ↔ UXUI, and Curator ↔ any project agent have no direct channels by design. Documented in `docs/COMMUNICATION.md` "Agents that never talk to each other directly". Additionally, the Designer → UXUI channel is an external-human handoff — no sender skill, `uxui:review` label (not `for-<target>`); UXUI's `/catchup` reconciles and scans, `/process-inbox` classifies and dispatches to `/review-bundle` (bundle) or `/resolve-review` (no-bundle), with the approve / reject / resolution responses sent by those skills (bundle approval via `/approve-design`). UXUI also splits the standard receiver side: a `for-uxui` channel's category handler lives in `/process-message`, reached via `/catchup` → `/process-inbox` — so a UXUI channel trace follows that dispatch chain rather than a single `/catchup`. See `.claude/asymmetries/uxui.md`; `docs/COMMUNICATION.md` "the one external-human handoff" note; `/contracts` Section 5 walks a reduced chain (label + receiver handler + response writes) for the external-human shape.
 
 ---
 
@@ -422,7 +422,7 @@ An `addSubIssue` mutation in any skill body or any `.claude/agents/*.md` file is
 - Board Status sync: `rg --hidden "boardSyncCore" -g '**/tools/dev-tools.cjs' herd/` — `issueCreate` and `issueTransition` call it, and every create / relabel / close write is delegated to one of those subcommands. The standalone `board-status` subcommand was removed — `rg --hidden "board-status" herd/` should return nothing (a hit is stale). `gh project list` / `gh project item-add` is a violation, and an `addProjectV2ItemById` or `updateProjectV2ItemFieldValue` mutation anywhere outside `boardSyncCore` is a violation.
 - Sub-issue: `rg --hidden "addSubIssue" -g '**/tools/dev-tools.cjs' herd/` — only `issueCreate`. An `addSubIssue` mutation in any `.claude/agents/*.md` file is a violation.
 
-**Declared exceptions.** None. Board sync and sub-issue linkage are both internal to `dev-tools.cjs` — `boardSyncCore` (reached by `issueCreate` / `issueTransition`) and `issueCreate`'s `parent` handling — so there are no per-agent instances to exempt.
+**Declared exceptions.** Board sync and sub-issue linkage are both internal to `dev-tools.cjs` — `boardSyncCore` (reached by `issueCreate` / `issueTransition`) and `issueCreate`'s `parent` handling — so there are no per-agent instances to exempt there. On the read direction: UXUI's `/catchup` reconciles human card-drags with the `board-reconcile` subcommand (all UXUI status columns aligned in one pass, with un-alignable drags flagged) rather than per-column `board-drags`; `board-drags` itself remains the cross-agent primitive (still used by PM / planner / builder). See `.claude/asymmetries/uxui.md`.
 
 ---
 
@@ -459,7 +459,7 @@ Required keys:
 - `name: <slug>` — matches directory name.
 - `description: <one-line>` — precise enough that an LLM deciding whether to pick this skill over a neighbor can tell from the description alone. Avoid vague multi-purpose descriptions.
 - `user-invocable: true` — always explicit.
-- `disable-model-invocation: true` — always explicit; set to `false` only when auto-trigger is legitimate. Two current cases: (1) `/propose`, which fires when the agent notices something worth improving; (2) the curator structural-pipeline skills (`/check`, `/patterns`, `/contracts`, `/coherence`), which the curator LLM proposes after a herd edit session so the user can approve running them without retyping each command. In both cases, model-invocation still requires per-call user approval via Claude Code's permission flow — "invocable" is not "autonomous".
+- `disable-model-invocation: <bool>` — always explicit. **Herd skills:** `false` (model-invokable) for every skill except the session-entry `start` skills, which stay `true` — starting a session is a deliberate user act, not something the agent should trigger mid-conversation. In normal use the agent proposes a skill ("run `/review` next?") and the user approves; model-invocation still routes each call through Claude Code's permission flow, so "invocable" is not "autonomous." Ship skills (`/publish`, `/notify`, `/design-publish`) are model-invokable too — each carries its own internal HARD GATE (Pattern 19), so the agent can only *start* the skill; the preview-and-confirm gate inside still blocks the destructive step. **Curator skills:** `true` (user-only) except the structural-pipeline skills (`/check`, `/patterns`, `/contracts`, `/coherence`), which are `false` so the curator can propose them after a herd edit session without the user retyping each command. The curator's heavyweight meta-ops (`/audit-agent`, `/audit-hygiene`, `/curate`, `/pressure-test`, `/rename-sweep`, `/scaffold-subagent`) stay `true`.
 
 Optional:
 - `argument-hint: <form>` — when the skill takes an argument, describe the accepted form. Use agent names verbatim (`<pm | uxui | planner | builder>`) when the argument names an agent.
@@ -467,7 +467,7 @@ Optional:
 
 **Installed third-party skills detection.** Skills installed by external tools (e.g., Microsoft's `playwright-cli install --skills claude`) ship with only `name:`, `description:`, and `allowed-tools:` — they omit `user-invocable:` and `disable-model-invocation:`. Patching them in place would be overwritten on the next installer run. Detection marker: presence of `allowed-tools:` **without** `user-invocable:` and without `disable-model-invocation:` signals an installed third-party skill and Pattern 16 does not apply. Authored skills are recognized by having either of those two required keys — the presence of `allowed-tools` is orthogonal.
 
-**Reference implementation.** `herd/builder/.claude/skills/start/SKILL.md` frontmatter.
+**Reference implementation.** `herd/builder/.claude/skills/review/SKILL.md` frontmatter (typical model-invokable skill); `herd/builder/.claude/skills/start/SKILL.md` for the `start`-skill `disable-model-invocation: true` case.
 
 **Find instances.** `rg -A1 --hidden "^---$" -g '**/.claude/skills/*/SKILL.md' herd/ | head -30` — every skill's frontmatter.
 
@@ -516,7 +516,7 @@ Applies to any skill whose body invokes N > 1 side-effecting operations in seque
 
 **Reference implementation.**
 - `herd/uxui/.claude/skills/design-publish/SKILL.md` Step 5 "Partial-failure recovery" (mid-batch issue creation failure).
-- `herd/uxui/.claude/skills/review-bundle/SKILL.md` Step 6a partial-commit recovery (ATTACH_DESIGN succeeded but APPROVE_DESIGN failed, etc.).
+- `herd/uxui/.claude/skills/approve-design/SKILL.md` Step 2 partial-run detection (`review-resume-state`) + Step 7 partial-commit recovery (ATTACH_DESIGN succeeded but APPROVE_DESIGN failed — re-invoke `/approve-design`).
 - `herd/planner/.claude/skills/publish/SKILL.md` "Partial-failure recovery" section (clear-draft / commit / GitHub issue creation failure modes).
 - `herd/builder/.claude/skills/publish/SKILL.md` Step 4 "If any step fails" guidance.
 

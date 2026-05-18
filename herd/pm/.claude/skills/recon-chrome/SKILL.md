@@ -2,7 +2,7 @@
 name: recon-chrome
 description: "Reverse-engineer a live web platform using Claude in Chrome. Scouts, researches, inspects entities and operations, then writes domain-based product analysis."
 user-invocable: true
-disable-model-invocation: true
+disable-model-invocation: false
 argument-hint: [url]
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent
 ---

@@ -2,7 +2,7 @@
 name: define
 description: Formalize working notes into cowmoo/design/ files — OVERVIEW, journeys, roles, screen-index, domains. Like PM's /digest but for UI.
 user-invocable: true
-disable-model-invocation: true
+disable-model-invocation: false
 allowed-tools: Write, Edit, Read, Glob, Bash, AskUserQuestion
 ---
 

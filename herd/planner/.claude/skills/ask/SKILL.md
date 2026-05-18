@@ -2,7 +2,7 @@
 name: ask
 description: Create a for-pm (spec issues) or for-uxui (UI definition issues) GitHub issue. Usage: /ask pm or /ask uxui.
 user-invocable: true
-disable-model-invocation: true
+disable-model-invocation: false
 argument-hint: <pm | uxui>
 allowed-tools: Agent, Read, Write, Glob, Bash, AskUserQuestion
 ---

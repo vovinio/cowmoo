@@ -2,7 +2,7 @@
 name: design-publish
 description: Publish the design draft to GitHub as N uxui:todo tasks. Pure ship — preview, confirm, create.
 user-invocable: true
-disable-model-invocation: true
+disable-model-invocation: false
 allowed-tools: Read, Bash, Agent, AskUserQuestion
 ---
 
@@ -76,7 +76,7 @@ These are likely previously-published tasks (possibly rejected back to uxui:todo
 
 **Render the collision-resolution choice via `AskUserQuestion`** (single-select). Recommended option first with `(Recommended)` suffix — default to **Cancel this publish** since closing in-flight work without confirmation risks losing designer iteration. Each option's `description` carries the consequence:
 
-- **Cancel this publish** (Recommended) — these are likely the same tasks still in flight. To revise, `/review-bundle` the existing issue or edit it directly on GitHub.
+- **Cancel this publish** (Recommended) — these are likely the same tasks still in flight. To revise, edit the existing issue directly on GitHub.
 - **Replace as stale** — close or delete the colliding issues on GitHub, then re-run `/design-publish`. Use when the collisions are dead artifacts from a prior run that should be replaced.
 - **Proceed anyway (duplicates)** — creates duplicate `uxui:todo` issues. Not recommended; only useful for unusual recovery cases where the duplicate is intentional.
 
@@ -130,8 +130,8 @@ Report to the user:
 - #<task-2-number> — [UXUI] <domain>: <screen 2>
 ...
 
-The human designer can now pick up any uxui:todo task. When they submit
-(uxui:review label), run /catchup or /review-bundle <issue> to evaluate.
+The human designer can now pick up any uxui:todo task. When the card
+reaches "UX: Review", run /catchup — it reconciles, scans, and routes it onward.
 ```
 
 Then clear the draft automatically — the GitHub issues are now the source of truth; the draft has served its purpose:

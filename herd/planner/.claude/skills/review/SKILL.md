@@ -2,7 +2,7 @@
 name: review
 description: Validate draft PRDs using 5 parallel check agents before publishing. Run after /draft and user approval.
 user-invocable: true
-disable-model-invocation: true
+disable-model-invocation: false
 allowed-tools: Agent, Read, Write, Edit, Glob, Grep, AskUserQuestion
 ---
 

@@ -2,7 +2,7 @@
 name: draft
 description: Capture UI discussion decisions — screen layouts, interaction patterns, state definitions — to working notes
 user-invocable: true
-disable-model-invocation: true
+disable-model-invocation: false
 allowed-tools: Write, Edit, Read, Glob, Bash
 ---
 
