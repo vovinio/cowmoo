@@ -40,7 +40,7 @@ Verify that task dependencies in `draft.md` are correct and properly ordered. Re
 - No circular dependencies (A depends on B depends on A)
 - First task should have Dependencies: None
 
-**Dependency availability (cross-story):**
+**Consumed-output availability:**
 - Does this task reference files, components, or APIs from prior stories?
 - Were those things actually built? (Check closed task Records)
 - If they were built with deviations, does this PRD account for the actual implementation?

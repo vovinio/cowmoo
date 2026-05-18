@@ -3,7 +3,7 @@ name: design-draft
 description: Compose task bodies for the batch agreed in /design-start, validate via @design-task-checker, write to design-draft.json. Rerunnable.
 user-invocable: true
 disable-model-invocation: false
-allowed-tools: Read, Glob, Grep, Write, Edit, Agent
+allowed-tools: Read, Glob, Grep, Write, Edit, Agent, AskUserQuestion
 ---
 
 # Design Draft
@@ -94,14 +94,14 @@ Visual direction: <one-line — inherited specifics or "initial direction">
 
 ### Task 2 — <Screen 2 name>
 ...
-
-→ Approve all, name task(s) to refine, or ask to see a full body before approving?
 ```
+
+Then render the approval gate as an `AskUserQuestion` picker — `Approve all` (Recommended — write the draft for every task as previewed) / `Refine specific tasks` (the user names which task(s) and what to change — picking it opens a free-text follow-up) / `See a full body first` (show the full composed body for a named task before approving).
 
 **Misunderstanding check.** The named decisions per task must be specific enough that a wrong composition would render visibly different in the preview (different state list, wrong roles, missing visual direction). If two different compositions could produce the same preview line, re-add the load-bearing detail as a named decision.
 
-**On refine** — edit the held body for the named task(s) inline; re-present only the changed task(s) in the same compressed shape. Don't re-show unchanged tasks.
-**On "show full body for task N"** — present the full composed body for that task only; ask the approval question again.
+**On `Refine specific tasks`** — edit the held body for the named task(s) inline; re-present only the changed task(s) in the same compressed shape, then re-render the approval picker. Don't re-show unchanged tasks.
+**On `See a full body first`** — present the full composed body for the named task only; then re-render the approval picker.
 
 Hold off on writing the draft file (Step 4) until the user approves the full batch.
 
@@ -189,13 +189,9 @@ Show a summary:
 
 Validated: PUBLISH READY (no findings).
 Saved to cowmoo/agent-files/uxui/design-draft.json.
-
-**Next:** Run `/design-publish` to create the GitHub tasks.
 ```
 
-Do NOT proceed to publish. The user runs `/design-publish` when ready.
-
-If the user wants changes → discuss → re-run `/design-draft` to rewrite.
+This is the HARD GATE — do NOT proceed to publish. Render an `AskUserQuestion` hand-off picker: `Run /design-publish` (Recommended — create the GitHub tasks from the draft) first, `Revise the draft` (the user wants changes — picking it opens a free-text follow-up; discuss, then re-run `/design-draft` to rewrite) as a live continuation, and `Done for now` last.
 
 ---
 
@@ -208,7 +204,7 @@ If the user wants changes → discuss → re-run `/design-draft` to rewrite.
 - [ ] Self-verified (re-read after write)
 - [ ] `@design-task-checker` ran (initial). If REFINE, one fix pass completed and the final regression check reported PUBLISH READY — OR findings surfaced and skill stopped for manual triage
 - [ ] Preview presented at HARD GATE
-- [ ] User informed `/design-publish` is next
+- [ ] Hand-off picker presented (`/design-publish` recommended)
 
 ---
 

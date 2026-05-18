@@ -3,7 +3,7 @@ name: draft
 description: Capture UI discussion decisions — screen layouts, interaction patterns, state definitions — to working notes
 user-invocable: true
 disable-model-invocation: false
-allowed-tools: Write, Edit, Read, Glob, Bash
+allowed-tools: Write, Edit, Read, Glob, Bash, AskUserQuestion
 ---
 
 # Draft
@@ -94,9 +94,9 @@ Touched: <OVERVIEW · journeys · roles · domain:<name> · patterns> (omit cate
 Gaps this session:
   • <Screen/State>: missing <states | interactions | flows | empty/error/loading copy | ...>
   • <Screen/State>: missing <...>
-
-Next: continue this domain, or /define when ready
 ```
+
+After the stamp, close with an `AskUserQuestion` hand-off picker — never end on a prose "Next:" line. Build the options from context: `Continue discussing this domain` `(Recommended)` (description: more screens/states/flows to capture for `<domain>`) / `Run /define` (description: formalize the captured [ready] items into cowmoo/design/ files — offer when this session produced [ready] decisions) / `Done for now` (description: stop here; working notes are saved). Omit `/define` if nothing is [ready] yet.
 
 The "Gaps" section flags forward-pointing items based on what a complete UI definition needs (declared states per `ui-vocabulary.md`, interactions, role references, empty/error/loading copy). One line per gap, ≤3 gaps surfaced. This section is report-only — do not write it to working notes.
 

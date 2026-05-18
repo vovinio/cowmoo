@@ -1,3 +1,7 @@
+---
+description: Frontend gotchas — UI implementation pitfalls. Always loaded.
+---
+
 ## Frontend Gotchas
 
 - Match design density to use case. Admin panels need tight spacing and data density. Marketing pages need whitespace. Don't apply same patterns everywhere.

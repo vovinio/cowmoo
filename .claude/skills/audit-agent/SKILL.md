@@ -12,7 +12,7 @@ Runs a deep audit on a single herd agent. Fully reads every file for that agent,
 
 **This is not a quick check.** It expects complete reads, not sampling. Budget for a long single run. Use it after significant work on one agent, or when something feels off about an agent's behavior, or on a scheduled cadence — not before every commit.
 
-**Scan only — do NOT fix.** Report findings so the curator can review and approve fixes.
+**Scan and triage — never fix directly.** The skill detects findings, verifies them, then walks the user through each one interactively to collect a decision. It never edits agent code itself — fixes the user approves are applied afterward by the curator as a normal herd edit (and run through the structural pipeline).
 
 ## Relationship to the structural pipeline
 
@@ -49,7 +49,7 @@ For the target agent, read in this order:
 
 If `audit-decisions/<agent>.md` does not exist, proceed without it (first audit of this agent) — but expect to add entries there as findings get resolved as "not a bug" during review.
 
-After reading, before running any check, write a 10-line mental model in the report:
+After reading, before running any check, write a 10-line mental model **as a working note** — it grounds Steps 2–7 but is never shown to the user; the Step 9 walkthrough delivers only the findings:
 
 - **Agent's mandate** (1 line) — what problem does it solve for the user?
 - **Core flow** (1 line) — happy path from session start to done.
@@ -260,7 +260,20 @@ This step requires **judgment**, not pattern matching. Take the time. The previo
 
 ## Finding Format
 
-Every actionable finding uses the canonical four-part shape — see `.claude/templates/finding-format.md`.
+Detection steps produce findings in the canonical finding shape — see `.claude/templates/finding-format.md`. Step 9 delivers them interactively: the canonical `Problem` is shown as-is, and the canonical `Fix` becomes the `Options` block plus the choices in the per-finding picker.
+
+---
+
+## Dismissal discipline
+
+Steps 2–7 don't only produce findings — they also silently *discard* candidates the detector considers and decides aren't real. Those discards never reach Step 8: `@audit-verify` only sees findings that are raised, so a candidate dropped during detection bypasses verification entirely. That makes a mid-detection dismissal the one judgment call with no safety net — and the failure mode it invites is anchoring on the audited file's own rationale ("the skill says this trade-off is deliberate, so it's fine").
+
+Two rules for Steps 2–7:
+
+1. **A dismissal must rest on grounds independent of the audited file's own rationale.** The strongest form is a concrete trace against the actual files — a specific unreachable state, an enforced precondition, a case split you checked is exhaustive. For a judgment-grade Step 7 candidate where no such trace is possible, the dismissal must still be a conclusion you reasoned to yourself — and it is invalid the moment its basis is the audited file describing itself as intentional. The file is the thing under audit; its rationale prose is a claim, not evidence. When a candidate's only defense is the file's self-description, raise it as a finding and let `@audit-verify` judge it in fresh context.
+2. **Record what you discard.** In the Step 1–7 working notes, keep a one-line-per-candidate list of what you considered and dismissed, with the grounds that justified each. A dismissal you can't see is a dismissal you can't check. This list is a working note — it is not shown to the user; the Step 9 walkthrough still delivers only confirmed findings.
+
+When in doubt, raise it. Verification absorbs a false positive cheaply; it cannot recover a false negative it never received.
 
 ---
 
@@ -275,51 +288,115 @@ Without this phase, roughly half of advisory findings from the detection steps a
 
 ---
 
-## Consolidated Report
+## Step 9 — Triage walkthrough
+
+Step 8 hands you the confirmed findings. **Do not dump them as one block** — a wall of fully-specified problems plus their fix decisions is exactly the overload this step exists to remove. Walk the user through them instead.
+
+The Step 1 mental model and the Step 2–7 detection blocks are internal working notes — they never appear in the output. The user sees only this walkthrough.
+
+### 9a — Summarize, then pick how to proceed
+
+Print one line: `Found <N> issues — <C> critical, <A> advisory.`
+
+If there are **zero** confirmed findings, say so, note any dismissed or deferred findings in one line each, and stop — no walkthrough.
+
+If there is exactly **one** confirmed finding, skip the mode picker — go straight to 9b for that finding.
+
+Otherwise present an `AskUserQuestion` picker — *"How do you want to work through these?"*:
+
+- **Walk through one at a time** *(recommended)* — each issue explained on its own; you decide per issue. → 9b
+- **Critical first** — triage only the `<C>` critical issue(s) interactively now; advisories are listed at the end, untriaged. → 9b (critical findings only). *Omit this option when `<C>` is 0.*
+- **Apply all recommended fixes** — no walkthrough; the recommended fix for every issue is queued. → skip to 9c, every finding's decision = its recommended fix.
+- **Just print the report** — the full findings as one static block (format below), no walkthrough; the user triages manually. → print and stop.
+
+Static-report format for the last option:
 
 ```
 ## Agent Audit: <agent>
 
-### Mental Model
-<the 10-line model from Step 1>
+Found <N> issues — <C> critical, <A> advisory.
+Checked: hidden assumptions, rule-vs-rule coherence, liveness, end-to-end flows,
+cross-boundary consumption, honest review.
 
-### Step 2: Hidden Assumptions — [PASS / N findings raised]
-### Step 3: Rule-vs-Rule Coherence — [PASS / N findings raised]
-### Step 4: Liveness — [PASS / N findings raised]
-### Step 5: End-to-End Flows — [N skills reviewed, M unhandled edge cases]
-### Step 6: Cross-Boundary Consumption — [N consumption points, M mismatches]
-### Step 7: Honest Review — [N findings raised]
+<each confirmed issue, numbered, in the finding format — critical first>
 
-### Step 8: Verification
-- Findings raised (Steps 2-7): N
-- Verified this session (capped at 10, critical first): M
-- Confirmed — fix good: X
-- Confirmed — fix needs revision: Y (each revision noted inline below)
-- Dismissed: Z (listed separately below)
-- Deferred to next audit run: N - M (if > 0)
-
-### Confirmed Findings (ready for user triage)
-<only the CONFIRMED findings, with any verifier-revised fixes inline>
-
-### Dismissed Findings (logged for transparency — not acted on)
-<DISMISSED findings with the verifier's concrete reason>
-
-### Deferred Findings (will surface on next /audit-agent run)
-<headlines only, if any — these were not verified this session due to the cap>
-
-Total confirmed findings: X critical, Y advisory.
+### Noticed outside this agent       ← only if the audit surfaced an issue elsewhere
+### Filtered out (not real — no action)   ← only if findings were dismissed
+### Deferred to next run             ← only if the 10-finding cap left findings unverified
 ```
 
-Critical = operational correctness or semantic contradiction the user will hit in practice.
-Advisory = rigidity, documentation drift, stylistic inconsistency, or a change that would improve quality but isn't a bug.
+### 9b — Walk each finding
 
-After user fixes the confirmed batch: re-run `/audit-agent <agent>` to pick up the deferred set and catch anything new uncovered by the fixes.
+Take the findings in scope **critical first**. For each, print a tight block, then ask exactly one picker:
+
+```
+### Issue <i> of <total> — <headline>   ·   <critical | advisory>
+
+**Problem.** 2–4 plain sentences: what is broken and what the user or agent
+actually experiences. No file-line walls here — keep one orienting `file:line`
+at most.
+
+**Why it matters.** One line: what breaks, how often, who is affected.
+
+**Options.** The fix path(s), recommended first, each with its one-line tradeoff.
+```
+
+Then an `AskUserQuestion` picker — **one question, this finding only; never batch findings into a multi-question call**:
+
+- **header:** `Issue <i>/<total>`
+- **question:** `<headline> — what do you want to do?`
+- **options:**
+  - One option per fix path. A single-fix finding gets one option labelled `Apply the fix`; a genuine fork gets one option per variant, the recommended variant first with `(recommended)` in the label. Each option's `description` carries the concrete edit and its tradeoff.
+  - `Skip — revisit next audit` — finding left untouched; it resurfaces on the next `/audit-agent` run.
+  - `Not a real bug — stop raising it` — appends an entry to `.claude/audit-decisions/<agent>.md` so future audits skip it.
+  - The free-text "Other" slot (always present) covers "let's discuss this one first" and custom instructions.
+  - A finding with 3 fix variants fills the four explicit slots with the three variants + `Skip`; `Not a real bug` then lives in "Other". Keep the common ≤2-variant case to the four options above.
+
+The audit-decisions append in 9c is keyed on the **meaning** of the decision, not which slot it came from: an "Other"-slot answer to the effect of "this isn't a real bug" is treated identically to the explicit `Not a real bug` option, append included.
+
+Record the decision, then move to the next finding. Do not re-explain finished findings.
+
+### 9c — Triage summary
+
+After the last finding (or immediately, for "Apply all recommended fixes"), print a compact recap:
+
+```
+## Triage summary — <agent>
+
+**Will apply (<n>):**
+- Issue <i> — <headline> — <chosen fix, one line>
+
+**Skipped — resurface next audit (<n>):**       ← only if any
+- Issue <i> — <headline>
+
+**Dismissed — added to audit-decisions (<n>):**  ← only if any
+- Issue <i> — <headline>
+
+**Not triaged — advisories left for a later run (<n>):**  ← only after "Critical first"
+- <headline>
+
+**Deferred — not verified this run, 10-finding cap (<n>):**  ← only if any
+- <headline>
+
+**Noticed outside this agent (<n>):**            ← only if any
+- <one-line description + file:line>
+```
+
+For each `Not a real bug` decision, append the entry to `.claude/audit-decisions/<agent>.md` now (title, verdict, one-line why, ≤3 lines) — see the audit-decisions rules below.
+
+### 9d — Hand off the fixes
+
+The skill stops here — it never edits agent code itself. After the triage summary, render an `AskUserQuestion` hand-off picker built from what triage produced:
+
+- **"Will apply" is non-empty** — `Apply the triaged fixes now` `(Recommended)` (the curator applies them as a herd edit, then the `/check` pipeline's own hand-off pickers carry verification — every fix lands under `herd/**`) / `Stop — apply the fixes later`. Add `Re-run /audit-agent <agent>` as an option when skipped or deferred findings remain.
+- **"Will apply" is empty** — nothing to apply; offer `Re-run /audit-agent <agent>` (when skipped/deferred findings remain) / `Done`, or simply close if nothing is outstanding.
 
 ---
 
 ## Rules
 
-- **Scan only — do NOT modify agent code or config.** Report findings for the curator to review and approve. The one exception is `.claude/audit-decisions/<agent>.md` — append entries there when a finding is resolved as "not a bug" (see the "Add to audit-decisions" rule below). That file is the audit system's memory, not agent code.
+- **Scan and triage — do NOT modify agent code or config.** The skill detects, verifies, and walks the user through findings to collect decisions; it never applies fixes. Approved fixes are applied afterward by the curator as a normal herd edit. The one file the skill itself writes is `.claude/audit-decisions/<agent>.md` — append entries there when the user dismisses a finding as "not a bug" (see the "Add to audit-decisions" rule below). That file is the audit system's memory, not agent code.
+- **One picker per finding.** Step 9b asks about exactly one finding per `AskUserQuestion` call — never batch findings into a multi-question call. Batching recreates the all-at-once overload the walkthrough exists to remove.
 - **Full reads, not sampling.** The whole skill hinges on deep context. Partial reads defeat the purpose.
 - **One agent at a time.** Do not audit multiple agents in one run. Focus is the point.
 - **Judgment required.** Steps 3 and 7 cannot be automated. The LLM reasons; the user decides.
@@ -327,5 +404,6 @@ After user fixes the confirmed batch: re-run `/audit-agent <agent>` to pick up t
 - **Respect audit-decisions.** Anything listed in `.claude/audit-decisions/<agent>.md` is already evaluated. Don't re-raise these findings. If you disagree with a prior decision, name the specific entry and say why you think it should be reconsidered — don't simply relist it as a bug.
 - **Add to audit-decisions when resolving a finding as "not a bug."** After the curator evaluates a finding and decides it's intentional, append an entry to `.claude/audit-decisions/<agent>.md` (title, verdict, one-line why, ≤3 lines total) so future audits skip it.
 - **Verification phase is mandatory, not optional.** Steps 2-7 are detection and may produce false positives; Step 8 filters them. Never present Steps 2-7 findings to the user without running them through `@audit-verify` first.
+- **Dismissal discipline — under-detection has no safety net.** A candidate the detector discards during Steps 2-7 never reaches `@audit-verify`, so a mid-detection dismissal is unverified by construction. Discard a candidate only on grounds independent of the audited file's own rationale — never because the file calls the behavior intentional. When unsure, raise it. See the "Dismissal discipline" section.
 - **Verifier-dismissed findings are NOT audit-decisions.** A dismissal from `@audit-verify` is a one-shot "not real this cycle," not a durable "this is intentional forever." Only append to `.claude/audit-decisions/<agent>.md` when the user explicitly triages a finding as intentional.
 - **This skill catches things the global pipeline can't.** Passing the global pipeline does NOT mean this skill has nothing to find. Conversely, finding nothing here does NOT mean the agent is done — a future deeper read may still surface issues.

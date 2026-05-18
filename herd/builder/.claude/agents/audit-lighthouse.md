@@ -13,6 +13,7 @@ Run Lighthouse audits against the pages this task touches. Report accessibility,
 ## Environment
 
 - `$PROJECT_DIR` — absolute path to the project root.
+- `$AGENT_DIR` — absolute path to this agent's own directory, where `tools/` lives.
 
 ## Prerequisite: Chrome DevTools MCP Enabled
 

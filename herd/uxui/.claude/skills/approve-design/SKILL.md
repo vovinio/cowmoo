@@ -107,11 +107,9 @@ Present the composed block as a durable-record preview, not a draft for chat-rev
 This goes to VISUAL-JOURNAL.md AND posts as a comment on the GH issue:
 
 <composed block>
-
-→ Approve to finalize, or name a section to adjust?
 ```
 
-Frame the approval as "commit this final form?" — the block IS spec-grade content (the durable record of what was approved), not a draft you're asking the user to wordsmith in chat. On adjust, edit only the named section inline and re-present the changed section, not the whole block.
+Then render the approval gate as an `AskUserQuestion` picker — `Finalize` (Recommended — commit this block to `VISUAL-JOURNAL.md` and post it as the issue comment) / `Adjust a section` (the user names which section to change — picking it opens a free-text follow-up; edit only that section inline and re-present the changed section, then re-render this picker) / `Cancel` (stop the approval transaction here). Each option's `description` carries the consequence. Frame `Finalize` as "commit this final form" — the block IS spec-grade content (the durable record of what was approved), not a draft to wordsmith in chat.
 
 ---
 
@@ -200,14 +198,7 @@ The command runs comment → relabel → close in order, verifies each step, and
 
 ## Step 8: Optional — notify planner
 
-When a meaningful chunk of design work is complete (e.g., a coherent flow's screens are all `uxui:done`), the user may want to announce to planner. This is judgment — not automatic per-task. Prompt:
-
-```
-This was approval N for <domain>/<related batch>. Notify planner now,
-or wait for more screens to land?
-```
-
-On "notify now": suggest running `/notify planner` (existing skill, separate run).
+When a meaningful chunk of design work is complete (e.g., a coherent flow's screens are all `uxui:done`), the user may want to announce to planner. This is judgment — not automatic per-task. Render the choice as an `AskUserQuestion` picker — `Notify planner` (recommended when a meaningful chunk has landed — leads to running `/notify planner`, an existing skill, in a separate run) / `Wait for more screens` (hold off until more screens land). Each option's `description` carries the consequence; pick the recommended option based on whether a coherent chunk is complete.
 
 ---
 
@@ -222,7 +213,7 @@ On "notify now": suggest running `/notify planner` (existing skill, separate run
 [- Suggested /notify planner if a meaningful chunk landed]
 ```
 
-**Next:** Run `/catchup` to process any other pending items.
+Then render an `AskUserQuestion` hand-off picker for the next action — `Run /catchup` (Recommended — process any other pending items) first, any other live continuation (e.g. `Run /notify planner` when Step 8 indicated a meaningful chunk landed), and `Done for now` last. Build the option set from where the conversation stands.
 
 ---
 
@@ -235,8 +226,9 @@ On "notify now": suggest running `/notify planner` (existing skill, separate run
 - [ ] Step 5 — `journal-update` wrote the entry; `issue-transition` UPDATE_JOURNAL posted the summary comment (or skipped per Step 2)
 - [ ] Step 6 — `commit attach-design` committed domain file + journal; pushed (or skipped per Step 2)
 - [ ] Step 7 — `issue-transition` APPROVE_DESIGN ran; issue is `uxui:done` and closed
-- [ ] Step 8 — planner notification considered (judgment call)
+- [ ] Step 8 — planner notification considered via picker (judgment call)
 - [ ] Report shown
+- [ ] Hand-off picker presented
 
 ---
 

@@ -28,7 +28,7 @@ If no argument is provided, scan the session and propose:
 
 Check `node "$AGENT_DIR/tools/dev-tools.cjs" inbox list` — if there's an active tracked `for-uxui` item from the planner and the current session diagnosed it as "not a real gap / task scope wrong", `planner` is the natural target.
 
-**Render the target choice via `AskUserQuestion`** (single-select). Recommended option first with `(Recommended)` suffix — pick PM when the discussion concerns a spec gap, contradiction, or business-logic question; pick planner when the session diagnosed a tracked `for-uxui` item and the response requires planner action. Each option's `description` carries the consequence ("creates a `for-pm` issue addressed to PM" vs "creates a `for-planner` issue responding to the tracked `for-uxui` item"). Per CLAUDE.md's picker rule. Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker.
+**Render the target choice via `AskUserQuestion`** (single-select) per CLAUDE.md item 3's picker rule. Recommend PM when the discussion concerns a spec gap, contradiction, or business-logic question; recommend planner when the session diagnosed a tracked `for-uxui` item and the response requires planner action. Each option's `description` carries the consequence ("creates a `for-pm` issue addressed to PM" vs "creates a `for-planner` issue responding to the tracked `for-uxui` item").
 
 The target determines which label and which handoff `op` to use.
 
@@ -50,7 +50,7 @@ Your message should include:
 - Specific questions that need answers
 - What UI work is affected (which screens or flows are blocked)
 
-Preview the message as a structured stamp — fielded, not free-prose. The fielded preview IS the body content; it gets posted to the GH issue verbatim (minus the chat-only `→ Send…` approval line and the `## Message preview` heading). Chat shows it for verification, not as a re-draft surface:
+Preview the message as a structured stamp — fielded, not free-prose. The fielded preview IS the body content; it gets posted to the GH issue verbatim (minus the `## Message preview` heading). Chat shows it for verification, not as a re-draft surface:
 
 ```
 ## Message preview → for-pm
@@ -62,8 +62,6 @@ Context: <2–3 lines of background — omit if observation is self-explanatory>
 Questions:
   - <specific question 1>
   - <specific question 2>
-
-→ Send, or name a field to adjust?
 ```
 
 ### `for-planner` message
@@ -84,11 +82,9 @@ Responding to: #<original for-uxui issue number>
 Affected: <task or story>
 Observation: <one-line fact — what was found while diagnosing>
 Context: <2–3 lines — omit if observation is self-explanatory>
-
-→ Send, or name a field to adjust?
 ```
 
-**Wait for user approval** (both targets). On "name a field to adjust", edit only that field and re-present the changed preview — don't re-show unchanged fields.
+**Render the send gate as an `AskUserQuestion` picker** (both targets) — `Send` (Recommended — post the message as the GitHub issue) / `Edit a field` (the user names which field to change — picking it opens a free-text follow-up; edit only that field and re-present the changed preview, then re-render this picker) / `Cancel` (stop without creating the issue). Each option's `description` carries the consequence.
 
 ---
 
@@ -98,7 +94,7 @@ The `issue-create` command reads its issue body and title from a JSON handoff fi
 
 ### `for-pm`
 
-Write the handoff array — the title carries the `[UXUI] ` identity prefix; the body is the composed message from Step 3 (the fielded preview verbatim, minus the chat-only `→ Send…` line and `## Message preview` heading):
+Write the handoff array — the title carries the `[UXUI] ` identity prefix; the body is the composed message from Step 3 (the fielded preview verbatim, minus the `## Message preview` heading):
 
 ```json
 [
@@ -133,10 +129,9 @@ Do NOT retry on `✗` — the command already retried internally; a second run w
 
 ## Step 5: Resolve Tracked Inbox Items
 
-If the current session is in response to a tracked `for-uxui` issue (check `node "$AGENT_DIR/tools/dev-tools.cjs" inbox list`), present each tracked item to the user:
+If the current session is in response to a tracked `for-uxui` issue (check `node "$AGENT_DIR/tools/dev-tools.cjs" inbox list`), present each tracked item to the user one at a time. For each, render an `AskUserQuestion` picker — `Resolved by this /ask` (Recommended when the `/ask` directly addresses the tracked item — closes the tracked issue) / `Leave tracked` (keep it open for future). Each option's `description` carries the consequence.
 
-- "Tracked issue #N: [title]. Did this `/ask` address it?"
-- If yes → **Write** the handoff array to `$PROJECT_DIR/cowmoo/agent-files/uxui/.op-handoff.json` (overwriting Step 4's handoff — it's already been consumed), then run the `issue-transition` command at `--index 0`. Compose the resolution summary (a short note pointing at the new `for-planner` or `for-pm` issue) with the `**[UXUI]** ` identity prefix. RESOLVE_ISSUE always closes the issue:
+- On `Resolved by this /ask` → **Write** the handoff array to `$PROJECT_DIR/cowmoo/agent-files/uxui/.op-handoff.json` (overwriting Step 4's handoff — it's already been consumed), then run the `issue-transition` command at `--index 0`. Compose the resolution summary (a short note pointing at the new `for-planner` or `for-pm` issue) with the `**[UXUI]** ` identity prefix. RESOLVE_ISSUE always closes the issue:
   ```json
   [
     { "op": "RESOLVE_ISSUE", "issue": <number>, "comment": "**[UXUI]** Resolved: <summary>", "close": true }
@@ -147,7 +142,7 @@ If the current session is in response to a tracked `for-uxui` issue (check `node
   ```
   The command runs comment → close in order, verifies each step with one retry, and syncs the board. Read its stdout — `RESOLVE_ISSUE #<n>: ✓ …` means done; `RESOLVE_ISSUE #<n>: ✗ <reason>` means a step failed. Do NOT retry on `✗`.
 - After resolving, remove from tracking: `node "$AGENT_DIR/tools/dev-tools.cjs" inbox remove <number>`.
-- If no → leave tracked for future.
+- On `Leave tracked` → leave the issue tracked for future.
 
 ---
 
@@ -161,6 +156,8 @@ If the current session is in response to a tracked `for-uxui` issue (check `node
 **Inbox resolved:** <list of closed tracked items, or "none">
 ```
 
+Then render an `AskUserQuestion` hand-off picker for the next action. Build the option set from where the conversation stands — e.g. `Run /ask <other target>` if both PM and planner need a message and only one was sent, `Run /catchup` to process other pending items — recommended continuation first, `Done for now` last.
+
 ---
 
 ## Completion Checklist
@@ -173,6 +170,7 @@ If the current session is in response to a tracked `for-uxui` issue (check `node
 - [ ] GitHub issue created via `issue-create` (`CREATE_FOR_PM` or `CREATE_FOR_PLANNER`) — verified
 - [ ] Tracked inbox items resolved if applicable — verified
 - [ ] Report presented
+- [ ] Hand-off picker presented
 
 ---
 

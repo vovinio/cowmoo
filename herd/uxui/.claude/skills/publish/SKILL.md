@@ -3,7 +3,7 @@ name: publish
 description: Commit cowmoo/design/ files locally and push to the remote. Run after /review or anytime to save progress. If the project has no origin remote, the push step skips cleanly and the commit completes locally.
 user-invocable: true
 disable-model-invocation: false
-allowed-tools: Bash, Read, Glob, Agent, Write, Edit
+allowed-tools: Bash, Read, Glob, Agent, Write, Edit, AskUserQuestion
 ---
 
 # Publish
@@ -36,7 +36,7 @@ Suggest a commit message:
 - UI definition changes: `design(<domain>): <description>`
 - Working notes only: `checkpoint(uxui): <description>`
 
-Wait for explicit approval before proceeding.
+Render the approval as an `AskUserQuestion` picker over the change set + suggested message: `Commit & push` `(Recommended)` (description: commit the listed cowmoo/design/ + working files with the suggested message and push to the remote) / `Edit the message` (description: revise the commit message — leads to a free-text follow-up asking for the new message, then re-present) / `Cancel` (description: stop without committing — nothing is written to git). On `Edit the message`, ask for the new message, then proceed to Step 3 with it. On `Cancel`, stop. Do not proceed to Step 3 without a picked approval.
 
 ---
 
@@ -87,6 +87,8 @@ If `push` reports `PUSH: ✗ <reason>` (network, auth, conflict), surface the er
 **Push:** <PUSH report from Step 3>
 **Next session:** [what to pick up — next domain, open questions, next action]
 ```
+
+Keep the `**Next session:**` line in the report stamp — it is the resume note. Then close with an `AskUserQuestion` hand-off picker — never end the skill on the prose stamp alone. Build the options from what was just committed and what remains: e.g. `Continue to <next domain>` `(Recommended)` (description: start UI definitions for the next undefined domain) / `Run /review` (description: coverage check — offer when cowmoo/design/ changed and review hasn't run this session) / `Run /notify planner` (description: announce the committed cowmoo/design/ changes to planner) / `Done for now` (description: stop here; work is committed and pushed). Omit options that don't apply this run.
 
 ---
 

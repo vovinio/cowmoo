@@ -214,7 +214,7 @@ On reject:
 
 On approve, this skill produces no report — `/approve-design` reports the approval outcome.
 
-**Next:** Run `/catchup` to process any other pending items, or wait for the designer's next submission.
+On the reject path, after the report render an `AskUserQuestion` hand-off picker for the next action — `Run /catchup` (Recommended — process any other pending items) first, any other live continuation, and `Done for now` last (the user may simply be waiting for the designer's next submission). Build the option set from where the conversation stands. On the approve path, `/approve-design` owns the hand-off — do not add one here.
 
 ---
 

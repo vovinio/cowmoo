@@ -3,7 +3,7 @@ name: draft
 description: Extract all decisions, open questions, edge cases, and terminology from the current discussion and append to working notes
 user-invocable: true
 disable-model-invocation: false
-allowed-tools: Write, Edit, Read, Glob, Bash
+allowed-tools: Write, Edit, Read, Glob, Bash, AskUserQuestion
 ---
 
 # Draft
@@ -98,11 +98,11 @@ Saved → WORKING-NOTES.md
 Gaps this session:
   • <Entity/Feature>: missing <workflow | validations | edge cases | ...>
   • <Entity/Feature>: missing <...>
-
-Next: continue this domain, or /digest when ready
 ```
 
 The "Gaps" section flags forward-pointing items based on what a complete spec needs (workflow, validations, edge cases, permissions, acceptance criteria for features; relationships, fields, rules, states for entities). One line per gap, ≤3 gaps surfaced — the highest-priority ones. This section is report-only — do not write it to working notes.
+
+**Hand-off.** After the stamp, render an `AskUserQuestion` picker of concrete next actions — never close on a prose "Next:" line. Build the options from session context: the recommended next step first with `(Recommended)`, other live continuations, and a `Done for now` option last. Typical options — keep discussing the current domain (recommended when gaps remain), address a specific gap surfaced above, or `/digest` when the notes are ready to formalize. Each option's `description` names what it leads to.
 
 **Misunderstanding check.** If a wrong interpretation of the session could produce the same counts (e.g., 8 decisions could be 8 *wrong* decisions), add a single named-decision line above the gaps so the user can verify intent in one glance:
 

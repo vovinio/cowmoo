@@ -3,7 +3,7 @@ name: catchup
 description: Triage pending for-pm issues from GitHub — quick-resolve or transition into a working session.
 user-invocable: true
 disable-model-invocation: false
-allowed-tools: Agent, Read, Glob, Bash, Edit, Write
+allowed-tools: Agent, Read, Glob, Bash, Edit, Write, AskUserQuestion
 ---
 
 # Catch Up
@@ -28,11 +28,11 @@ For each dragged card, build a RELABEL op entry. Collect all of them into one ar
 
 ```json
 [
-  { "op": "RELABEL", "issue": <n>, "removeLabel": "<old>", "addLabel": "for-pm" }
+  { "op": "RELABEL", "issue": <n>, "removeLabel": ["<routing-label>", ...], "addLabel": "for-pm" }
 ]
 ```
 
-`<old>` is the current label taken from the `board-drags` line. Write this array to `cowmoo/agent-files/pm/.op-handoff.json` with the Write tool, then run one `issue-transition` command per entry, in index order:
+The `board-drags` line's second field is a comma-separated list of the card's current labels. Build `removeLabel` as a JSON array of the **column-routing labels** in that list — the labels that map to a board column (`story`, `todo`, `in-progress`, `for-planner`, `for-uxui`, and any `uxui:*` label) — and leave any non-routing labels (priority, type, etc.) untouched. `issue-transition` accepts `removeLabel` as a string or an array and skips any label not actually on the issue; if the line carries only one routing label, the array has one element. Write this array to `cowmoo/agent-files/pm/.op-handoff.json` with the Write tool, then run one `issue-transition` command per entry, in index order:
 
 ```bash
 node "$AGENT_DIR/tools/dev-tools.cjs" issue-transition --from cowmoo/agent-files/pm/.op-handoff.json --index <i>
@@ -62,9 +62,9 @@ Show the full inbox with category and origin:
    <one-line summary>
 ```
 
-**Render the issue-selection choice via `AskUserQuestion`** with `multiSelect: true`. Each option is one issue (`#N — title → category (from origin)`); the user picks the issues to handle in this pass. Recommended option first with `(Recommended)` suffix — pick the highest-priority issue (quick questions before spec-change-needed, oldest first within a category) as the recommendation; each option's `description` carries the one-line summary. Per CLAUDE.md's picker rule (the `/catchup triage` example called out there). Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker.
+**Render the issue-selection choice via `AskUserQuestion`** with `multiSelect: true`, per CLAUDE.md item 3's picker rule. Each option is one issue (`#N — title → category (from origin)`); the user picks the issues to handle in this pass. Recommend the highest-priority issue (quick questions before spec-change-needed, oldest first within a category); each option's `description` carries the one-line summary.
 
-If the inbox has only 1 issue, skip the picker and prose-confirm: "Handle #N — <title>?" — a 1-option picker is degenerate.
+If the inbox has only 1 issue, still render a confirmation picker — `Handle #N — <title>` (Recommended) / `Skip for now` — so the user selects rather than typing.
 
 ---
 
@@ -99,8 +99,9 @@ The `issue-transition` command runs comment → relabel/close in order, verifies
 1. Read the full issue context from @inbox-reader's response
 2. Present your understanding of the question
 3. Propose an answer — with specifics, not vague responses
-4. Discuss with user until resolved
-5. On confirmation: write the handoff file and run the **RESOLVE_ISSUE** op per the **Invoking RESOLVE_ISSUE** mechanics above — issue number, resolution summary, action and transfer-target per the **Routing rule** above.
+4. Discuss with user until the answer is settled
+5. Render an `AskUserQuestion` confirmation gate before writing — the user selects, never types "yes". Three options: `Resolve & route` (Recommended) — *posts the resolution comment and closes or transfers the issue per the Routing rule*; `Edit the answer` — *the user revises the resolution wording; ask what to change, then re-present this gate*; `Cancel` — *leaves the issue untouched*.
+6. On `Resolve & route`: write the handoff file and run the **RESOLVE_ISSUE** op per the **Invoking RESOLVE_ISSUE** mechanics above — issue number, resolution summary, action and transfer-target per the **Routing rule** above. On `Edit the answer`, take the revision and re-present the gate. On `Cancel`, leave the issue and move to the next picked issue.
 
 ### Spec Change Needed
 1. Read the full issue context
@@ -133,7 +134,7 @@ Stop the catchup process here. Remaining inbox issues can be processed in a futu
 
 ## Step 5: Report (when all issues resolved in triage)
 
-If all issues were quick-resolved without needing a discussion session:
+If all issues were quick-resolved without needing a discussion session, state the outcome as a prose stamp:
 
 ```
 ## Inbox Processed
@@ -141,10 +142,9 @@ If all issues were quick-resolved without needing a discussion session:
 - [N] issues resolved
   - #<number>: <resolution summary> — <closed | transferred>
 - Spec files changed: <list, or "none">
-
-<If spec files were changed:>
-**Next:** Run /publish to save changes, then /notify to announce downstream.
 ```
+
+Then render an `AskUserQuestion` hand-off picker of concrete next actions — never close on a prose "Next:" line. Build the options from context: if spec files were changed, lead with `/publish` `(Recommended)` — *saves the spec changes and pushes to the remote* — followed by other live continuations (e.g. `/notify` to announce downstream once published); if no spec files changed, offer the live continuations directly. Always end with `Done for now` last. Each option's `description` names what it leads to.
 
 ---
 
@@ -164,7 +164,7 @@ Before finishing, confirm:
 ## Rules
 
 - **Triage, don't force** — if an issue needs discussion, transition. Don't try to resolve complex spec problems inline.
-- **User decides** — present your recommendation, let the user confirm or adjust
+- **User decides** — present your recommendation; the user confirms or redirects through the picker, never an assumed yes
 - **One at a time** — process each issue fully before moving to the next
 - **Quick resolve = comment + close/transfer** — always through `dev-tools.cjs issue-transition` with verification
 - **Needs work = discussion session** — stop catchup, start discussion, let /notify close the loop

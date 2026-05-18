@@ -17,10 +17,11 @@ Quick reconnaissance of a live web platform using Playwright CLI. Map the naviga
 
 **NEVER do any of these:**
 1. NEVER run `click` on Save, Submit, Confirm, Apply, Create, or any button that persists changes
-2. NEVER run `fill` or `type` on any form field
-3. NEVER run `click` on Archive, Deactivate, Remove, or any destructive action
-4. NEVER run `click` on action buttons that trigger operations (send, publish, run, execute, sync)
-5. NEVER open create/edit forms — that's the entity agent's job. You only browse navigation and list views.
+2. NEVER delete anything
+3. NEVER run `fill` or `type` on any form field
+4. NEVER run `click` on Archive, Deactivate, Remove, or any destructive action
+5. NEVER run `click` on action buttons that trigger operations (send, publish, run, execute, sync)
+6. NEVER open create/edit forms — that's the entity agent's job. You only browse navigation and list views.
 
 **What you CAN do (read-only):**
 - `click` navigation links via refs from snapshot

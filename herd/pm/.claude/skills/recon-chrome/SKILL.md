@@ -4,7 +4,7 @@ description: "Reverse-engineer a live web platform using Claude in Chrome. Scout
 user-invocable: true
 disable-model-invocation: false
 argument-hint: [url]
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent, AskUserQuestion
 ---
 
 # Platform Reverse Engineering
@@ -55,7 +55,7 @@ Check if `[FOLDER]/_working/` already has files from a previous run:
 - `notes-entities.md` exists → Phase 3 done (check header for partial completion)
 - `notes-ops.md` exists → Phase 4 done (check header for partial completion)
 
-If any working files exist, tell the user what was already completed and ask: **"Previous recon data found. Resume from Phase [N], or start fresh?"** If they say start fresh, delete the `_working/` contents and proceed from Phase 1.
+If any working files exist, tell the user what was already completed, then render an `AskUserQuestion` picker — `Resume from Phase [N]` `(Recommended)` / `Start fresh`. Each option's `description` carries the consequence: `Resume from Phase [N]` continues from the first incomplete phase, keeping prior working files; `Start fresh` deletes the `_working/` contents and proceeds from Phase 1. On `Start fresh`, delete the `_working/` contents and proceed from Phase 1.
 
 ---
 
@@ -379,3 +379,5 @@ List all files in `[FOLDER]/` and `[FOLDER]/domains/` with sizes.
 Show summary: domains created, entity types documented, report metrics counted, top 3 findings.
 
 Tell the user: **"Recon complete. Full product analysis in `[FOLDER]/`."**
+
+Then render an `AskUserQuestion` hand-off picker of concrete next actions, recommended first and `Done for now` last. Build the options from state — e.g. `/compare` to compare this analysis against the product specs (recommended), `/recon-playwright` against the same URL to cross-check with the other tool (especially worth surfacing if the user also ran `/recon-playwright` — comparing the two output directories), `/recon-chrome` against a different platform, and `Done for now` last.

@@ -80,7 +80,7 @@ This keeps the asymmetry files from becoming permanent exceptions that outlive t
 
 ## Finding Format
 
-Every actionable finding uses the canonical four-part shape — see `.claude/templates/finding-format.md`.
+Every actionable finding uses the canonical finding shape — see `.claude/templates/finding-format.md`.
 
 ---
 
@@ -98,31 +98,21 @@ Run the canonical verification phase. Read `.claude/templates/verification-phase
 ```
 ## Pattern Check Results
 
-For each pattern in the catalog:
-### Pattern <N>: <name> — [PASS / <M> instances, <K> findings]
-- <optional one-line note per instance if something notable>
+<N> issues found — <C> critical, <A> advisory.   (or, if none: "No issues found.")
+Checked: every pattern in `docs/PATTERN-CATALOG.md` against its discovered instances,
+plus cross-pattern discovery (novel pattern candidates, stale asymmetry entries,
+discovery-recipe gaps).
 
-### Cross-pattern discovery
-- Novel pattern candidates: <list or "none">
-- Stale asymmetry entries: <list or "none">
-- Discovery-recipe gaps: <list or "none">
+<Each confirmed issue, numbered, in the finding format — critical first.>
 
-### Verification
-- Findings raised: N
-- Verified this session (capped at 10): M
-- Confirmed — fix good: X
-- Confirmed — fix needs revision: Y
-- Dismissed: Z
-- Deferred to next run: N - M (if > 0)
+### Filtered out (not real — no action)   ← include only if findings were dismissed
+- <headline> — <verifier's one-line reason>
 
-### Confirmed Findings (ready for fix)
-<confirmed findings with any verifier-revised fixes inline>
-
-### Dismissed Findings (logged for transparency)
-<dismissed findings with verifier's concrete reason>
+### Deferred to next run   ← include only if the 10-finding cap was hit
+- <headline only>
 ```
 
-**Next:** If clean, continue with `/contracts` (next skill in the pipeline). If confirmed findings need fixing, fix them and re-run `/patterns` before continuing. If the only findings are advisory (novel pattern candidates, stale asymmetries), consider whether the catalog or asymmetry files need updating rather than the herd.
+**Next.** After the report, render an `AskUserQuestion` hand-off picker — `Run /contracts` (Recommended when `/patterns` came back clean) / `Fix findings, then re-run /patterns` (Recommended when confirmed findings need fixing) / `Stop here`. On a CRITICAL finding, drop the `Run /contracts` option. When the only findings are advisory (novel pattern candidates, stale asymmetries), the middle option is instead `Update the catalog or asymmetry files`. Per the picker doctrine in CLAUDE.md "Rendering Choices".
 
 ---
 

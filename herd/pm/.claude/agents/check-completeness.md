@@ -40,42 +40,13 @@ From PRODUCT.md, identify:
 
 ## Step 3: Check Against Templates
 
-For each item, compare against its template:
+For each spec item, verify it against every section its type's template defines — the four templates read in Step 1 (`product.md`, `domain.md`, `entity.md`, `feature.md`) are the authority. Do not rely on a hardcoded section list; check against the template files as loaded. Flag:
 
-**Domain files must have:**
-- `# [Name] Domain` header
-- One-sentence description of the business area
-- `## Entities` section (before Features)
-- `## Features` section (after Entities)
-- File name in kebab-case matching the domain name
-- Domain name reflects a business area, not a technical component
-- No entity defined in multiple domain files
+- **(a)** template-required sections entirely missing
+- **(b)** sections present but empty or placeholder-only
+- **(c)** required subsections absent
 
-**Entities must have:**
-- What it is (one sentence)
-- Relationships (with required/optional and delete behavior)
-- Fields (with types in plain language, not SQL)
-- Rules
-- States (if entity has a status field)
-
-**Features must have:**
-- User story (As a [role], I can [action] so that [benefit])
-- Workflow (step-by-step, alternating user and system)
-- Validations (with exact error messages)
-- Edge cases (with explicit handling)
-- Permissions
-- Acceptance criteria (Given/When/Then)
-
-**Product overview must have:**
-- Problem statement
-- Target users with pain points
-- Overview
-- Glossary
-- Roles
-- Product areas
-- How it works
-- Key behaviors
-- Key constraints
+The domain template additionally encodes structural rules beyond section presence — section ordering (Entities before Features), kebab-case file naming matching the domain name, business-oriented domain naming, and no entity defined in multiple domain files. Verify these against the domain template too.
 
 **Scope-aware gap detection.** When a template section is missing from a spec file, check whether the section maps to content that's out of scope for this project (per CLAUDE.md) before flagging it:
 - Key Constraints is only expected when the user has explicitly stated product-level constraints (performance, scale, data retention, etc.). If the section is missing and no constraints appear anywhere in the specs, don't flag it. But if constraints are mentioned elsewhere in the specs without being captured in Key Constraints, flag the gap.

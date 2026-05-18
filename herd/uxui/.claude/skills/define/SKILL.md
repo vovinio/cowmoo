@@ -105,9 +105,9 @@ Skip if this run has no journey-level content.
 
 #### 3d. Update `cowmoo/design/domains/[domain].md` (for each ready screen)
 
-**One domain at a time.** When 2+ domains have `[ready]` items, **render the domain-selection choice via `AskUserQuestion`** (single-select). Recommended option first with `(Recommended)` suffix — pick the domain with the most ready items as the recommendation, since processing it produces the largest delta in this run. Each option's `description` lists the count and a brief summary of what's ready ("4 ready items: 3 screens, 1 flow"). Per CLAUDE.md's picker rule. Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker.
+**One domain at a time.** When 2+ domains have `[ready]` items, **render the domain-selection choice via `AskUserQuestion`** (single-select) per CLAUDE.md item 3's picker rule. Recommend the domain with the most ready items, since processing it produces the largest delta in this run. Each option's `description` lists the count and a brief summary of what's ready ("4 ready items: 3 screens, 1 flow").
 
-When only 1 domain has ready items, skip the picker and prose-confirm: "Process `<domain>` (the only domain with ready items)?" — a 1-option picker is degenerate.
+When only 1 domain has ready items, **render a confirmation picker via `AskUserQuestion`**: `Process <domain>` `(Recommended)` (description: writes the N ready items into `cowmoo/design/domains/<domain>.md`) / `Cancel` (description: stop without writing — items stay in working notes).
 
 For each ready item, structure it per the domain-ui template:
 
@@ -153,11 +153,11 @@ Remove items successfully written to `cowmoo/design/` files. Keep untagged and o
 ### Remaining in Working Notes
 - [N] untagged items (still in discussion)
 - [N] ready items in domain(s) not processed this run — re-run /define to handle them
-
-**Next:** Run /review to verify spec coverage, then /publish to commit and push.
 ```
 
 Include the "ready items in domain(s) not processed" line only when Step 3d's picker was used and at least one non-selected domain still has `[ready]` items; omit it otherwise (single-domain runs leave no ready items behind).
+
+After the report, close with an `AskUserQuestion` hand-off picker — never end on a prose "Next:" line. Build the options from context: `Run /review` `(Recommended)` (description: verify the UI definitions cover all specs) / `Run /define again` (description: process the [ready] items in domain(s) not handled this run — offer only when non-selected domains still have [ready] items) / `Done for now` (description: stop here; cowmoo/design/ files are written, run /publish later to commit). Omit the second option when no ready items remain.
 
 ---
 

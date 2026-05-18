@@ -169,7 +169,7 @@ Update the header counts each time you append.
 - Business rules: auto-calculations, conditional requirements, constraints, validation messages
 - UX observations
 
-## Things to NOT Miss
+## Rules
 
 **Always do these:**
 - **Fields below the fold** — SCROLL TO BOTTOM of every form/tab

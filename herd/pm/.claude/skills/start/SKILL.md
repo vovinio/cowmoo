@@ -3,7 +3,7 @@ name: start
 description: Load the project and orient the session — greet a fresh project, or resume an existing one
 user-invocable: true
 disable-model-invocation: true
-allowed-tools: Read, Glob, Bash
+allowed-tools: Read, Glob, Bash, AskUserQuestion
 ---
 
 # Start
@@ -67,12 +67,12 @@ Project loaded.
 **Suggested focus:** [the most important open area, with reasoning — drawn from notes + backlog + domains]
 
 [CLOSING — depends on how many candidates the suggested focus surfaces:]
-- **0 candidates** — nothing in notes, backlog, or domain specs is open. Before seeding the picker, check whether the spec phase looks complete: if Step 2 listed domain spec files AND a Glob of `$PROJECT_DIR/cowmoo/design/domains/` returns nothing, the product spec covers everything currently captured and no design work has started. In that case prepend this prose line before the picker: *"Nothing's open in notes, backlog, or domain specs, and no design work has started — when you're ready, the natural next step is the UXUI agent (`moo uxui`). If you'd rather keep expanding the spec, here are starting points:"* Skip the prose line if `cowmoo/design/domains/` is non-empty (UXUI already engaged) or if no domain specs exist at all (closer to greenfield — nothing for UXUI to consume yet). Either way, don't ask open-endedly. Render `AskUserQuestion` seeded from what you DID read in PRODUCT.md: 2–3 concrete starting points (a glossary term that lacks a domain, a role whose workflows aren't yet captured, a product area implied by the overview) plus a free-text fallback option. Recommended option first with `(Recommended)` suffix; each option's `description` names the consequence (which file gets created, what's affected — not a label repeat). Example seeds:
+- **0 candidates** — nothing in notes, backlog, or domain specs is open. Before seeding the picker, check whether the spec phase looks complete: if Step 2 listed domain spec files AND a Glob of `$PROJECT_DIR/cowmoo/design/domains/` returns nothing, the product spec covers everything currently captured and no design work has started. In that case prepend this prose line before the picker: *"Nothing's open in notes, backlog, or domain specs, and no design work has started — when you're ready, the natural next step is the UXUI agent (`moo uxui`). If you'd rather keep expanding the spec, here are starting points:"* Skip the prose line if `cowmoo/design/domains/` is non-empty (UXUI already engaged) or if no domain specs exist at all (closer to greenfield — nothing for UXUI to consume yet). Either way, don't ask open-endedly. Render `AskUserQuestion` per CLAUDE.md item 3's picker rule, seeded from what you DID read in PRODUCT.md: 2–3 concrete starting points (a glossary term that lacks a domain, a role whose workflows aren't yet captured, a product area implied by the overview) plus a free-text fallback option. Each option's `description` names the consequence (which file gets created, what's affected). Example seeds:
   - "Define `<glossary-term>` as first domain" — *creates `domains/<term>.md`; already named in PRODUCT.md glossary*
   - "Capture workflows for role `<R>`" — *defines features for an already-named role; touches existing domains if any*
   - "Describe a different area" — *free-text fallback when none of the above fit*
-- **1 candidate** — prose: "Want to dig into [topic]?" or similar single-recommendation confirmation. Exception: if that one focus is itself a multi-unit effort, see the fan-out note below — go straight to a starting-unit picker instead.
-- **2–4 candidates** — `AskUserQuestion` picker. Recommended candidate first with `(Recommended)` suffix; each option's `description` carries the tradeoff (what each candidate touches, what's affected). Per CLAUDE.md's picker rule and the `/start focus` example called out there.
+- **1 candidate** — render the focus as an `AskUserQuestion` picker: `Dig into <topic>` (its `description` carries the why-this-one reasoning) plus a fallback option for a different direction. Even a single-candidate focus is a confirmation gate — the user selects, never types a yes. Exception: if that one focus is itself a multi-unit effort, see the fan-out note below — go straight to a starting-unit picker instead.
+- **2–4 candidates** — `AskUserQuestion` picker per CLAUDE.md item 3's picker rule; each option's `description` carries the tradeoff (what each candidate touches, what's affected).
 - **5+ candidates** — render the lineup as a brief table, then use `AskUserQuestion` to pick the next batch (top 2–4) or ask for an unlisted direction. Never end with bare prose like "walk through in order, or jump to a specific one, or do you have a different topic?" — that's a 3-option fork that the picker is for.
 ```
 
@@ -121,22 +121,22 @@ Wait for the user. Do not read any further files — there is nothing to read.
 
 Required PM files are missing (e.g., `cowmoo/specs/PRODUCT.md`, `cowmoo/agent-files/pm/WORKING-NOTES.md`). The PM file structure must be in place before discussion or formalization can begin.
 
-Tell the user the files are missing and give them an actionable recovery path — do not stop at a dead end:
+Tell the user the files are missing and give them an actionable recovery path — do not stop at a dead end. State the situation as prose:
 
 ```
 Required PM files are missing — `cowmoo/specs/PRODUCT.md` and
 `cowmoo/agent-files/pm/WORKING-NOTES.md` are not present.
 
-To create the PM file structure, run one of these:
-- /import <folder>      — recreates the structure and walks through existing docs
-- /import-design <url>  — recreates the structure and extracts specs from a
-                          Claude Designer bundle
-
 If you expected these files to already exist, they may have been deleted —
 check version control to restore them.
 ```
 
-Stop after showing this — the user runs the chosen skill, then re-runs `/start`.
+Then render an `AskUserQuestion` picker of the two recovery skills so the user selects a path rather than typing a command:
+
+- **`/import <folder>`** — *recreates the PM file structure and walks through existing docs together*
+- **`/import-design <url>`** — *recreates the PM file structure and extracts specs from a Claude Designer bundle*
+
+Neither has an obvious default — present both without a `(Recommended)` suffix unless the conversation already named which one fits. Stop after the user picks — they run the chosen skill, then re-run `/start`.
 
 ---
 
@@ -150,5 +150,5 @@ Before finishing, confirm:
 - [ ] For existing: session focus proposed with specific reasoning, rendered through picker when 2–4+ candidates; a fan-out focus closes with a starting-unit picker, not prose
 - [ ] For existing: after focus picked, the relevant domain file(s) loaded fully at Step 5 (typically one per session per Rule 3)
 - [ ] For greenfield: greeting shown with /draft and /import options; no file reads beyond the Step 1 state check and its placeholder-confirmation read of WORKING-NOTES.md + PRODUCT.md
-- [ ] For not initialized: user told which files are missing AND given the `/import` / `/import-design` recovery path — no dead-end stop
+- [ ] For not initialized: user told which files are missing AND given the `/import` / `/import-design` recovery path via an `AskUserQuestion` picker — no dead-end stop
 - [ ] User has full context to start working — main agent holds the ground truth, not a sub-agent's summary

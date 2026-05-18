@@ -606,6 +606,29 @@ function pushOp() {
   process.exit(0);
 }
 
+// --- Last spec commit (most recent commit touching cowmoo/specs/) ---
+//
+// Used by /notify to detect spec changes when it runs in a SEPARATE session
+// from /publish — there is no in-context COMMIT report to read. Prints one
+// parseable line; the skill reads it as a fallback when the session shows no
+// /publish.
+//
+//   specs: <hash> <file>,<file>,...   — most recent commit touching cowmoo/specs/
+//   specs: none                       — no commit in history touched cowmoo/specs/
+//
+// Always exits 0 — a clean "none" is a valid answer, not an error. Read-only.
+//
+function lastSpecCommit() {
+  if (!PROJECT_DIR) { console.log('specs: none'); process.exit(0); }
+  const head = git(['log', '-n', '1', '--format=%H', '--', 'cowmoo/specs/']);
+  const hash = head.ok ? head.out.trim() : '';
+  if (!hash) { console.log('specs: none'); process.exit(0); }
+  const shown = git(['show', '--name-only', '--format=', hash, '--', 'cowmoo/specs/']);
+  const files = splitLines(shown.out);
+  console.log(`specs: ${hash.slice(0, 9)} ${files.join(',')}`);
+  process.exit(0);
+}
+
 // --- Project board (canonical label↔Status sync) ---
 //
 // Agent-independent — verbatim copy across all four dev-tools.cjs files.
@@ -1010,6 +1033,9 @@ switch (command) {
   case 'push':
     pushOp();
     break;
+  case 'last-spec-commit':
+    lastSpecCommit();
+    break;
   case 'board-drags':
     boardDragsOp(process.argv[3], process.argv[4]);
     break;
@@ -1020,5 +1046,5 @@ switch (command) {
     issueTransition();
     break;
   default:
-    console.log('Usage: node "$AGENT_DIR/tools/dev-tools.cjs" <hook|git-check|territory-check|check-files|inbox|workflow-check|next-step|design-fetch|downstream-engaged|commit|push|board-drags|issue-create|issue-transition>');
+    console.log('Usage: node "$AGENT_DIR/tools/dev-tools.cjs" <hook|git-check|territory-check|check-files|inbox|workflow-check|next-step|design-fetch|downstream-engaged|commit|push|last-spec-commit|board-drags|issue-create|issue-transition>');
 }

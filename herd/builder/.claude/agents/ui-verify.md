@@ -14,6 +14,7 @@ Verify that the implemented UI flow works in a real browser by walking through i
 ## Environment
 
 - `$PROJECT_DIR` — absolute path to the project root.
+- `$AGENT_DIR` — absolute path to this agent's own directory, where `tools/` lives.
 
 ## Input
 

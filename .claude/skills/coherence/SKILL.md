@@ -108,7 +108,7 @@ This section is judgment-heavy. Take time; don't pattern-match.
 
 ## Finding Format
 
-Every actionable finding uses the canonical four-part shape — see `.claude/templates/finding-format.md`.
+Every actionable finding uses the canonical finding shape — see `.claude/templates/finding-format.md`.
 
 ---
 
@@ -126,16 +126,20 @@ Run the canonical verification phase. Read `.claude/templates/verification-phase
 ```
 ## Coherence Results
 
-### Section 1: Tool Availability — [PASS / N findings]
-### Section 2: Environment Assumptions — [PASS / N findings]
-### Section 3: Rule-Command Alignment — [PASS / N findings]
-### Section 4: Execution Order — [PASS / N findings]
+<N> issues found — <C> critical, <A> advisory.   (or, if none: "No issues found.")
+Checked: tool availability, environment assumptions, rule-command alignment,
+execution order.
 
-### Verification
-<standard block from the verification template>
+<Each confirmed issue, numbered, in the finding format — critical first.>
+
+### Filtered out (not real — no action)   ← include only if findings were dismissed
+- <headline> — <verifier's one-line reason>
+
+### Deferred to next run   ← include only if the 10-finding cap was hit
+- <headline only>
 ```
 
-**Next:** If clean, the four structural skills (`/check`, `/patterns`, `/contracts`, `/coherence`) have all passed. Consider running `/audit-agent <name>` for a per-agent deep review when an agent has had substantial changes.
+**Next.** `/coherence` is the last structural skill. After the report, render an `AskUserQuestion` hand-off picker. When clean: `Run /audit-agent <agent>` (Recommended after substantial single-agent work — a deeper per-agent review) / `Done — pipeline complete`. When findings need fixing: `Fix findings, then re-run /coherence` (Recommended) / `Stop here`. Per the picker doctrine in CLAUDE.md "Rendering Choices".
 
 ---
 

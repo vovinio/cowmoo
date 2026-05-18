@@ -21,7 +21,7 @@ Use when the planner finds a problem that can't be resolved without input from a
 
 Parse the argument: `pm` or `uxui`.
 
-If no argument is provided, **render the target choice via `AskUserQuestion`** (single-select). Recommended option first with `(Recommended)` suffix — pick PM when the discussion concerns a spec gap, contradiction, or business-logic question; pick UXUI when the discussion concerns a UI definition issue (missing screen state, question about a `cowmoo/design/` file). Each option's `description` carries the consequence ("creates a `for-pm` issue addressed to PM" vs "creates a `for-uxui` issue addressed to UXUI"). Per CLAUDE.md's picker rule. Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker.
+If no argument is provided, **render the target choice via `AskUserQuestion`** (single-select). Recommended option first with `(Recommended)` suffix — pick PM when the discussion concerns a spec gap, contradiction, or business-logic question; pick UXUI when the discussion concerns a UI definition issue (missing screen state, question about a `cowmoo/design/` file). Each option's `description` carries the consequence ("creates a `for-pm` issue addressed to PM" vs "creates a `for-uxui` issue addressed to UXUI"). Per CLAUDE.md's picker rule.
 
 The target determines which label and which `dev-tools.cjs` op to run.
 

@@ -534,9 +534,9 @@ Applies to any skill whose body invokes N > 1 side-effecting operations in seque
 
 - A "Preview" or "HARD GATE" step appears after the skill has assembled everything needed to execute, but before any side effect occurs.
 - The preview shows the user concretely what will happen: which files will be committed, which issues will be created (with titles), which labels will be changed, which commit message. No abstraction — the actual text and data.
-- The skill waits for explicit user confirmation. "Silence is consent" is not allowed — the user must type an approval or an adjustment.
+- The skill waits for explicit user confirmation. "Silence is consent" is not allowed — the skill must not advance until the user actively approves or adjusts.
 - The skill handles the fork: approve → execute; adjust → discuss then re-preview; reject → stop cleanly.
-- When the preview offers 2–4 genuine alternatives (e.g. `/notify planner` vs `uxui` vs `both`, approve-as-is vs approve-with-role-additions), the skill uses `AskUserQuestion` rather than free-text prompting.
+- How the confirmation is rendered is per-agent. PM and UXUI render every HARD-GATE confirmation as an `AskUserQuestion` picker — including a plain approve/cancel — per their `CLAUDE.md` item 3 interaction doctrine. Planner and builder use `AskUserQuestion` when the preview offers 2–4 genuine alternatives (e.g. `/notify planner` vs `uxui` vs `both`, approve-as-is vs approve-with-role-additions) and free-text prompting otherwise.
 
 **Reference implementation.**
 - `herd/uxui/.claude/skills/design-draft/SKILL.md` Step 8 "HARD GATE" (before `/design-publish` ships N tasks to GitHub).
@@ -608,27 +608,27 @@ Patterns that govern how the curator's own skills are written.
 
 - **No verification phase, no detection shape:** `/pressure-test` (runs scenarios via sub-agent, not a structural check), `/curate` (workflow skill that designs options for proposals), `/rename-sweep` (user-driven rename utility), `/scaffold-subagent` (generator).
 - **Detection-like work but exempt from verification filter:** `/audit-hygiene` is an editorial noise scanner whose findings are judgment-heavy — verification would add cost without signal.
-- **Partial conformance:** `/audit-agent` uses the verification phase tail (Step 8 invokes the canonical procedure) but its narrative 8-step body doesn't decompose into the multi-section or single-iteration variants — Steps 2–7 are six distinct substantive checks plus Step 1 (full comprehension) plus Step 8 (verification). It's a narrative variant treated as a detection skill in CLAUDE.md, audit-verify, and the verification template.
+- **Partial conformance:** `/audit-agent` uses the verification phase tail (Step 8 invokes the canonical procedure) but its narrative body doesn't decompose into the multi-section or single-iteration variants — Steps 2–7 are six distinct substantive checks plus Step 1 (full comprehension) plus Step 8 (verification). It also replaces the static `## Report` tail with `## Step 9 — Triage walkthrough`: confirmed findings are delivered to the user one at a time via `AskUserQuestion` pickers (problem + fix options + apply/skip/dismiss decision) rather than as a single block. It's a narrative variant treated as a detection skill in CLAUDE.md, audit-verify, and the verification template.
 
 ---
 
 ### 22. Finding Format
 
-**Purpose.** Every curator finding uses the same four-part format so the user can triage uniformly regardless of which skill surfaced it.
+**Purpose.** Every curator finding the user sees uses the same shape so the user can triage uniformly regardless of which skill surfaced it — and so the real issue is in front of the user fast, not buried under PASS lists or verification accounting.
 
 **Canonical shape.**
 
 ```
-**[One-line headline — what's wrong]**
+**[Headline — what's wrong, in plain words]**  ·  [critical | advisory]
 
-One short paragraph: what the problem is and why it matters, in plain language.
+**Problem.** Plain-language paragraph: what's broken and what the user/agent
+experiences because of it. file:line cited.
 
-**Impact check:** Actually verify — grep, read, trace. Report concrete findings (files, line numbers, affected elements). Confirm the fix is safe or enumerate coordinated edits.
-
-**Fix:** One sentence on what to do. If multiple coordinated edits are needed, list them.
+**Fix.** One obvious fix stated directly, OR — for a genuine fork — 2–3 options,
+the recommended one first and marked `(recommended)`, each with a one-line reason.
 ```
 
-Informational findings (expected state, PASS) skip Impact check and Fix — just state what's there and that it's correct.
+Impact verification (grep callers, confirm coordinated edits are safe) happens *while producing* the finding but is not a rendered section. Skills that pass a check emit a single coverage line ("Checked: X, Y, Z"), never a list of PASS entries; the raised/verified/confirmed/dismissed counts are internal to the verification phase and stay out of the user-facing report.
 
 **Reference implementation.** `.claude/templates/finding-format.md`.
 
@@ -640,7 +640,7 @@ Informational findings (expected state, PASS) skip Impact check and Fix — just
 
 ### 23. Verification Phase
 
-**Purpose.** Detection casts a wide net; verification filters out false positives and weak fix proposals so surviving findings are trustworthy. Per-finding fresh context via `@audit-verify` is what makes this work.
+**Purpose.** Detection casts a wide net; verification filters out false positives and weak fix proposals so surviving findings are trustworthy. Per-finding fresh context via `@audit-verify` is what makes this work. The phase catches *over-detection* only — a real issue the detector dismissed mid-pass never reaches the verifier, so guarding against *under-detection* is the calling skill's detection-phase responsibility (see `/audit-agent`'s "Dismissal discipline" section).
 
 **Canonical shape.**
 

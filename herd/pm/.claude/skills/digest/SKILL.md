@@ -3,7 +3,7 @@ name: digest
 description: Dedicated session — formalize working notes into specs, move deferred items to backlog
 user-invocable: true
 disable-model-invocation: false
-allowed-tools: Write, Edit, Read, Glob, Bash
+allowed-tools: Write, Edit, Read, Glob, Bash, AskUserQuestion
 ---
 
 # Digest
@@ -65,7 +65,7 @@ From working notes, separate items into categories:
 
 **One domain at a time.** Pick the domain with the most ready items (or let the user specify). Process that domain fully — transform, write, clean — before starting the next. If changes in that domain require updates to other files (e.g., glossary in PRODUCT.md, ripple to another domain), make those cross-domain changes too. But don't process unrelated ready items from other domains in the same run — they wait for the next digest.
 
-If ready items span multiple domains with no clear primary, propose which domain to focus on and let the user confirm or redirect.
+If ready items span multiple domains with no clear primary, render the domain choice as an `AskUserQuestion` picker — one option per domain with ready items, the domain with the most ready items first with `(Recommended)`, each option's `description` naming its ready-item count. The user's pick is this run's focus.
 
 **Ordering within the run:** Process PRODUCT.md updates first (if needed), then the primary domain. Within the domain, process entities before features so features can reference entities.
 
@@ -135,13 +135,13 @@ Proposed (your call):
   • <what PM proposed — e.g., default = "Net 30">
 
 Reasoning preserved: <N> trade-offs / threshold rationale → <where in spec, e.g., "Design notes §" or "inline at field">
-
-→ Open file, or confirm?
 ```
 
-If nothing was proposed (the working-notes item was complete), drop the "Proposed" section. If no reasoning was preserved (none was present in the source item), drop that line. Never echo the full drafted spec content back into chat — the spec file IS the long version.
+After the stamp, render an `AskUserQuestion` confirmation gate — the user selects, never types "yes". Three options: `Confirm` (Recommended) — *accepts the proposals and proceeds to write the spec*; `Open file` — *the user reviews the drafted spec before confirming; re-present this gate after*; `Adjust a proposal` — *the user names what to change; revise the proposal and re-present this gate*.
 
-**Never present a gap without a proposal.** If the template requires something and working notes don't have it, always propose a specific completion. If multiple approaches exist, present 2-3 options with trade-offs and a recommendation — **and render the choice via `AskUserQuestion`, not as a prose `(a)/(b)/(c)` list.** Recommended option first with `(Recommended)` suffix; each option's `description` carries the tradeoff. Per CLAUDE.md's picker rule (the `/digest gap-filling` example called out there). Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker. The user should never have to invent an answer from scratch.
+If nothing was proposed (the working-notes item was complete), drop both the "Proposed" section and the `Adjust a proposal` option. If no reasoning was preserved (none was present in the source item), drop that line. Never echo the full drafted spec content back into chat — the spec file IS the long version.
+
+**Never present a gap without a proposal.** If the template requires something and working notes don't have it, always propose a specific completion. If multiple approaches exist, present 2-4 options with trade-offs and a recommendation, rendered as an `AskUserQuestion` picker per CLAUDE.md item 3's picker rule. The user should never have to invent an answer from scratch.
 
 **Verify before writing:**
 
@@ -250,11 +250,11 @@ If any `[future]` items remain in working notes that weren't associated with a p
 
 ### Proposed & Confirmed
 - [What you proposed that user confirmed]
-
-**Next:** Run /review to verify spec integrity, then /publish to ship.
 ```
 
 Include the "ready items in domain(s) not processed" line only when Step 4 processed one of multiple domains that had `[ready]` items, leaving at least one domain's ready items behind; omit it otherwise (single-domain runs leave no ready items behind).
+
+**Hand-off.** After the report, render an `AskUserQuestion` picker of concrete next actions — never close on a prose "Next:" line. Build the options from context: `/review` first with `(Recommended)` — *verifies spec integrity before shipping*; other live continuations (e.g. `/digest` again when ready items remain in unprocessed domains, or `/publish` directly if the user wants to ship without a review pass); and `Done for now` last. Each option's `description` names what it leads to.
 
 **Heavy-digest companion (HTML).** When this digest wrote **substantial** content — multiple items or sections across one or more spec files, or a new entity or feature — also deliver the report as an HTML companion the user can review before shipping:
 

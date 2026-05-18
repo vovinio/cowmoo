@@ -18,17 +18,4 @@ Always prefix GitHub comments with `**[PM]**` and issue titles with `[PM]`.
 
 ## Board columns
 
-Each label maps to a Projects v2 board column. The herd keeps each card's Status column in sync with its issue label automatically — every create / relabel / close is mirrored to the board by the `issue-create` / `issue-transition` subcommands, and a human dragging a card to another column is read back as a label change on the next `/catchup` (or `/start`). You never set the column by hand.
-
-| Label / event | Column |
-|---|---|
-| `story` | Stories |
-| `todo` | Todo |
-| `in-progress` | In Progress |
-| `for-planner` | Planner |
-| `for-pm` | PM |
-| `for-uxui` | UXUI |
-| `uxui:todo` | UX: Todo |
-| `uxui:in-progress` | UX: In Progress |
-| `uxui:review` | UX: Review |
-| `uxui:done` / closed issue | Done |
+Each label maps to a Projects v2 board column. The `issue-create` / `issue-transition` subcommands keep each card's Status column in sync with its label automatically — every create / relabel / close is mirrored to the board, and you never set the column by hand. A card a human drags into the PM column is reconciled back to the `for-pm` label by `/catchup`.

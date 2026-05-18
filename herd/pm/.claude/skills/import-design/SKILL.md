@@ -4,7 +4,7 @@ description: Initiate spec work from an existing Claude Designer share URL — f
 user-invocable: true
 argument-hint: <share-url>
 disable-model-invocation: false
-allowed-tools: Read, Edit, Write, Glob, Agent, Bash
+allowed-tools: Read, Edit, Write, Glob, Agent, Bash, AskUserQuestion
 ---
 
 # Import Design
@@ -146,8 +146,9 @@ Ambiguities ([N]):
   • <contradiction | undefined-in-UI | unsupported-by-UI>: <specific item>
 
 Starting with: <first topic> — foundational, others depend on it.
-Different starting point?
 ```
+
+After the overview, render an `AskUserQuestion` picker — `Start with <first topic>` `(Recommended)` / `Different starting point`. Each option's `description` carries the consequence: `Start with <first topic>` begins the walk-through at the dependency-rooted topic; `Different starting point` lets the user name where to begin instead (ask in free text which topic).
 
 **Misunderstanding check.** Screens list stays dense — don't drop a screen for compression; every screen is load-bearing. If the inferred entities / features / roles could equally describe a different product the user didn't intend, add a one-line `Key call:` naming the inferred product-defining decision (e.g., `Key call: multi-tenant SaaS inferred from workspace-switcher in <Screen X>`).
 
@@ -160,7 +161,7 @@ Walk through by **topic** (entity, feature, or screen group), not file-by-file. 
 1. **Summarize** what the design shows: screen elements + what the chat transcript says about intent
 2. **Infer the spec content** — entities (fields, types in business terms, relationships), features (who triggers, workflow steps, validations), states (per the canonical state vocabulary), edge cases
 3. **Flag gaps** — what the design implies but doesn't pin down (e.g., "the design shows a 'Status' chip with 3 colors — what are the actual statuses and transitions?")
-4. **Ask specific questions** — one or two at a time. Propose concrete answers per CLAUDE.md "Propose completions" rule; don't ask the user to fill from a blank. **When the question admits 2-4 meaningful resolutions with tradeoffs (e.g., contradictions between screen and chat — keep screen as truth / adopt chat-stated intent / merge), render the choice via `AskUserQuestion`, not as a prose `(a)/(b)/(c)` list.** Recommended option first with `(Recommended)` suffix; each option's `description` carries the tradeoff. Per CLAUDE.md's picker rule. Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker.
+4. **Ask specific questions** — one or two at a time. Propose concrete answers per CLAUDE.md "Propose completions" rule; don't ask the user to fill from a blank. **When the question admits 2-4 meaningful resolutions with tradeoffs (e.g., contradictions between screen and chat — keep screen as truth / adopt chat-stated intent / merge), render the choice via `AskUserQuestion`** per CLAUDE.md item 3's picker rule.
 5. **Wait for user answers** before moving on
 6. **Append confirmed understanding** to `WORKING-NOTES.md` after each topic, tagged `[ready]` for confirmed items, `[future]` for explicitly deferred items, untagged for items still in discussion. Always note `Source: design import (<url>)` so provenance is preserved.
 
@@ -189,23 +190,15 @@ After walking all topics, summarize what got captured and where the gaps are:
 - [...]
 ```
 
-Propose: fill the blocking gaps now via more discussion, or accept the gaps as open questions and proceed to the hand-off step.
+Render an `AskUserQuestion` picker for how to proceed — `Accept gaps as open questions` `(Recommended)` / `Fill the blocking gaps now`. Each option's `description` carries the tradeoff: `Accept gaps as open questions` records the blocking gaps as open questions and proceeds to the hand-off step; `Fill the blocking gaps now` continues the discussion to resolve them before hand-off.
 
 ---
 
 ## Step 8: Hand the URL to UXUI
 
-When the user is ready to wrap (gaps acceptable, walk-through complete), confirm the hand-off:
+When the user is ready to wrap (gaps acceptable, walk-through complete), render an `AskUserQuestion` picker for the hand-off — `Notify UXUI` `(Recommended)` / `Skip`. Each option's `description` carries the consequence: `Notify UXUI` creates a `for-uxui` GitHub issue with the share URL so when the user runs `moo uxui` next, the design import is in their inbox and UXUI can fetch the bundle for canonical use; `Skip` is fine if the user wants to handle this manually later — the URL is saved to working notes instead.
 
-```
-Ready to notify UXUI? This creates a for-uxui GitHub issue with the share URL
-so when the user runs `moo uxui` next, the design import is in their inbox
-and UXUI can fetch the bundle for canonical use.
-
-Confirm or skip? (skip is fine if the user wants to handle this manually later)
-```
-
-On confirm, compose the title and body, write the handoff file, then run the `issue-create` command.
+On `Notify UXUI`, compose the title and body, write the handoff file, then run the `issue-create` command.
 
 **Compose the body** (the message UXUI will receive):
 
@@ -268,13 +261,9 @@ If the user skipped the hand-off, write the URL to working notes under a `**Sour
 
 **Hand-off:**
 - for-uxui issue #<N> created with the share URL  (or: deferred — URL saved in working notes)
-
-**Next steps:**
-- Run /tidy to organize imported notes (optional)
-- Run /digest to formalize [ready] items into specs
-- After /digest + /publish, run /notify uxui to announce the spec changes
-- (User runs `moo uxui` later — UXUI sees the import issue and proposes capturing the bundle)
 ```
+
+After the report, render an `AskUserQuestion` hand-off picker of concrete next actions, recommended first and `Done for now` last. Build the options from state — e.g. `/digest` to formalize `[ready]` items into specs (recommended), `/tidy` to organize the imported notes first, `/start` to discuss the open items that need more work, and `Done for now` last. (After `/digest` + `/publish`, `/notify uxui` announces the spec changes; the user runs `moo uxui` later to act on the import issue.)
 
 The temp directory at `/tmp/pm-import-<timestamp>/` is left for OS cleanup. If the session is interrupted before completion, the user re-runs `/import-design` with the same URL — there is nothing to recover.
 
@@ -284,7 +273,7 @@ The temp directory at `/tmp/pm-import-<timestamp>/` is left for OS cleanup. If t
 
 - **Read transiently — never write the bundle into project files.** PM's job is spec extraction, not bundle storage. UXUI owns persistent design artifacts.
 - **Walk by topic, not by file** — a single entity is often visible in 3 screens and discussed in 2 chat transcripts. Group related content.
-- **Propose, don't interrogate** — when a screen implies something ambiguous, suggest a concrete reading and ask the user to confirm or adjust. Never present a blank gap.
+- **Propose, don't interrogate** — when a screen implies something ambiguous, suggest a concrete reading and render the confirm/adjust choice as an `AskUserQuestion` picker. Never present a blank gap.
 - **Preserve source context** — note which screen or chat each piece of inferred spec came from, plus the share URL, so future digestion can verify.
 - **Use the tagging system** — `[ready]` confirmed, `[future]` deferred, untagged still open.
 - **Respect scope** — if the design implies database schema, API design, or component code, note their existence but don't import them. PM owns business-level entities and features only.

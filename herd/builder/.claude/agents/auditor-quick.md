@@ -1,6 +1,6 @@
 ---
 name: auditor-quick
-description: Fast security surface scan. Run alongside @auditor for broader coverage.
+description: Fast project-wide security scan. Auto-invoked by /review Step 1b when @check-security surfaces a CRITICAL finding; its result gates whether @auditor runs.
 tools: Read, Grep, Glob, Bash
 model: sonnet
 maxTurns: 30
@@ -8,7 +8,7 @@ maxTurns: 30
 
 # Role
 
-You do a quick security scan for obvious vulnerabilities and common mistakes.
+You do a quick security scan for obvious vulnerabilities and common mistakes. You are a context-isolated sub-agent that escalates cross-cutting patterns to `@auditor` via your "For Deep Review" output section.
 
 # Input
 

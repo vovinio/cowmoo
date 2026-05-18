@@ -14,18 +14,24 @@ This applies to everything — design discussions, code changes, audit findings.
 
 ## Rendering Choices
 
-When you have 2–4 genuine alternatives with real tradeoffs — not a single recommendation — render the choice with the `AskUserQuestion` tool instead of prose `(a)/(b)/(c)` lists. Recommended option first with `(Recommended)` suffix; put the tradeoff in each option's `description`, not just a label repeat. Use `multiSelect: true` only when picks are non-exclusive.
+Render every decision you put to the user as an `AskUserQuestion` picker — never a prose question they answer by typing. Three interaction classes, all pickers:
 
-**The rule is general — apply it to any 2–4-alternative fork with tradeoffs and a recommendation.** If your response would contain a list (numbered, bulleted, or prose-enumerated) of 2–4 options each with a tradeoff and a recommendation, use the picker.
+- **Decision forks** — 2-4 genuine alternatives with real tradeoffs. Recommended option first with `(Recommended)` suffix; the tradeoff goes in each option's `description`, not a label repeat. `multiSelect: true` only when picks are non-exclusive.
+- **Confirmation gates** — every "apply this / proceed?" point, rendered as a picker even when it is a plain yes/no — the user selects, never types "yes". When the confirmation has an "edit / adjust" branch, that branch is its own option.
+- **Hand-off** — every skill, and every pipeline step, ends with a picker of concrete next actions: the recommended next step first, the other live continuations, and a `Stop here` option. Never close on a prose "Next:" line.
 
-Curator moments where this typically applies (illustrative, not exhaustive):
+**The governing rule:** never end a turn on a prose question the user answers by typing — end on a picker they select.
+
+**What stays prose:** your reasoning, findings, reports, and recommendations — the *content*. And genuinely open questions with nothing to enumerate.
+
+Decision-fork moments where this typically applies (illustrative, not exhaustive):
 - **Fix-path choice for a finding** — multiple legitimate resolutions (e.g., remove the check vs. tighten the regex vs. accept the recurring dismissal).
 - **Proposal application choices** — when a curated proposal offers Option A/B/C, present them as a picker rather than re-narrating in prose.
 - **Asymmetry decisions** — e.g., collapse vs. keep + tighten vs. keep + remove-trigger when an asymmetry's Revisit-if condition has materialized.
-- **Commit grouping** — when a session's work splits into 2–4 plausible commit shapes (one big vs. by feature vs. by file family).
+- **Commit grouping** — when a session's work splits into 2-4 plausible commit shapes (one big vs. by feature vs. by file family).
 - **Refactor scope** — minimal fix vs. generalize vs. leave-and-revisit when a finding could be addressed at multiple scopes.
 
-When you have a single concrete recommendation ("I suggest X because Y — confirm or adjust?") or a yes/no confirmation, stay in prose. The picker is for forks, not single proposals. Same principle PM applies in `herd/pm/CLAUDE.md`; Pattern 19 in `docs/PATTERN-CATALOG.md` already encodes a narrow form of this rule scoped to HARD GATE previews. If the broader rule starts applying to a third agent (UXUI, planner, builder), that's when it earns its own catalog entry distinct from Pattern 19's HARD-GATE-scoped form.
+PM and UXUI run this same expanded doctrine in their own `CLAUDE.md` files. Planner and builder keep a narrow forks-only form — picker for 2-4-alternative forks, prose for single recommendations and yes/no — deliberately, because they are less conversational; that divergence is per-agent and not catalogued (a herd-wide catalog pattern would mislabel them). Pattern 19 in `docs/PATTERN-CATALOG.md` records, agent by agent, how a HARD-GATE confirmation is rendered.
 
 ## How You Work
 
@@ -216,10 +222,9 @@ Each skill is state-based — it reads the current repo and reports what's wrong
 **Running the pipeline with me.** These four skills are model-invokable (Pattern 16 carveout), so after a herd edit session I can run them for you without you retyping each command:
 
 - You kick off by either typing the first skill yourself or saying "run the pipeline."
-- I run each skill, report its findings, then **propose** the next skill with a short "run `/patterns` next?" prompt.
-- You approve with a terse "yes" or "continue"; I invoke the next skill. Decline and I stop.
-- **I do not chain without approval.** Two skills never run back-to-back without your sign-off between them.
-- **Hard stop on critical findings.** If a skill surfaces any CRITICAL finding, I report it and stop — I do not propose the next skill. You decide whether to fix before continuing.
+- I run each skill, report its findings, then render an `AskUserQuestion` hand-off picker — the next pipeline skill (recommended when the current skill came back clean), `Fix findings first`, and `Stop here`. You select; no typing "yes" or "continue" between skills.
+- **I do not chain without a selection.** Two skills never run back-to-back without you picking the next step from the hand-off picker.
+- **Hard stop on critical findings.** If a skill surfaces any CRITICAL finding, the hand-off picker drops the "run the next skill" option — it offers only `Fix the findings` and `Stop here`. You decide whether to fix before continuing.
 - Only `/check`, `/patterns`, `/contracts`, `/coherence` are model-invokable. Every other curator skill (`/scaffold-subagent`, `/rename-sweep`, `/curate`, `/audit-agent`, `/audit-hygiene`, `/pressure-test`) stays user-only — you must invoke those yourself.
 
 If you want to narrow the review to a subset, pass an explicit scope to the skill (once supported): `/patterns herd/uxui` or `/check herd/builder/.claude/agents/`.
@@ -256,7 +261,7 @@ The check pipeline (`/check` → `/patterns` → `/contracts` → `/coherence`) 
 /audit-agent <pm | uxui | planner | builder>
 ```
 
-This reads every file for the named agent (no partial reads, no sampling), then walks 6 substantive steps. Slow; budget accordingly. Use it after significant agent work, when something feels off, or on a scheduled cadence — not on every commit. See `.claude/skills/audit-agent/SKILL.md` for the full procedure.
+This reads every file for the named agent (no partial reads, no sampling), then walks 6 substantive steps, then walks you through each confirmed finding one at a time — explaining the problem, offering fix options with a recommendation, and collecting your decision via an `AskUserQuestion` picker (apply / skip / dismiss). Scan-and-triage only — it never edits agent code; fixes you approve are applied afterward as a normal herd edit. Slow; budget accordingly. Use it after significant agent work, when something feels off, or on a scheduled cadence — not on every commit. See `.claude/skills/audit-agent/SKILL.md` for the full procedure.
 
 `/audit-agent` is complementary to the structural pipeline, not a replacement. Passing the structural pipeline means "structurally intact"; passing `/audit-agent` means "no hidden assumptions or logical contradictions found in this deep pass."
 
@@ -271,7 +276,7 @@ The detection skills read these two files fresh on every run. Adding a pattern, 
 
 **Shared templates** live in `.claude/templates/`:
 - `verification-phase.md` — the canonical `@audit-verify` procedure, referenced by every detection skill.
-- `finding-format.md` — the canonical four-part finding shape.
+- `finding-format.md` — the canonical finding shape.
 
 Changes to either template propagate to every detection skill automatically.
 

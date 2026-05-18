@@ -3,7 +3,7 @@ name: tidy
 description: Organize and clean working notes — group related items, tag confirmed decisions as [ready], remove superseded content, prepare notes for /digest
 user-invocable: true
 disable-model-invocation: false
-allowed-tools: Write, Edit, Read, Glob, Bash
+allowed-tools: Write, Edit, Read, Glob, Bash, AskUserQuestion
 ---
 
 # Tidy
@@ -65,9 +65,9 @@ Open Questions ([N])
 
 **Misunderstanding check.** "Design reasoning: 3 items" is not enough — the user can't spot a miscapture from a count alone. "Design reasoning: invoice numbering chose sequential over UUID for human-readability" lets them verify intent in one glance. If load-bearing detail doesn't fit on one line for an item, give it two — don't drop it.
 
-**This is a confirmation checkpoint — stop and wait for user confirmation before proceeding.** The user may spot substance the catalog missed — a decision they remember making, context they provided, reasoning that wasn't captured with an explicit "because." Do not begin reorganizing until the user confirms the catalog is complete.
+**This is a confirmation checkpoint.** The user may spot substance the catalog missed — a decision they remember making, context they provided, reasoning that wasn't captured with an explicit "because." After presenting the catalog, render an `AskUserQuestion` picker — `Catalog is complete` `(Recommended)` / `Something is missing`. Each option's `description` carries the consequence: `Catalog is complete` proceeds to reorganizing; `Something is missing` pauses so the user can name what the catalog missed before any reorganizing begins. Do not begin reorganizing until the user picks `Catalog is complete`.
 
-**If you have clarifying questions about ambiguous content** (e.g., "this kept-as-is meta-decision could go to a spec note OR stay here OR be dropped" — content that admits 2-4 handling strategies with real tradeoffs), surface each question through `AskUserQuestion` — one picker per ambiguity, not a prose list of "Q1 / Q2 / Q3 — here are the options." Per CLAUDE.md's picker rule (the `/tidy ambiguity questions` example called out there). Yes/no confirmations and single-recommendation prompts stay in prose; only forks with 2-4 real options go through the picker.
+**If you have clarifying questions about ambiguous content** (e.g., "this kept-as-is meta-decision could go to a spec note OR stay here OR be dropped" — content that admits 2-4 handling strategies with real tradeoffs), surface each question through `AskUserQuestion` — one picker per ambiguity, not a prose list of "Q1 / Q2 / Q3 — here are the options." Per CLAUDE.md item 3's picker rule.
 
 ---
 
@@ -145,9 +145,9 @@ Preserved (vs Step 2 catalog):
   • Design reasoning: [N]/[N]
   • Edge cases / error messages: [N]/[N]
   • Cross-domain impacts: [N]/[N]
-
-Next: continue discussion, or /digest when ready
 ```
+
+After the stamp, render an `AskUserQuestion` hand-off picker of concrete next actions, recommended first and `Done for now` last. Build the options from state — e.g. `/digest` to formalize the now-organized `[ready]` items into specs (recommended when ready items exist), `/draft` or `/start` to continue discussion, and `Done for now` last.
 
 The "Preserved" line is the trust signal — `[N]/[N]` confirms substance counts match the Step 2 catalog. If any actual < expected, stop and patch before reporting tidy complete (per Step 5's verification rule).
 

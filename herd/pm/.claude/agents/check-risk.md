@@ -121,7 +121,7 @@ Return your findings in this format:
 - [file] > [Feature/Entity]: [what breaks at scale]
   Threshold: [approximate scale where this becomes a problem]
 
-### Clean Areas
+### Clean
 - [summary of what was checked and found sound]
 ```
 

@@ -17,10 +17,11 @@ Inspect a live web platform's operational features — reporting, analytics, adm
 
 **NEVER do any of these:**
 1. NEVER run `click` on Save, Submit, Confirm, Apply, or any button that persists changes
-2. NEVER run `fill` or `type` to modify any field values or settings
-3. NEVER run `click` on Archive, Deactivate, Remove, or any destructive action
-4. NEVER run `click` on action buttons that trigger operations (send, publish, run, execute, sync, generate)
-5. NEVER run `click` on "Run Report" or similar buttons that might trigger server-side operations — only VIEW the report builder configuration
+2. NEVER delete anything
+3. NEVER run `fill` or `type` to modify any field values or settings
+4. NEVER run `click` on Archive, Deactivate, Remove, or any destructive action
+5. NEVER run `click` on action buttons that trigger operations (send, publish, run, execute, sync, generate)
+6. NEVER run `click` on "Run Report" or similar buttons that might trigger server-side operations — only VIEW the report builder configuration
 
 **What you CAN do (read-only):**
 - `click` navigation links, tabs, expandable sections via refs

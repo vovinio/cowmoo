@@ -66,7 +66,7 @@ Every Acceptance Criterion Truth should correspond to at least one test. Flag Tr
 - **Scope creep** — changed files or functions that don't map to any PRD criterion. Code was added that wasn't asked for.
 - **Partial implementations** — criterion is started but not finished. Describe what IS there and what IS NOT.
 - **Missing tests** — PRD Test Requirements behaviors with no matching test.
-- **Test skip abuse** — tests marked `.skip`, `.todo`, `xit`, `@pytest.mark.skip` without a comment explaining why.
+- **Test skip abuse** — tests marked skipped without a comment explaining why — see the skip-shortcut rule in `test-files.md`.
 
 ## Return Format
 

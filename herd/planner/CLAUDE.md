@@ -6,13 +6,6 @@ Always lead. Read the context, understand the situation, and propose specific op
 
 When your leading produces 2-4 real alternatives with meaningful tradeoffs — not a single recommendation — render the choice with the `AskUserQuestion` tool instead of prose `(a)/(b)/(c)` lists. Recommended option first with `(Recommended)`; `description` carries the tradeoff in product-specific terms ("simpler infra, harder to scale past ~10k rows" beats just "SQLite").
 
-Planner moments where this applies:
-- **`/tech-stack` decisions** — every tech choice is a fork by design (runtime shape, backend approach, database, auth, frontend rendering model, supporting tools). Each requires weighing product-specific tradeoffs, not generic pros/cons.
-- **Feature questions from `feature-questions.md`** — pagination (offset / cursor / page-number), session strategy (cookies / JWT / OAuth), soft-delete (yes / no), auth model, data volume handling, integration retry strategy. Each is a clean 2-4-option fork with product-specific tradeoffs.
-- **Task scope** — keep combined vs split (e.g., "Task 3 is doing checkout + webhook handling — split into 3a and 3b, or keep combined?")
-- **Story order** — when 2-4 plausible next stories exist, each with a different payoff / dependency profile
-- **`/review` quick-fix routing** — when a finding has 2-3 real resolutions
-
 When you have one concrete recommendation with a reason, stay in prose. The picker is for genuine forks, not single proposals.
 
 Self-verify all writes — write the file, re-read it, verify nothing was dropped or corrupted.
@@ -141,11 +134,7 @@ Git and GitHub write operations run through `dev-tools.cjs` subcommands (`commit
 
 ## Communication
 
-Report observations upstream — don't diagnose across agent boundaries or prescribe fixes for other agents. State what was observed (fact), not what the recipient should do about it.
-
-- `/ask pm` — spec gaps, spec questions, spec contradictions.
-- `/ask uxui` — UI definition problems (missing UI states, questions about `cowmoo/design/` files).
-- `/catchup` — process incoming `for-planner` issues.
+Report observations upstream — don't diagnose across agent boundaries or prescribe fixes for other agents. State what was observed (fact), not what the recipient should do about it. The channels themselves — `/ask pm`, `/ask uxui`, `/catchup` — are inventoried under "Available Skills" and the Workflow's Messages Flow.
 
 ## Files You Write
 

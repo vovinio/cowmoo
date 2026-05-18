@@ -3,7 +3,7 @@ name: copywrite
 description: Review and improve all user-facing text — terminology, messages, labels, descriptions — informed by domain research
 user-invocable: true
 disable-model-invocation: false
-allowed-tools: Write, Edit, Read, Glob, Agent, Bash
+allowed-tools: Write, Edit, Read, Glob, Agent, Bash, AskUserQuestion
 ---
 
 # Copywrite
@@ -21,7 +21,7 @@ Run `node "$AGENT_DIR/tools/dev-tools.cjs" check-files` and read the `working-no
 1. Read `$PROJECT_DIR/cowmoo/specs/PRODUCT.md` (glossary, roles, product areas) and `$PROJECT_DIR/cowmoo/agent-files/pm/RESEARCH.md` for existing domain context
 2. If no domain terminology research exists yet, use @research: how does this industry name things? What terms do users expect? How do competitors communicate similar concepts?
 3. Read all domain files in `$PROJECT_DIR/cowmoo/specs/domains/`
-4. Work through one file at a time — audit all user-facing text, propose improvements, get confirmation before writing
+4. Work through one file at a time — audit all user-facing text, propose improvements, then render an `AskUserQuestion` picker before writing — `Apply` `(Recommended)` / `Adjust` / `Skip this file`. Each option's `description` carries the consequence: `Apply` writes the proposed improvements; `Adjust` lets the user revise the proposals before writing (ask in free text what to change, revise, re-present the picker); `Skip this file` leaves the file untouched and moves to the next.
 5. Use @research anytime during the audit when a term, pattern, or messaging decision would benefit from real-world context — don't guess when you can look
 
 ## What to review
@@ -37,11 +37,15 @@ Run `node "$AGENT_DIR/tools/dev-tools.cjs" check-files` and read the `working-no
 
 - **Research-informed, not opinion-based** — when proposing a change, cite what the industry uses or explain why it's better for the user. No "I think this sounds better."
 - **Flag UX impact** — distinguish between cosmetic changes (clearer phrasing, same meaning) and semantic changes (different term, different mental model). Semantic changes need explicit user approval.
-- **User's glossary is authoritative** — if the user chose a term that differs from industry standard, flag it as a decision point. Don't auto-fix. They may have a reason.
+- **User's glossary is authoritative** — if the user chose a term that differs from industry standard, don't auto-fix. They may have a reason. Render the decision via `AskUserQuestion` — `Keep "<user's term>"` `(Recommended)` / `Adopt "<industry standard>"` — each option's `description` carrying the tradeoff (the user's intent vs. matching industry convention and user expectations).
 - **Don't touch business logic** — you're improving how things are communicated, not what the rules are.
 - **Consistency across files** — same tone, same message patterns, same level of helpfulness everywhere.
 - **Self-verify every edit** — write, re-read, verify. Same as all other skills.
 - **Let the user pause** — say how many files are done and how many remain, so they can resume later.
+
+## Hand-off
+
+When the audit wraps (all files done, or the user pauses), render an `AskUserQuestion` hand-off picker of concrete next actions, recommended first and `Done for now` last. Build the options from state — e.g. continue auditing the remaining files if any are left (recommended when files remain), `/review` to verify spec integrity after the copy changes, `/publish` to commit the improvements, and `Done for now` last.
 
 ---
 

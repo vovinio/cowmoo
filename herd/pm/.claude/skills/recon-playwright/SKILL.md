@@ -4,7 +4,7 @@ description: "Reverse-engineer a live web platform using Playwright CLI. Token-e
 user-invocable: true
 disable-model-invocation: false
 argument-hint: [url]
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent, AskUserQuestion
 ---
 
 # Platform Reverse Engineering (Playwright CLI)
@@ -67,9 +67,9 @@ The `-s=recon` flag is required — it places the attached browser in the `recon
 playwright-cli -s=recon open <url>/login --headed --persistent
 ```
 
-Tell the user: "Log in manually in the browser window. Tell me when you're done."
+Tell the user to log in manually in the browser window, then render an `AskUserQuestion` picker — `I've logged in` `(Recommended)` / `Login failed — retry` / `Cancel recon`. On `Login failed — retry`, re-run the `open` command above. On `Cancel recon`, stop the skill.
 
-After user confirms:
+On `I've logged in`:
 ```bash
 playwright-cli -s=recon state-save "/tmp/pm-recon-auth-[platform-name]-$(date +%s).json"
 ```
@@ -92,7 +92,7 @@ Check if `[FOLDER]/_working/` already has files from a previous run:
 - `notes-entities.md` exists → Phase 3 done (check header for partial completion)
 - `notes-ops.md` exists → Phase 4 done (check header for partial completion)
 
-If working files exist: "Previous recon data found. Resume from Phase [N], or start fresh?"
+If working files exist, tell the user what was already completed, then render an `AskUserQuestion` picker — `Resume from Phase [N]` `(Recommended)` / `Start fresh`. Each option's `description` carries the consequence: `Resume from Phase [N]` continues from the first incomplete phase, keeping prior working files; `Start fresh` deletes the `_working/` contents and proceeds from Phase 1. On `Start fresh`, delete the `_working/` contents and proceed from Phase 1.
 
 ---
 
@@ -404,4 +404,4 @@ Show summary: domains created, entity types documented, top 3 findings.
 
 Tell the user: **"Recon complete (Playwright). Full product analysis in `[FOLDER]/`."**
 
-If the user also ran `/recon-chrome`, suggest comparing the two output directories.
+Then render an `AskUserQuestion` hand-off picker of concrete next actions, recommended first and `Done for now` last. Build the options from state — e.g. `/compare` to compare this analysis against the product specs (recommended), `/recon-chrome` against the same URL to cross-check with the other tool (especially worth surfacing if the user also ran `/recon-chrome` — comparing the two output directories), `/recon-playwright` against a different platform, and `Done for now` last.

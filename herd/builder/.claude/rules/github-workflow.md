@@ -19,7 +19,7 @@ Always prefix GitHub comments with `**[Builder]**` and issue titles with `[Build
 
 ## Board columns
 
-Each label maps to a Projects v2 board column. The herd keeps each card's Status column in sync with its issue label automatically — every create / relabel / close is mirrored to the board by the `issue-create` / `issue-transition` subcommands, and a human dragging a card to another column is read back as a label change on the next `/catchup` (or `/start`). You never set the column by hand.
+Each label maps to a Projects v2 board column. The herd keeps each card's Status column in sync with its issue label automatically — every create / relabel / close is mirrored to the board by the `issue-create` / `issue-transition` subcommands, and a human dragging a card to another column is read back as a label change on the next `/start`. You never set the column by hand.
 
 | Label / event | Column |
 |---|---|

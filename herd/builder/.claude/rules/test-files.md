@@ -1,3 +1,7 @@
+---
+description: Test-file conventions — TDD discipline for writing tests. Always loaded.
+---
+
 You are editing a test file. The builder follows TDD — tests are written before the implementation, from the PRD's Test Requirements, not from the code.
 
 ## Writing Tests

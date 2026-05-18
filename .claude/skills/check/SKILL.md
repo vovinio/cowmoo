@@ -277,7 +277,7 @@ done
 
 ## Finding Format
 
-Every actionable finding uses the canonical four-part shape — see `.claude/templates/finding-format.md`.
+Every actionable finding uses the canonical finding shape — see `.claude/templates/finding-format.md`.
 
 ---
 
@@ -295,27 +295,20 @@ Run the canonical verification phase. Read `.claude/templates/verification-phase
 ```
 ## Check Results
 
-### Syntax: [PASS / FAIL]
-### Regex Portability: [PASS / N warnings]
-### Frontmatter: [PASS / N missing]
-### Cross-references: [PASS / N broken]
-### Skill → dev-tools subcommand: [PASS / N missing]
-### Dev-tools round-trip: [PASS / N orphans]
-### Architectural invariants: [PASS / N regressions]
-### Sub-agent Prerequisite placement: [PASS / N violations]
+<N> issues found — <C> critical, <A> advisory.   (or, if none: "No issues found.")
+Checked: syntax, regex portability, frontmatter, cross-references, skill→subcommand
+wiring, dev-tools round-trip, architectural invariants, sub-agent Prerequisite placement.
 
-### Verification
-- Findings raised: N
-- Verified this session (capped at 10): M
-- Confirmed — fix good: X
-- Confirmed — fix needs revision: Y
-- Dismissed: Z
+<Each confirmed issue, numbered, in the finding format — critical first.>
 
-### Confirmed Findings (ready for fix)
-### Dismissed Findings (logged for transparency)
+### Filtered out (not real — no action)   ← include only if findings were dismissed
+- <headline> — <verifier's one-line reason>
+
+### Deferred to next run   ← include only if the 10-finding cap was hit
+- <headline only>
 ```
 
-**Next:** If clean, continue with `/patterns` (next skill in the pipeline). If findings need fixing, fix them and re-run `/check` before continuing.
+**Next.** After the report, render an `AskUserQuestion` hand-off picker — `Run /patterns` (Recommended when `/check` came back clean) / `Fix findings, then re-run /check` (Recommended when findings need fixing) / `Stop here`. On a CRITICAL finding, drop the `Run /patterns` option. Per the picker doctrine in CLAUDE.md "Rendering Choices".
 
 ---
 

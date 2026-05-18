@@ -3,7 +3,7 @@ name: design-start
 description: Synthesize UI state and propose the next batch of design tasks (1-3 tasks). Phase B entry point. Conversational — nothing is written.
 user-invocable: true
 disable-model-invocation: false
-allowed-tools: Read, Glob, Grep, Bash
+allowed-tools: Read, Glob, Grep, Bash, AskUserQuestion
 ---
 
 # Design Start
@@ -100,11 +100,12 @@ Why these together: <coherence>
 Why now: <ordering rationale>
 Inherits: <prior visual decisions, or "first batch — establishes direction">
 Sets up: <what these screens establish for downstream work>
-
-Sound right, or different angle?
 ```
 
-When the synthesis admits 2-4 genuinely different starting points (different value/risk profiles, different parts of the product), use the `AskUserQuestion` tool to present the choice — `(Recommended)` first, descriptions stating what each batch gets you. Otherwise stay in prose with one recommendation.
+After showing the proposal, render the decision as an `AskUserQuestion` picker:
+
+- When the synthesis admits 2-4 genuinely different starting points (different value/risk profiles, different parts of the product), present each as an option — the recommended batch first with `(Recommended)`, descriptions stating what each batch gets you.
+- Otherwise, the proposal above is the single recommendation: render a confirmation picker — `Accept this batch` (Recommended) / `Different angle` (the user wants a different set — picking it opens a free-text follow-up where they describe what to change). Each option's `description` carries the consequence.
 
 ---
 
@@ -119,9 +120,9 @@ Locked next batch:
 - Screens: [list]
 - Why these together: [coherence]
 - Inherits: [visual direction]
-
-Run /design-draft to compose the task bodies.
 ```
+
+Then render an `AskUserQuestion` hand-off picker for the next action — `Run /design-draft` (Recommended — compose the task bodies for the locked batch) first, any other live continuation (e.g. `Refine the batch further` if the user might still adjust), and `Done for now` last. Build the option set from where the conversation actually stands.
 
 ---
 
@@ -136,8 +137,8 @@ Do NOT write any files. Do NOT touch GitHub. Do NOT compose task bodies. The use
 - [ ] All sources read (specs, design defs, VISUAL-JOURNAL.md, GH state) — no per-bundle reads by default
 - [ ] Synthesis presented (concise — what's done, what's pending, visual direction)
 - [ ] One batch proposed with explicit reasoning (what / why-together / why-now / inherits / sets-up)
-- [ ] User confirmed or redirected; batch locked
-- [ ] User informed `/design-draft` is the next step
+- [ ] User confirmed or redirected via picker; batch locked
+- [ ] Hand-off picker presented (`/design-draft` recommended)
 
 ---
 

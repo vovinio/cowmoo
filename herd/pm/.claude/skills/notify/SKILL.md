@@ -4,7 +4,7 @@ description: Announce spec changes via for-planner or for-uxui issue, and resolv
 user-invocable: true
 disable-model-invocation: false
 argument-hint: <planner | uxui>
-allowed-tools: Bash, Read, Glob, Agent, Write
+allowed-tools: Bash, Read, Glob, Agent, Write, AskUserQuestion
 ---
 
 # Notify
@@ -24,10 +24,10 @@ Parse the argument:
 
 **If no argument is provided**, scan the session and propose:
 
-1. Were spec files committed this session? If no, there's nothing to announce — skip to Step 5 (inbox check).
+1. Were spec files committed this session? If `/publish` ran in this session, use what it committed. If not, run `node "$AGENT_DIR/tools/dev-tools.cjs" last-spec-commit` — it prints `specs: <hash> <files>` for the most recent commit touching `cowmoo/specs/`, or `specs: none`. If neither the session nor `last-spec-commit` shows a spec commit, there's nothing to announce — skip to Step 5 (inbox check).
 2. Use Glob once to list `$PROJECT_DIR/cowmoo/design/domains/*.md`. If any changed spec domain has a matching design-domain filename in that list, `for-uxui` is a candidate.
 3. Specs feed downstream work — `for-planner` is almost always a candidate.
-4. Propose the target fork to the user — `planner`, `uxui`, `both`, or `none`. **Render this choice via `AskUserQuestion`, not as a prose `(a)/(b)/(c)/(d)` list** — it's a 4-option fork with real tradeoffs (who consumes the spec change). Recommended option first with `(Recommended)` suffix; each option's `description` carries the tradeoff — for `uxui` and `both`, include whether `$PROJECT_DIR/cowmoo/design/domains/<domain>.md` exists for the changed domain so the user knows if UXUI has matching content to update. Per CLAUDE.md's picker rule (the `/notify target selection` example called out there). Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker.
+4. Propose the target fork to the user — `planner`, `uxui`, `both`, or `none`. **Render this choice via `AskUserQuestion`** per CLAUDE.md item 3's picker rule — it's a 4-option fork with real tradeoffs (who consumes the spec change). For `uxui` and `both`, the option's `description` includes whether `$PROJECT_DIR/cowmoo/design/domains/<domain>.md` exists for the changed domain so the user knows if UXUI has matching content to update.
 5. Accept the user's choice: `planner`, `uxui`, `both`, or `none`.
 
 If the user picks `both`, run the notify flow twice — once per target — sequentially.
@@ -40,9 +40,14 @@ The target determines which label and which `dev-tools.cjs` op to use.
 
 ## Step 2: Check for Spec Changes
 
-Review the current session's conversation. Were spec files (`cowmoo/specs/`) committed by `/publish`?
+Identify the spec changes to announce. (If Step 1's no-argument path already ran `last-spec-commit`, reuse that result instead of re-running it.)
 
-- **No spec changes** — skip to Step 5 (inbox check).
+- **`/publish` ran in this session** — use the spec files it committed; you saw the `COMMIT: ✓ <hash>` report.
+- **`/notify` is running in a separate session from `/publish`** — there is no in-context commit report. Run `node "$AGENT_DIR/tools/dev-tools.cjs" last-spec-commit`:
+  - `specs: <hash> <file>,<file>,...` — the most recent commit touching `cowmoo/specs/`; treat those files as the spec change to announce and note the hash. This commit comes from git history, not this session — it may be one already announced in an earlier `/notify`. Surface the hash and changed files to the user so the Step 3 approval is an informed check, not a rubber stamp.
+  - `specs: none` — no commit in history touched `cowmoo/specs/`.
+
+- **No spec changes** (no in-session `/publish`, and `last-spec-commit` reported `none`) — skip to Step 5 (inbox check).
 - **Specs changed** — note which files and what changed. Proceed to Step 3.
 
 ---
@@ -63,7 +68,7 @@ Same content, but frame the impact around what may need updating in UI definitio
 
 Include enough context that the recipient understands the impact without reading the specs themselves.
 
-Present the composed message to the user for approval.
+Present the composed message, then render an `AskUserQuestion` approval picker — `Send` `(Recommended)` / `Edit the message` / `Cancel`. Each option's `description` carries the consequence: `Send` creates the GitHub issue (Step 4); `Edit the message` lets the user revise before sending; `Cancel` skips notification (proceed to Step 5 inbox check, no issue created). On `Edit the message`, ask in free text what to change, revise the message, and re-present the picker.
 
 ---
 
@@ -124,8 +129,8 @@ If no tracked issues — skip to report.
 
 If tracked issues exist, the `inbox list` output is `<number>\t<title>` per line. For each line:
 
-1. Present to user: "Tracked issue #<number>: <title>. Has this been resolved by the recent spec work?"
-2. If user confirms, resolve the issue with action **close**. The skill composes the resolution comment — prefixed `**[PM]** ` — and writes a one-element handoff array to `cowmoo/agent-files/pm/.op-handoff.json` with the Write tool:
+1. For each tracked issue, render an `AskUserQuestion` picker — one per issue — naming it (`Tracked issue #<number>: <title>`): `Resolved` `(Recommended)` / `Not resolved`. Each option's `description` carries the consequence: `Resolved` closes the issue and removes it from tracking; `Not resolved` leaves it tracked for a future `/notify`.
+2. If the user picks `Resolved`, resolve the issue with action **close**. The skill composes the resolution comment — prefixed `**[PM]** ` — and writes a one-element handoff array to `cowmoo/agent-files/pm/.op-handoff.json` with the Write tool:
 
    ```json
    [
@@ -146,7 +151,7 @@ If tracked issues exist, the `inbox list` output is `<number>\t<title>` per line
    ```bash
    node "$AGENT_DIR/tools/dev-tools.cjs" inbox remove <number>
    ```
-4. If user declines → leave the issue tracked for a future `/notify`.
+4. If the user picks `Not resolved` → leave the issue tracked for a future `/notify`.
 
 ---
 
@@ -162,6 +167,8 @@ If tracked issues exist, the `inbox list` output is `<number>\t<title>` per line
 ```
 
 If nothing happened (no spec changes and no tracked issues): "Nothing to notify about."
+
+After the report, render an `AskUserQuestion` hand-off picker of concrete next actions, recommended first and `Done for now` last. Build the options from session state — e.g. `/notify <other target>` if only one of planner/uxui was notified and the other is a live candidate, `/notify` again if tracked inbox issues remain unresolved, `/catchup` to check for new inbox items, `/start` to begin or resume discussion, and `Done for now` last.
 
 ---
 
@@ -196,8 +203,8 @@ Before finishing, confirm:
 ## Rules
 
 - **One target per invocation** — if both planner and UXUI need messages, run `/notify` twice with different targets (or accept the "both" offer in Step 1).
-- **Check session context** — review what was committed this session (you were there when `/publish` ran).
+- **Check what was committed** — prefer this session's `/publish`; when `/notify` runs in a separate session, fall back to `dev-tools.cjs last-spec-commit` for the most recent `cowmoo/specs/` commit.
 - **Always resolve through `dev-tools.cjs issue-transition`** — never close or transfer issues with hand-rolled `gh` calls.
 - **Observational, not prescriptive** — the impact description states facts about what changed, not instructions for what the recipient should do.
-- **User decides** — present your recommendation, let the user confirm or adjust.
+- **User decides** — present your recommendation; the user confirms or redirects through the picker, never an assumed yes.
 - **Inbox resolution belongs here** — `/catchup` tracks items; `/notify` closes them when the work that addresses them ships.

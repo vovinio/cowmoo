@@ -17,9 +17,10 @@ Inspect every entity type on a live web platform — creation forms, edit forms,
 
 **NEVER do any of these:**
 1. NEVER run `click` on Save, Submit, Confirm, Apply, Create, or any button that persists changes
-2. NEVER run `click` on Archive, Deactivate, Remove, or any destructive action
-3. NEVER run `fill` or `type` on **edit forms** of existing entities
-4. NEVER run `click` on action buttons that trigger operations (send, publish, run, execute, sync)
+2. NEVER delete anything
+3. NEVER run `click` on Archive, Deactivate, Remove, or any destructive action
+4. NEVER run `fill` or `type` on **edit forms** of existing entities
+5. NEVER run `click` on action buttons that trigger operations (send, publish, run, execute, sync)
 
 **On CREATE forms only** (nothing persists until you click Create, which you NEVER do):
 - You MAY `click` radio buttons and type selectors via refs to test dynamic form behavior

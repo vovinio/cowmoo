@@ -1,3 +1,7 @@
+---
+description: Database-change gotchas — migration and indexing pitfalls. Always loaded.
+---
+
 ## Database Gotchas
 
 - Adding NOT NULL column to table with existing rows: add as nullable first, backfill, then add constraint. One-step locks the table and fails on non-empty tables.

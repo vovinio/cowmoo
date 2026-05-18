@@ -41,9 +41,9 @@ Show all items, grouped by kind and — for review tasks — by classification:
 
 Omit a group when it has no members. Review tasks take priority — they block the design pipeline.
 
-**Render the inbox-selection choice via `AskUserQuestion`** with `multiSelect: true`. Each option is one inbox item (`#N — title → <bundle submission | no-bundle review task | agent message: type> (from <origin>)`); the user picks the items to handle in this pass. Recommended option first with `(Recommended)` suffix — pick the highest-priority item by this order — bundle submissions, then no-bundle review tasks, then `for-uxui` agent messages; within each kind, oldest first. Each option's `description` carries the one-line summary. Per CLAUDE.md's picker rule. Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker.
+**Render the inbox-selection choice via `AskUserQuestion`** with `multiSelect: true`, per CLAUDE.md item 3's picker rule. Each option is one inbox item (`#N — title → <bundle submission | no-bundle review task | agent message: type> (from <origin>)`); the user picks the items to handle in this pass. Recommend the highest-priority item by this order — bundle submissions, then no-bundle review tasks, then `for-uxui` agent messages; within each kind, oldest first.
 
-If the inbox has only 1 item, skip the picker and prose-confirm: "Handle #N — <title>?" — a 1-option picker is degenerate.
+If the inbox has only 1 item, **render a confirmation picker via `AskUserQuestion`**: `Handle #N — <title>` `(Recommended)` (description: the one-line summary of the item and where it routes) / `Skip for now` (description: leave it in the inbox — re-run /catchup later to revisit).
 
 ---
 
@@ -72,7 +72,7 @@ All three resolution skills are model-invocable — dispatch by invoking them, *
   - #<number>: <title>
 ```
 
-**Next:** anything not picked this pass stays in the inbox — run `/catchup` again to revisit.
+After the report, close with an `AskUserQuestion` hand-off picker — never end on a prose "Next:" line. Build the options from context: `Run /catchup again` `(Recommended)` (description: revisit the inbox — offer when items were left unpicked this pass) / `Done for now` (description: stop here; anything not picked stays in the inbox for next time). When every item was handled this pass, lead with `Done for now` `(Recommended)` instead and offer `Run /catchup again` as the verify-it's-empty option.
 
 ---
 

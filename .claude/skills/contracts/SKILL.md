@@ -242,7 +242,7 @@ rg "@[a-z-]+\b" herd/*/.claude/skills/ herd/*/.claude/agents/ herd/*/CLAUDE.md
 
 ## Finding Format
 
-Every actionable finding uses the canonical four-part shape — see `.claude/templates/finding-format.md`.
+Every actionable finding uses the canonical finding shape — see `.claude/templates/finding-format.md`.
 
 ---
 
@@ -260,18 +260,20 @@ Run the canonical verification phase. Read `.claude/templates/verification-phase
 ```
 ## Contracts Results
 
-### Section 1: Handoff-Entry Contracts — [PASS / N findings]
-### Section 2: Reader-Classifier Coverage — [PASS / N findings]
-### Section 3: State-File Lifecycle — [PASS / N findings]
-### Section 4: Semantic Argument Names — [PASS / N findings]
-### Section 5: Channel Traces — [X of Y channels PASS, Z FAIL]
-### Section 6: Sub-Agent Liveness — [PASS / N findings]
+<N> issues found — <C> critical, <A> advisory.   (or, if none: "No issues found.")
+Checked: handoff-entry contracts, reader-classifier coverage, state-file lifecycles,
+semantic argument names, channel traces, sub-agent liveness.
 
-### Verification
-<standard block from the verification template>
+<Each confirmed issue, numbered, in the finding format — critical first.>
+
+### Filtered out (not real — no action)   ← include only if findings were dismissed
+- <headline> — <verifier's one-line reason>
+
+### Deferred to next run   ← include only if the 10-finding cap was hit
+- <headline only>
 ```
 
-**Next:** If clean, continue with `/coherence`. If confirmed findings need fixing, fix and re-run.
+**Next.** After the report, render an `AskUserQuestion` hand-off picker — `Run /coherence` (Recommended when `/contracts` came back clean) / `Fix findings, then re-run /contracts` (Recommended when confirmed findings need fixing) / `Stop here`. On a CRITICAL finding, drop the `Run /coherence` option. Per the picker doctrine in CLAUDE.md "Rendering Choices".
 
 ---
 

@@ -4,7 +4,7 @@ description: Process one for-uxui agent message — a spec update, UI gap, or UI
 argument-hint: <issue-number>
 user-invocable: true
 disable-model-invocation: false
-allowed-tools: Read, Glob, Grep, Bash, Edit, Write
+allowed-tools: Read, Glob, Grep, Bash, Edit, Write, AskUserQuestion
 ---
 
 # Process Message
@@ -30,7 +30,7 @@ Specs were updated. Read the message to understand what changed:
 1. Read the relevant cowmoo/design/ domain file
 2. Read the updated spec files referenced in the message
 3. Assess impact: do existing UI definitions need updating? **You own this diagnosis** — the change is reported as fact, you decide whether UI needs updating.
-4. **Small fix** (quick update, no cross-screen impact) → discuss changes with user, update cowmoo/design/ files, self-verify, then close the issue via the `issue-transition` RESOLVE_ISSUE command (see "Resolving via RESOLVE_ISSUE" below).
+4. **Small fix** (quick update, no cross-screen impact) → discuss the changes with the user, then **render a confirmation picker via `AskUserQuestion`** before writing: `Apply the update` `(Recommended)` (description: the concrete cowmoo/design/ edit to be made) / `Adjust the change` (description: revise before writing — leads to a free-text follow-up, then re-present) / `Cancel` (description: leave the UI definition unchanged). On `Apply`, update cowmoo/design/ files, self-verify, then close the issue via the `issue-transition` RESOLVE_ISSUE command (see "Resolving via RESOLVE_ISSUE" below). On `Adjust`, ask what to change, revise, re-present the picker.
 5. **Extended work** (multi-screen redesign, spans sessions) → track the issue for later resolution and transition to discussion mode:
    ```bash
    node "$AGENT_DIR/tools/dev-tools.cjs" inbox add <number> "<title>"
@@ -43,7 +43,7 @@ A task needs a UI state or definition that isn't in `cowmoo/design/` files.
 
 1. Read the message — which screen, which state or definition is missing
 2. **Diagnose:** is this a real gap (missed during extraction) or a misunderstanding (the task scope was wrong, or the screen doesn't need that state)?
-3. **Real gap** → add the missing state/definition to `cowmoo/design/domains/*.md`, self-verify, then either:
+3. **Real gap** → **render a confirmation picker via `AskUserQuestion`** before writing: `Add the missing <state | definition>` `(Recommended)` (description: the concrete addition to `cowmoo/design/domains/<domain>.md`) / `Adjust the change` (description: revise before writing — leads to a free-text follow-up, then re-present) / `Cancel` (description: leave the UI definition unchanged). On `Apply`, add the missing state/definition to `cowmoo/design/domains/*.md`, self-verify, then either:
    - Quick update (one screen, one state) → run `/publish`, then close the issue via the `issue-transition` RESOLVE_ISSUE command (see "Resolving via RESOLVE_ISSUE" below).
    - Extended update (multi-screen, spans sessions) → track the issue for later:
      ```bash
@@ -95,9 +95,12 @@ The command runs comment → close in order, verifies each step with one retry, 
 - <summary> — tracked for extended work; will be closed by `/notify` or `/ask` after the response ships
 ```
 
-**Next** (only when applicable):
-- If cowmoo/design/ files changed → run `/publish` to commit and push, then `/notify planner` to announce and close any tracked items.
-- If a UI gap was diagnosed as task-scope-wrong → run `/ask planner` to send the response and close the tracked item.
+After the report, close with an `AskUserQuestion` hand-off picker — never end on a prose "Next:" line. Build the options from what this message resolved:
+- If cowmoo/design/ files changed → `Run /publish` `(Recommended)` (description: commit and push the cowmoo/design/ changes) / `Run /notify planner` (description: announce the changes and close tracked items) / `Done for now`.
+- If a UI gap was diagnosed as task-scope-wrong → `Run /ask planner` `(Recommended)` (description: send the response and close the tracked item) / `Done for now`.
+- If the message was answered inline with no file change → `Done for now` `(Recommended)` (description: nothing further — the issue is closed) and any other live continuation.
+
+Omit options that don't apply this run.
 
 ---
 

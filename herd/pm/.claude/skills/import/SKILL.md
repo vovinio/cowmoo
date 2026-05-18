@@ -4,7 +4,7 @@ description: Import existing specs or docs from a folder — understand, walk th
 user-invocable: true
 argument-hint: [folder path]
 disable-model-invocation: false
-allowed-tools: Write, Edit, Read, Glob
+allowed-tools: Write, Edit, Read, Glob, AskUserQuestion
 ---
 
 # Import
@@ -79,7 +79,7 @@ Check if `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md` exists.
 
 ## Step 4: Present Understanding
 
-Share a scannable overview before the walk-through. One line per domain, named concepts, and ambiguities. Don't preview the full walk-through order — name only the first topic (dependency-rooted) so the user can confirm or redirect. The full walk-through unfolds topic by topic in Step 5.
+Share a scannable overview before the walk-through. One line per domain, named concepts, and ambiguities. Don't preview the full walk-through order — name only the first topic (dependency-rooted); this step ends with a picker for the user to accept it or choose another. The full walk-through unfolds topic by topic in Step 5.
 
 ```
 ## Import Overview
@@ -96,8 +96,9 @@ Ambiguities ([N]):
   • <contradiction | gap | vague>: <specific item>
 
 Starting with: <first topic> — foundational, others depend on it.
-Different starting point?
 ```
+
+After the overview, render an `AskUserQuestion` picker — `Start with <first topic>` `(Recommended)` / `Different starting point`. Each option's `description` carries the consequence: `Start with <first topic>` begins the walk-through at the dependency-rooted topic; `Different starting point` lets the user name where to begin instead (ask in free text which topic).
 
 **Misunderstanding check.** If the domains and ambiguities lines could equally describe a *different* product the user didn't actually have in mind, add a one-line `Key call:` naming the most product-defining decision you read (e.g., `Key call: <product> = self-serve, not assisted onboarding`). Otherwise the overview is enough.
 
@@ -115,7 +116,7 @@ For each topic:
    - Clearly defined and confirmed → tag `[ready]`
    - Explicitly out of scope or deferred → tag `[future]`
    - Needs discussion or has gaps → leave untagged
-4. **Ask specific questions** — resolve contradictions, fill gaps, clarify vague sections. One or two questions at a time. **For contradiction resolution (imported doc disagrees with existing spec — typically keep current / adopt imported / merge specific fields), render the choice via `AskUserQuestion`, not as a prose `(a)/(b)/(c)` list.** Recommended option first with `(Recommended)` suffix; each option's `description` carries the tradeoff. Per CLAUDE.md's picker rule (the `/import contradictions` example called out there). Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker.
+4. **Ask specific questions** — resolve contradictions, fill gaps, clarify vague sections. One or two questions at a time. **For contradiction resolution (imported doc disagrees with existing spec — typically keep current / adopt imported / merge specific fields), render the choice via `AskUserQuestion`** per CLAUDE.md item 3's picker rule.
 5. **Wait for user answers** before moving on
 6. **Append confirmed understanding** to `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md` after each topic
 
@@ -137,11 +138,9 @@ After walking through all topics:
 
 **Contradictions resolved:** [N]
 **Gaps identified:** [N] (captured as open questions)
-
-**Next steps:**
-- Run /tidy to organize the imported notes
-- Then /digest in a dedicated session to formalize ready items
 ```
+
+After the report, render an `AskUserQuestion` hand-off picker of concrete next actions, recommended first and `Done for now` last. Build the options from state — e.g. `/tidy` to organize the imported notes (recommended), `/digest` in a dedicated session to formalize `[ready]` items into specs, `/start` to discuss the untagged items that need more work, and `Done for now` last.
 
 ---
 

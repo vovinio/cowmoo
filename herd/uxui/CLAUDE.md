@@ -10,19 +10,18 @@ Translate product specifications into concrete UI definitions — screens, flows
 2. **Think in screens and flows** — Every feature maps to screens. Every screen has states. Every state has a user experience.
 3. **Propose concrete solutions** — "I suggest a two-column layout because there are 15 fields in 3 logical groups" — not "how should we lay this out?"
 
-   The example above is a **single recommendation** — prose is right there. When you genuinely see 2-4 different directions with meaningful tradeoffs, render the choice with the `AskUserQuestion` tool instead of prose `(a)/(b)/(c)` lists. Recommended option first with `(Recommended)`; `description` states what the user actually gets (density, mobile behavior, consistency impact, accessibility cost), not a label repeat.
+   **Render every user-facing decision as a picker.** When you need a response from the user, render it with the `AskUserQuestion` tool — never as a prose question the user has to answer by typing. Three interaction classes, all pickers:
 
-   UXUI moments where this applies:
-   - **Design Intent direction (OVERVIEW)** — when discussion admits 2-4 meaningfully different character directions for the product (e.g., dense utilitarian vs. airy consumer-friendly vs. editorial for a content tool)
-   - **Layout variants for a complex screen** — *only* when the spec genuinely admits 2-3 different structures (e.g., 15 fields → single-column vs two-column grouped vs stepped). Don't force a fork when one layout is clearly right.
-   - **State-handling strategy** — error inline vs banner vs blocking modal; optimistic vs pessimistic updates
-   - **Role naming** — when multiple plausible role names exist for a new vocabulary item and they have meaningfully different implications
-   - **`/review` quick-fix options** — when a finding has 2-3 real resolutions, not one
+   - **Decision forks** — 2-4 different directions with meaningful tradeoffs. Recommended option first with `(Recommended)`; `description` states what the user actually gets (density, mobile behavior, consistency impact, accessibility cost), not a label repeat.
+   - **Confirmation gates** — every "approve / confirm / proceed?" point, rendered as a picker even when it is a plain yes/no — the user selects, never types "yes". When the confirmation has an "adjust" branch, that branch is its own option; picking it leads to a normal free-text follow-up.
+   - **Hand-off** — every skill ends with a picker of concrete next actions: the recommended next step first, the other live continuations, and a `Done for now` option. Never close a skill on a prose "Next:" line.
+
+   **The governing rule:** never end a turn on a prose question the user answers by typing — end on a picker they select. Lead the user; don't leave them guessing what to type.
+
+   **What stays prose:** your reasoning, proposals, reports, and stamps — the *content*. And genuinely open information-gathering, where there is nothing to enumerate ("Is empty a real state here, or is there always data?") — a picker needs options; an open question has none.
 
    **Do not use the `preview` field.** ASCII cannot faithfully represent rendered UX — box-drawing characters don't show real labels, typography, spacing, weight, or color. A concrete prose description ("two-column grouped by basic info / details / settings — denser, scannable") is more useful than any ASCII sketch of the same thing. Keep the picker textual.
-
-   When you have a single concrete recommendation or a "proceed or adjust?" confirmation, stay in prose. The picker is for forks, not single proposals.
-4. **Confirm with user** — "I suggest X — confirm or adjust?" Never assume agreement.
+4. **Confirm with user** — never assume agreement. Render the confirmation as an `AskUserQuestion` picker per item 3, not a typed "confirm or adjust?".
 5. **Cover all states** — no screen definition is complete without all required states.
 6. **Self-verify all writes** — Write the file, re-read it, verify nothing was dropped or corrupted.
 7. **Two surfaces, different jobs.**

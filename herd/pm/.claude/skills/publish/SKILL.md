@@ -3,7 +3,7 @@ name: publish
 description: Publish PM files — commit specs, working notes, and proposals locally, then push to the remote. Run after /review or anytime to save progress. If the project has no origin remote, the push step skips cleanly and the commit completes locally.
 user-invocable: true
 disable-model-invocation: false
-allowed-tools: Bash, Read, Glob, Agent, Write, Edit
+allowed-tools: Bash, Read, Glob, Agent, Write, Edit, AskUserQuestion
 ---
 
 # Publish
@@ -33,7 +33,13 @@ Suggest a commit message using conventional format:
 - Spec changes: `spec(<domain>): <description>`
 - Working notes only: `checkpoint(pm): <description>`
 
-Wait for explicit approval before proceeding.
+Then render an `AskUserQuestion` confirmation gate — the user selects, never types "yes". Three options:
+
+- **`Commit & push`** (Recommended) — *commits with the suggested message and pushes to the remote*
+- **`Edit the message`** — *the user supplies a different commit message; ask what it should be, then re-present this gate with the revised message*
+- **`Cancel`** — *stops the publish flow; nothing is committed*
+
+Proceed to Step 3 only on `Commit & push`. On `Edit the message`, take the user's free-text revision and re-present the gate. On `Cancel`, stop.
 
 ---
 
@@ -72,15 +78,16 @@ If PUSH fails (network, auth, conflict), surface the error to the user. The loca
 
 ## Step 4: Report
 
+State the commit outcome as a prose stamp:
+
 ```
 ## Committed
 
 **Commit:** <commit hash> — <message>
 **Push:** <PUSH report from Step 3>
-**Next session:** [what to pick up — domain focus, open questions, next action]
 ```
 
-If spec files were committed, decide whether to suggest `/notify` based on project lifecycle. Run:
+If spec files were committed, decide what next actions to surface based on project lifecycle. Run:
 
 ```bash
 node "$AGENT_DIR/tools/dev-tools.cjs" downstream-engaged
@@ -90,10 +97,14 @@ The helper checks two file-artifact signals — both are paths PM is denied from
 
 GitHub labels (`for-planner`, `for-uxui`) are deliberately NOT used as signals — those labels can be created entirely by PM itself via `/notify` or `/catchup`, so their presence is not proof that the downstream agent ever ran.
 
-- **If exit 0 (engaged)** — suggest: `"Specs changed — run /notify to announce to planner and/or UXUI (inference will propose targets)."`
-- **If exit 1 (greenfield)** — `/notify` would land as noise (no downstream agent has run). Check one more thing before deciding: Glob `$PROJECT_DIR/cowmoo/specs/domains/*.md`.
-  - **Spec domain files exist** — the project has formalized specs but no design work has started. Suggest: `"Specs are taking shape and no design work has started yet — when you're ready, launch the UXUI agent (\`moo uxui\`) to begin UI definitions."`
-  - **No spec domain files yet** — skip the suggestion entirely. The user is still in PM-only formalization with nothing for UXUI to consume.
+**Hand-off.** After the stamp, render an `AskUserQuestion` hand-off picker of concrete next actions — never close on a prose "Next session:" line. Build the options from the `downstream-engaged` result:
+
+- **If exit 0 (engaged)** — recommended first: `/notify` — *announces the spec changes to planner and/or UXUI (inference proposes targets)*. Then other live continuations (e.g. start the next domain). Then `Done for now` last.
+- **If exit 1 (greenfield)** — `/notify` would land as noise (no downstream agent has run). Check one more thing before building the picker: Glob `$PROJECT_DIR/cowmoo/specs/domains/*.md`.
+  - **Spec domain files exist** — formalized specs but no design work started. Recommended first: launch the UXUI agent (`moo uxui`) — *begins UI definitions from the specs*. Then other continuations (e.g. continue the spec in PM). Then `Done for now`.
+  - **No spec domain files yet** — no downstream option applies. Build a picker of PM-only continuations (pick up the next domain focus, address an open question) plus `Done for now`.
+
+Each option's `description` names what it leads to and what to pick up — domain focus, open questions, next action.
 
 ---
 
@@ -116,10 +127,10 @@ Before finishing, confirm:
 - **Commit verify fails (`COMMIT: ✗ commit contains paths outside territory`)** — the commit was created locally but contains non-PM paths. Surface the message verbatim including the recovery command; stop the publish flow. Do NOT push the tainted commit.
 - **Commit succeeds with foreign staged content** — report includes a `Note:` line; surface it so the user knows pre-existing staged paths remained in the index.
 - **Commit fails (any other reason)** — report the failure to user; stop the publish flow.
-- **Specs changed AND `downstream-engaged` exits 0** — suggest `/notify` after committing.
-- **Specs changed, `downstream-engaged` exits 1, and `cowmoo/specs/domains/*.md` is non-empty** — skip the `/notify` suggestion; instead suggest launching the UXUI agent (`moo uxui`) for a first design pass.
-- **Specs changed, `downstream-engaged` exits 1, and no spec domain files exist yet** — skip both suggestions. PM-only formalization; nothing for UXUI to consume.
-- **Only working notes changed** — no `/notify` or UXUI suggestion needed.
+- **Specs changed AND `downstream-engaged` exits 0** — the hand-off picker leads with `/notify`.
+- **Specs changed, `downstream-engaged` exits 1, and `cowmoo/specs/domains/*.md` is non-empty** — the hand-off picker leads with launching the UXUI agent (`moo uxui`) for a first design pass, not `/notify`.
+- **Specs changed, `downstream-engaged` exits 1, and no spec domain files exist yet** — the hand-off picker offers PM-only continuations; no downstream option. PM-only formalization; nothing for UXUI to consume.
+- **Only working notes changed** — the hand-off picker offers PM-only continuations; no `/notify` or UXUI option.
 
 ---
 
@@ -127,5 +138,5 @@ Before finishing, confirm:
 
 - **Write first, commit second** — all file updates before the commit.
 - **Don't reorganize** — when appending to working notes, add at the bottom. Don't restructure existing content.
-- **Don't skip the "next session" note** — this is the most important part for resuming later.
+- **Don't skip the hand-off picker** — its options carry the "what to pick up next" guidance; this is the most important part for resuming later.
 - **Idempotent** — running commit twice in a row should not duplicate content or create empty commits.

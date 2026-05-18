@@ -3,7 +3,7 @@ name: review
 description: Verify spec integrity — terminology, references, scope, completeness, structure, product risk. Run after /digest to verify before shipping.
 user-invocable: true
 disable-model-invocation: false
-allowed-tools: Agent, Read, Write, Edit, Glob, Grep, Bash
+allowed-tools: Agent, Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion
 ---
 
 # Review
@@ -60,7 +60,7 @@ Once all six reports are verified present and usable, read the results, deduplic
 
 After deduplicating, classify every non-auto-fix finding by effort:
 
-- **Auto-fix** — capitalization, known-pattern replacements. Apply with one confirmation.
+- **Auto-fix** — capitalization, known-pattern replacements. Applied as a batch once the user picks the apply path in Step 4's picker.
 - **Quick fix** — term renames, reference rewording, adding a missing line. Discuss and apply inline.
 - **Structural** — entity reorganization, missing features, cross-domain splits, new spec sections. Too big for inline fixes — route to working notes for a dedicated session.
 
@@ -111,7 +111,7 @@ Present a single merged report:
 
 **This is mandatory, not aspirational.** Every quick fix and structural item must have concrete options and a recommendation. If you can't propose a solution, explain why and what information is needed. Never present a finding as just "this is wrong" — always include "here's how to fix it."
 
-**Render the per-finding resolution choice via `AskUserQuestion`, not as a prose `(a)/(b)/(c)` list.** When a finding has 2-4 legitimate fix paths (e.g., remove / simplify / document / keep), use the picker — recommended option first with `(Recommended)` suffix; each option's `description` carries the tradeoff. Per CLAUDE.md's picker rule (the `/review finding resolution` example called out there). Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker.
+**Render the per-finding resolution choice via `AskUserQuestion`** per CLAUDE.md item 3's picker rule — each legitimate fix path (e.g., remove / simplify / document / keep) is an option.
 
 For contradiction-type findings (two specs say different things), quote both sides so the user sees the conflict directly.
 
@@ -134,11 +134,11 @@ If the HTML write or `open` fails, fall back to presenting the full report inlin
 
 ## Step 4: Discuss with User
 
-Ask: **"I found [N] auto-fix items, [N] quick fixes, and [N] structural items. Want me to apply the auto-fixes first, then we'll go through quick fixes inline? Structural items I'll add to working notes for a dedicated session."**
+State the tally as prose — *"I found [N] auto-fix items, [N] quick fixes, and [N] structural items."* — then render an `AskUserQuestion` picker for how to proceed (the user selects, never types). Options: `Apply auto-fixes, then quick fixes inline` (Recommended) — *applies the auto-fixes as a batch, then walks quick fixes one at a time; structural items route to working notes*; `Quick fixes only — skip auto-fixes` — *leaves the auto-fixes for later, goes straight to quick-fix discussion*; `Review findings first` — *the user inspects the report before deciding; re-present this gate after*.
 
 Handle each tier differently:
 
-1. **Auto-fixes** — apply with one confirmation
+1. **Auto-fixes** — once the user picks the apply path, apply them as a batch (the picker IS the confirmation; no separate prose yes/no)
 2. **Quick fixes** — discuss and apply inline, one at a time
 3. **Structural items** — present with full context, recommend adding to working notes, let user override if they want to fix now
 
@@ -179,17 +179,17 @@ If the resolved finding had a corresponding entry already sitting in WORKING-NOT
 
 Do NOT auto-remove these. LLM-driven check agents have variance; a finding disappearing from this run doesn't prove it was resolved — it might have just been under-detected this time. Removing it silently would be data loss.
 
-Instead, surface a list of "candidate stale routings" at the end of Step 6's report:
+Instead, surface the "candidate stale routings" at the end of Step 6 — state the situation as prose, then render an `AskUserQuestion` picker for the user to select which to remove:
 
 ```
 **Candidate stale routings** (in WORKING-NOTES.md from prior runs, not flagged in this run):
 - [entry title from working-notes]
 - [entry title from working-notes]
 
-These may be resolved (in which case removing them is correct) or may be issues this run's check agents missed (in which case removing would lose them). Want me to remove any of these from WORKING-NOTES.md? (Confirm individually, or say "remove all" / "keep all".)
+These may be resolved (in which case removing them is correct) or may be issues this run's check agents missed (in which case removing would lose them).
 ```
 
-Apply removals only with explicit user confirmation per item or batch. Don't act unilaterally.
+Render an `AskUserQuestion` picker with `multiSelect: true` — one option per candidate entry (`description`: why it might be stale vs. why it might be a missed finding). The user selects the entries to remove from WORKING-NOTES.md; unselected entries stay. Apply removals only for the selected entries — don't act unilaterally.
 
 **For this run's unresolved findings:**
 
@@ -211,11 +211,14 @@ Write them to a single section: `## Gaps Found in /review (<date>)`. Do NOT crea
 
 ## Step 7: Outcome
 
-**All clean or all fixes applied:** "Review passed. Run `/publish` to save."
+State the outcome as a prose stamp:
 
-**Unresolved items remain:** "Review complete with [N] items routed to working notes. The shipped specs are consistent — structural improvements captured for a future session. Run `/publish` to save."
+- **All clean or all fixes applied:** "Review passed."
+- **Unresolved items remain:** "Review complete with [N] items routed to working notes. The shipped specs are consistent — structural improvements captured for a future session."
 
-Do NOT suggest `/notify` here. `/publish` Step 4 owns that decision — it runs the `downstream-engaged` check and only suggests `/notify` when planner or UXUI has actually run. Suggesting it from `/review` would fire unconditionally, landing as noise on greenfield projects where no downstream agent exists yet.
+Then render an `AskUserQuestion` hand-off picker of concrete next actions — never close on a prose "Run /publish" line. Build the options from context: `/publish` first with `(Recommended)` — *commits the reviewed specs and pushes to the remote*; other live continuations (e.g. continue discussing a structural item routed to working notes); and `Done for now` last. Each option's `description` names what it leads to.
+
+Do NOT include `/notify` as an option here. `/publish` Step 4 owns that decision — it runs the `downstream-engaged` check and only suggests `/notify` when planner or UXUI has actually run. Offering it from `/review` would fire unconditionally, landing as noise on greenfield projects where no downstream agent exists yet.
 
 ---
 
@@ -232,7 +235,7 @@ Before finishing, confirm:
 - [ ] Quick fixes discussed and resolved inline
 - [ ] Structural items routed to working notes
 - [ ] Every edit self-verified (write → re-read → verify)
-- [ ] Told user to run `/publish`
+- [ ] Hand-off picker presented with `/publish` as the recommended next action
 
 ---
 

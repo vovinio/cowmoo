@@ -77,7 +77,7 @@ Verify that each task PRD in `draft.md` fully covers its referenced spec section
 ### Task: [name]
 ...
 
-## Summary
+### Summary
 - [N] tasks checked
 - [N] passed
 - [N] with issues ([total issue count])

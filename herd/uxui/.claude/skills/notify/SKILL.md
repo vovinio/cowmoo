@@ -3,7 +3,7 @@ name: notify
 description: Announce cowmoo/design/ file changes via for-planner issue when active tasks may consume them. Closes tracked inbox items the work resolves.
 user-invocable: true
 disable-model-invocation: false
-allowed-tools: Bash, Read, Glob, Agent, Write
+allowed-tools: Bash, Read, Glob, Agent, Write, AskUserQuestion
 ---
 
 # Notify
@@ -68,7 +68,7 @@ Your message should include:
 
 Write naturally — facts about what changed and what may be impacted, not instructions for what the recipient should do.
 
-Present the composed message to the user for approval.
+Present the composed message, then render the approval gate as an `AskUserQuestion` picker — `Send` (Recommended — post the message as the `for-planner` GitHub issue) / `Edit the message` (the user describes what to change — picking it opens a free-text follow-up; revise and re-present, then re-render this picker) / `Cancel` (stop without creating the issue).
 
 ---
 
@@ -107,9 +107,9 @@ node "$AGENT_DIR/tools/dev-tools.cjs" inbox list
 
 If no tracked issues — skip to report.
 
-If tracked issues exist, present each to the user:
-- "Tracked issue #N: [title]. Has this been resolved by the recent cowmoo/design/ work?"
-- If user confirms → **Write** the handoff array to `$PROJECT_DIR/cowmoo/agent-files/uxui/.op-handoff.json` (overwriting Step 4's handoff — it's already been consumed), then run the `issue-transition` command directly. Compose the resolution summary (reference the new `for-planner` issue number) with the `**[UXUI]** ` identity prefix. RESOLVE_ISSUE always closes the issue:
+If tracked issues exist, present each to the user one at a time. For each, render an `AskUserQuestion` picker — `Resolved by this work` (Recommended when the recent `cowmoo/design/` work directly resolves the tracked item — closes the tracked issue) / `Leave tracked` (keep it open for future).
+
+- On `Resolved by this work` → **Write** the handoff array to `$PROJECT_DIR/cowmoo/agent-files/uxui/.op-handoff.json` (overwriting Step 4's handoff — it's already been consumed), then run the `issue-transition` command directly. Compose the resolution summary (reference the new `for-planner` issue number) with the `**[UXUI]** ` identity prefix. RESOLVE_ISSUE always closes the issue:
   ```json
   [
     { "op": "RESOLVE_ISSUE", "issue": <number>, "comment": "**[UXUI]** Resolved: <summary>", "close": true }
@@ -123,7 +123,7 @@ If tracked issues exist, present each to the user:
   ```bash
   node "$AGENT_DIR/tools/dev-tools.cjs" inbox remove <number>
   ```
-- If user declines → leave the issue tracked for future
+- On `Leave tracked` → leave the issue tracked for future
 
 ---
 
@@ -140,6 +140,8 @@ If tracked issues exist, present each to the user:
 ```
 
 If nothing happened (no cowmoo/design/ changes, no matching tasks, no tracked issues): "Nothing to notify about."
+
+Then render an `AskUserQuestion` hand-off picker for the next action. Build the option set from where the conversation stands — e.g. `Run /catchup` to process other pending items, `Run /design-start` to plan the next batch — recommended continuation first, `Done for now` last.
 
 ---
 
@@ -158,6 +160,7 @@ Before finishing, confirm:
 - [ ] Resolved issues closed via `issue-transition` RESOLVE_ISSUE (verified)
 - [ ] Resolved issues removed from tracking
 - [ ] Report presented
+- [ ] Hand-off picker presented
 
 ---
 
@@ -176,6 +179,6 @@ Before finishing, confirm:
 - **Scope to actual consumers** — only notify the planner when active tasks reference the changed files. Fresh-domain updates with no downstream tasks don't need a notification; the planner reads cowmoo/design/ fresh when drafting.
 - **roles.md matches by role name, not path.** PRDs don't contain the string `cowmoo/design/roles.md` — they cite roles by name (`primary-action`, `text-muted`). When roles.md changes, diff the commit to extract role names that were modified or removed and match any PRD that mentions them. Added roles have no in-flight consumers and can be skipped; modifications and removals both need notification.
 - **Observational, not prescriptive** — the impact description states facts about what changed, not instructions for what the recipient should do.
-- **User decides** — present your recommendation, let the user confirm or adjust.
+- **User decides** — present your recommendation; the user confirms or redirects through the picker, never an assumed yes.
 - **Inbox resolution belongs here** — `/catchup` tracks items; `/notify` closes them when the cowmoo/design/ work that addresses them ships.
 - **Always resolve through the `issue-transition` command** — never close or transfer issues with hand-rolled `gh` calls.

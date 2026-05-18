@@ -111,13 +111,13 @@ Collect the N per-domain reports plus your global-pass findings. Deduplicate. Be
 
 For each quick fix and structural item: present what the definition says, what's wrong, 2-3 options, and your recommendation.
 
-**Render the per-finding fix-path choice via `AskUserQuestion`** (single-select), not as a prose `(a)/(b)/(c)` list. Recommended option first with `(Recommended)` suffix; each option's `description` carries the tradeoff in design terms ("add all 5 states per ui-vocabulary" vs "add loading + error only — empty not applicable here"; "rewrite to use existing `destructive-action` role" vs "add new role `destructive-quiet` to roles.md first"). Include a "leave as-is" or "specify other" escape option when the finding admits one. Per CLAUDE.md's picker rule (the `/review quick-fix options` example called out there). Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker.
+**Render the per-finding fix-path choice via `AskUserQuestion`** (single-select), not as a prose `(a)/(b)/(c)` list, per CLAUDE.md item 3's picker rule. Each option's `description` carries the tradeoff in design terms ("add all 5 states per ui-vocabulary" vs "add loading + error only — empty not applicable here"; "rewrite to use existing `destructive-action` role" vs "add new role `destructive-quiet` to roles.md first"). Include a "leave as-is" or "specify other" escape option when the finding admits one.
 
 ---
 
 ## Step 5: Handle Findings
 
-**Auto-fixes:** Apply with one confirmation.
+**Auto-fixes:** Render a confirmation picker via `AskUserQuestion` before applying the batch: `Apply the N auto-fixes` `(Recommended)` (description: lists what gets fixed — e.g. "add 2 missing screens to index, swap 1 role reference") / `Skip auto-fixes` (description: leave them unfixed this run). Apply on the recommended pick.
 
 **Quick fixes:** Discuss with user, apply agreed fixes. Self-verify each edit.
 
@@ -129,11 +129,13 @@ For each quick fix and structural item: present what the definition says, what's
 
 ## Step 6: Outcome
 
-**All clean:** "Review passed. Run /publish to commit and push."
+State the outcome in prose — which case holds:
 
-**Fixes applied:** "Fixed N issues. Run /publish to commit and push."
+- **All clean:** "Review passed."
+- **Fixes applied:** "Fixed N issues."
+- **Spec gaps found:** "Found N spec gaps."
 
-**Spec gaps found:** "Found N spec gaps. Run `/ask pm`."
+Then close with an `AskUserQuestion` hand-off picker — never end on a prose "Run …" suggestion. Build the options from which outcome holds: when spec gaps were found, `Run /ask pm` `(Recommended)` (description: send the N spec gaps to PM) leads, with `Run /publish` (description: commit the fixes applied this run) and `Done for now` after; when the review is clean or fixes were applied with no spec gaps, `Run /publish` `(Recommended)` (description: commit and push the cowmoo/design/ changes) leads, then `Done for now`. Add `Address structural items` (description: route to working notes for a future /define) when structural findings exist. Omit options that don't apply this run.
 
 ---
 

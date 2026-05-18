@@ -3,7 +3,7 @@ name: start
 description: Load specs, assess what UI work is needed, propose session focus. Entry point for every UXUI session.
 user-invocable: true
 disable-model-invocation: true
-allowed-tools: Read, Glob, Agent, Bash
+allowed-tools: Read, Glob, Agent, Bash, AskUserQuestion
 ---
 
 # Start
@@ -80,21 +80,22 @@ Surface in Step 3's proposal:
 
 Based on the assessment, propose a specific action — embed reasoning + flow inside the proposal, don't echo it back as a separate verification step.
 
-- **First time:**
+- **First time:** present the proposal as prose, then render the approval as an `AskUserQuestion` picker — never close on the prose `→ Approve…` line.
   ```
   Proposed starting domain: <name>
 
   Why this domain: <load-bearing reasoning — foundational, most user-facing, etc.>
   Domain landscape: <one-line — N domains, complexity profile>
-  Open assumptions: <2-3 inferred from specs — confirm or redirect>
+  Open assumptions: <2-3 inferred from specs — the picker below can lock the domain or open these for discussion>
 
   Flow ahead: discussion → /draft → /define → /review → /publish. First /define creates initial OVERVIEW.md (Design Intent + Navigation), seeds roles.md, writes first domains/*.md.
-
-  → Approve this starting domain, or name a different one?
   ```
+  Then render an `AskUserQuestion` picker for the starting-domain decision: `Start with <proposed domain>` `(Recommended)` (description: the why-this-one reasoning) / `Name a different domain` (description: pick another domain to begin from — leads to a free-text follow-up asking which) / `Discuss the assumptions first` (description: work through the open assumptions before locking a domain). On the "Name a different domain" option, ask which domain and proceed from there.
 
-- **Continuing:** "Let's continue with [domain]. Last session we defined [X], next up is [Y]."
-- **All domains covered:** "All spec domains have UI definitions. Run /review for a full coverage check."
+- **Continuing:** state the recommendation in prose — "Let's continue with [domain]. Last session we defined [X], next up is [Y]."
+- **All domains covered:** state in prose — "All spec domains have UI definitions."
+
+Then close with an `AskUserQuestion` hand-off picker built from the path that holds: recommended next action first with `(Recommended)`, other live continuations, `Done for now` last. Build the options from context — e.g. first-time/continuing: `Discuss <domain> screens now` (Recommended) / `Run /define` (if working notes have [ready] items) / `Run /catchup` (if open for-uxui issues exist) / `Done for now`; all-domains-covered: `Run /review` (Recommended) / `Run /catchup` (if open for-uxui issues exist) / `Done for now`. Omit options that don't apply this run.
 
 ---
 

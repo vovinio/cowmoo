@@ -1,3 +1,7 @@
+---
+description: API security gotchas — auth, hashing, rate-limiting pitfalls. Always loaded.
+---
+
 ## Security Gotchas
 
 - Hash passwords with a modern adaptive algorithm — argon2id (preferred), scrypt, or bcrypt (cost ≥12). Plain hashes (MD5/SHA-256) and weak-cost bcrypt are brute-forceable on modern GPUs.

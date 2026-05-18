@@ -30,7 +30,7 @@ The calling skill provides one finding with this shape:
 ```
 Source skill: <skill name — e.g. /audit-agent, /contracts>
 Finding headline: <one line>
-Finding body: <full finding text as produced by the source skill — impact check, reasoning, all of it>
+Finding body: <full finding text as produced by the source skill — the Problem paragraph, reasoning, all of it>
 Cited files: <file paths referenced in the finding, with line numbers if given>
 Proposed fix: <the exact fix the source skill proposed>
 ```

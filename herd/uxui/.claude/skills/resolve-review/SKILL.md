@@ -53,7 +53,7 @@ A bundle is not required to resolve a task — the comments may already carry th
 
 ## Step 3: Choose the outcome with the user
 
-When two or more of the outcomes below are genuinely live, render the choice with `AskUserQuestion`. The user makes the call — never resolve a task unilaterally.
+Render the outcome choice with `AskUserQuestion` — the user makes the call, never resolve a task unilaterally. When two or more of the outcomes below are genuinely live, present each live outcome as an option (recommended outcome first with `(Recommended)`, descriptions carrying each outcome's consequence). When only one outcome is live, the picker is still the confirmation gate — render it as `Proceed with <the outcome>` (Recommended) / `Choose a different outcome` (picking it opens a free-text follow-up).
 
 ### Outcome A — Resolve and close (the task is moot)
 
@@ -123,7 +123,7 @@ The comments raise a question about an existing UI definition, or surface UXUI w
 - <`/ask pm` suggested, if specs are affected>
 ```
 
-**Next:** Run `/catchup` to process any other pending items.
+Then render an `AskUserQuestion` hand-off picker for the next action — `Run /catchup` (Recommended — process any other pending items) first, any other live continuation (e.g. `Run /ask pm` if the resolution surfaced spec changes), and `Done for now` last. Build the option set from where the conversation stands.
 
 ---
 
@@ -131,10 +131,11 @@ The comments raise a question about an existing UI definition, or surface UXUI w
 
 - [ ] Issue loaded; `uxui:review` label confirmed; no share URL (a URL → redirected to `/review-bundle`)
 - [ ] Comments treated; what they communicate stated plainly to the user
-- [ ] Outcome chosen with the user (resolve & close / send back / UI-definition work)
+- [ ] Outcome chosen with the user via picker (resolve & close / send back / UI-definition work)
 - [ ] `cowmoo/design/` files updated + committed + pushed, if the outcome required it
 - [ ] `issue-transition` ran — issue closed (`uxui:review` removed, no `uxui:done`) or relabelled to `uxui:todo`
 - [ ] Report shown
+- [ ] Hand-off picker presented
 
 ---
 

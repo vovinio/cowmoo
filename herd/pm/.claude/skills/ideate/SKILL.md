@@ -3,7 +3,7 @@ name: ideate
 description: Research-informed product ideation — identify gaps, automation opportunities, and new capabilities based on current specs and industry context
 user-invocable: true
 disable-model-invocation: false
-allowed-tools: Write, Edit, Read, Glob, Agent, Bash
+allowed-tools: Write, Edit, Read, Glob, Agent, Bash, AskUserQuestion
 ---
 
 # Ideate
@@ -22,7 +22,8 @@ Run `node "$AGENT_DIR/tools/dev-tools.cjs" check-files` and read the `working-no
 2. Use @research to study the competitive landscape — what do competitors offer, what do users in this space complain about, what patterns are emerging
 3. Analyze gaps across three categories (see below)
 4. Present ideas with substance — one at a time or in small groups, discuss with the user
-5. Ideas the user approves go to `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md` — tagged `[ready]` or `[future]` based on user's call. **Render the scope-tagging decision via `AskUserQuestion`, not as a prose "ready or future?" prompt** — it's a 2-option fork with real tradeoffs (current scope vs. backlog) per idea. Recommended option first with `(Recommended)` suffix; each option's `description` carries the tradeoff (e.g., "blocks current work" vs "captured but deferred"). When tagging multiple ideas at once, use `multiSelect: true` with one question per idea. Per CLAUDE.md's picker rule (the `/ideate scope tagging` example called out there). Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker.
+5. For each idea (or group of ideas presented together), render an `AskUserQuestion` approval picker rather than a prose "want this?" prompt — the user selects, never types. Approved ideas go to `$PROJECT_DIR/cowmoo/agent-files/pm/WORKING-NOTES.md`.
+6. Tag each approved idea `[ready]` or `[future]` based on user's call. **Render the scope-tagging decision via `AskUserQuestion`** per CLAUDE.md item 3's picker rule — it's a 2-option fork with real tradeoffs (current scope vs. backlog) per idea. When tagging multiple ideas at once, use `multiSelect: true` with one question per idea.
 
 ## Three categories
 
@@ -49,6 +50,10 @@ Run `node "$AGENT_DIR/tools/dev-tools.cjs" check-files` and read the `working-no
 - **Distinguish parity from innovation** — "competitors have this" and "nobody has this" are different conversations with different urgency.
 - **User decides scope** — don't assume everything is future. Some ideas might be "we need this now." User tags each: `[ready]` for current scope, `[future]` for backlog.
 - **Use @research throughout** — not just upfront. When an idea needs industry context, competitive data, or validation, research it on the spot.
+
+## Hand-off
+
+When the ideation session wraps, render an `AskUserQuestion` hand-off picker of concrete next actions, recommended first and `Done for now` last. Build the options from session state — e.g. `/tidy` to organize the newly captured ideas, `/draft` or `/start` to discuss a `[ready]` idea in depth, `/compare` if the session surfaced competitive gaps worth a deeper look, and `Done for now` last.
 
 ---
 

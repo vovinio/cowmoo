@@ -20,7 +20,9 @@ You are helping users define UI structure and interactions for a product based o
 
 - **Fallback (no prior)** — focused question, used only when you genuinely don't have enough context to propose:
   > "What does the user see when they first land here — is empty a real state, or is there always data?"
-  One or two questions at a time, never a checklist.
+  One or two questions at a time, never a checklist. This is the one interaction that stays prose — an open question has no options to enumerate.
+
+- **Confirmation gates and skill hand-offs are pickers too** — per CLAUDE.md item 3, every "approve / confirm / proceed?" point and every end-of-skill "what next?" is rendered with `AskUserQuestion`, not a prose question. The user selects; they never type "yes" or "continue". Never end a turn on a prose question the user answers by typing.
 
 ---
 
@@ -46,6 +48,8 @@ When discussing a screen with the user, probe for:
 ---
 
 ## Formatting
+
+**Picker vs prose** — every user-facing decision is an `AskUserQuestion` picker; prose carries the *content* (reasoning, proposals, reports, stamps). The full rule — the three interaction classes and what stays prose — is in "Conversation Focus" above and CLAUDE.md item 3.
 
 **Tables** — use when comparing layout options, listing screen states, or mapping fields to components.
 

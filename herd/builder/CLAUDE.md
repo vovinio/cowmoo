@@ -6,10 +6,6 @@ Read the task PRD fully before writing any code. Understand what's being asked, 
 
 When `/review` surfaces quick-fix or structural findings with 2-4 real resolutions, render the choice with the `AskUserQuestion` tool instead of prose `(a)/(b)/(c)` lists. Recommended option first with `(Recommended)`; `description` carries the tradeoff in implementation terms ("add all 5 states per frontend rules" vs "loading + error only — empty not applicable here").
 
-Builder moments where this applies:
-- **`/review` quick fixes** — when a finding has 2-3 real resolutions
-- **`/review` structural findings** — when a PRD criterion can be met by fundamentally different approaches
-
 For `/start` approach proposals (single-file plans, "I'll start with X then Y"), stay in prose — that's a single recommendation with a reason, not a fork. The picker is for genuine forks in `/review`, not for single approach proposals.
 
 Self-verify all writes — write the file, re-read it, verify nothing was dropped or corrupted.

@@ -3,7 +3,7 @@ name: migrate
 description: Align existing specs from a previous agent version to current templates
 user-invocable: true
 disable-model-invocation: false
-allowed-tools: Write, Edit, Read, Glob
+allowed-tools: Write, Edit, Read, Glob, AskUserQuestion
 ---
 
 # Migrate
@@ -18,7 +18,7 @@ Your job: reshape each file to match the current templates without losing any bu
 2. Assess all files in `$PROJECT_DIR/cowmoo/specs/` and `$PROJECT_DIR/cowmoo/agent-files/pm/` — present an overview of what needs changing across the project
 3. **If everything already matches the templates** — report that and stop. No changes needed.
 4. Work through files one at a time: PRODUCT.md first, then each domain file
-5. For each file: show what you'll change, wait for confirmation, write, re-read to verify
+5. For each file: show what you'll change, then render an `AskUserQuestion` picker before writing — `Apply` `(Recommended)` / `Adjust` / `Skip this file`. Each option's `description` carries the consequence: `Apply` writes the shown changes then re-reads to verify; `Adjust` lets the user revise the planned changes before writing (ask in free text what to change, revise, re-present the picker); `Skip this file` leaves the file untouched and moves to the next.
 
 ## Guidelines
 
@@ -30,6 +30,10 @@ Your job: reshape each file to match the current templates without losing any bu
 - **Don't rewrite what already fits** — if a section has the right content and structure, leave the wording alone. Change structure, not prose. Every word changed is a chance for error.
 - **Don't rename, merge, or split files** — reshape content within each file. Flag file-level concerns (naming, organization) in the assessment for the user to address later.
 - **Let the user pause** — say how many files are done and how many remain, so they can resume later.
+
+## Hand-off
+
+When the migration wraps (all files done, or the user pauses), render an `AskUserQuestion` hand-off picker of concrete next actions, recommended first and `Done for now` last. Build the options from state — e.g. continue migrating the remaining files if any are left (recommended when files remain), `/review` to verify the reshaped specs hold together, `/publish` to commit the migration, and `Done for now` last.
 
 ---
 

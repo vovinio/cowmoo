@@ -49,9 +49,10 @@ Option C: Project-only
   + No shared change (committed to project's cowmoo/agent-files/<agent>/.claude/rules/ — team-shared)
   - Same issue will recur in other projects
 
-→ Apply A | Apply B | Apply C | Edit | Skip
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
+
+Render the choice as an `AskUserQuestion` picker — `Apply A` `(Recommended)`, `Apply B`, `Apply C (project-only)`, and `Skip this proposal`. To refine an option before applying, the user picks "Other" and describes the change (the **Edit** path in Step 4). One picker per proposal group; wait for the selection before presenting the next group.
 
 ### 4. On user choice
 
@@ -81,6 +82,8 @@ Curation complete:
   Skipped: N proposals
   Remaining: N proposals (pending)
 ```
+
+After the summary, render an `AskUserQuestion` hand-off picker. When shared herd changes were applied this session: `Run /check` `(Recommended)` — start the verification pipeline on the applied edits — / `Stop here`. When only project-only changes or skips happened: `Done`.
 
 ## Rules
 

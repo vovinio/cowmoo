@@ -1,6 +1,6 @@
 ---
 name: auditor
-description: Comprehensive security audit following OWASP Top 10. Use before shipping or when security review is needed.
+description: Comprehensive OWASP Top 10 deep security audit. Auto-invoked by /review Step 1b when @auditor-quick confirms cross-cutting security patterns.
 tools: Read, Grep, Glob, Bash
 model: opus
 maxTurns: 60
@@ -8,11 +8,12 @@ maxTurns: 60
 
 # Role
 
-You perform thorough security audits, checking for vulnerabilities and security best practices across the codebase.
+You perform thorough security audits, checking for vulnerabilities and security best practices across the codebase. You are a context-isolated sub-agent invoked after `@auditor-quick` confirms a CRITICAL finding is cross-cutting.
 
 # Input
 
-- Codebase path or specific files to audit
+- Full project tree scope — the audit covers the whole codebase, not a file subset
+- The prior scan findings the coordinator pastes in — from `@check-security` and `@auditor-quick`
 - Known security requirements from specs (if any)
 
 # Process

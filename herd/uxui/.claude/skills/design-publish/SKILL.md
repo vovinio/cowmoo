@@ -50,11 +50,9 @@ From the parsed draft (Step 1), show the user what will be created — `batch.wh
 ...
 
 This will create N independent `uxui:todo` tasks on GitHub.
-
-Confirm to proceed.
 ```
 
-Do not proceed without explicit user confirmation.
+Then render the confirmation gate as an `AskUserQuestion` picker — `Publish` (Recommended — create the N `uxui:todo` tasks on GitHub) / `Cancel` (stop without creating anything; the draft is left in place). Do not proceed without an explicit `Publish` selection.
 
 ### Pre-check: duplicate titles
 
@@ -74,13 +72,11 @@ Exact-match each `tasks[].title` from the draft against the returned titles. If 
 These are likely previously-published tasks (possibly rejected back to uxui:todo). Publishing from the draft would duplicate them.
 ```
 
-**Render the collision-resolution choice via `AskUserQuestion`** (single-select). Recommended option first with `(Recommended)` suffix — default to **Cancel this publish** since closing in-flight work without confirmation risks losing designer iteration. Each option's `description` carries the consequence:
+**Render the collision-resolution choice via `AskUserQuestion`** (single-select) per CLAUDE.md item 3's picker rule. Default to **Cancel this publish** since closing in-flight work without confirmation risks losing designer iteration:
 
 - **Cancel this publish** (Recommended) — these are likely the same tasks still in flight. To revise, edit the existing issue directly on GitHub.
 - **Replace as stale** — close or delete the colliding issues on GitHub, then re-run `/design-publish`. Use when the collisions are dead artifacts from a prior run that should be replaced.
 - **Proceed anyway (duplicates)** — creates duplicate `uxui:todo` issues. Not recommended; only useful for unusual recovery cases where the duplicate is intentional.
-
-Per CLAUDE.md's picker rule. Yes/no confirmations and single-recommendation prompts stay in prose; only 2-4-option forks go through the picker.
 
 Only proceed past this check on explicit user confirmation of "Replace as stale" (after collisions cleared) or "Proceed anyway". Titles follow `[UXUI] <domain>: <screen>` by construction, so exact strcmp is correct — no substring matching needed.
 
@@ -130,9 +126,10 @@ Report to the user:
 - #<task-2-number> — [UXUI] <domain>: <screen 2>
 ...
 
-The human designer can now pick up any uxui:todo task. When the card
-reaches "UX: Review", run /catchup — it reconciles, scans, and routes it onward.
+The human designer can now pick up any uxui:todo task.
 ```
+
+Then render an `AskUserQuestion` hand-off picker for the next action — `Run /catchup` (Recommended — reconcile the board, scan, and route any pending items; this is also where a designer's submitted card gets picked up once it reaches "UX: Review") first, any other live continuation (e.g. `Run /design-start` to plan the next batch), and `Done for now` last. Build the option set from where the conversation stands.
 
 Then clear the draft automatically — the GitHub issues are now the source of truth; the draft has served its purpose:
 
@@ -160,14 +157,15 @@ If Step 3 stopped mid-batch (e.g., 2 of 5 tasks created before a failure), show 
 - [UXUI] <domain>: <screen 4>
 - [UXUI] <domain>: <screen 5>
 
-**Recovery options:**
-(a) Leave the already-created tasks, edit `design-draft.json` to remove the already-created tasks from the `tasks` array, then re-run `/design-publish` to create the remaining ones.
-(b) Close the already-created tasks on GitHub (they're unused), then re-run `/design-publish` after fixing whatever caused the failure — recreates all N tasks fresh.
-
-The skill does NOT automatically roll back created tasks. Your choice.
+The skill does NOT automatically roll back created tasks.
 ```
 
-Wait for user to pick a path before continuing. Do NOT auto-clear the draft in this state.
+Then render the recovery choice as an `AskUserQuestion` picker (single-select):
+
+- **Create the remaining tasks** (Recommended) — leave the already-created tasks, edit `design-draft.json` to remove them from the `tasks` array, then re-run `/design-publish` to create only the not-created ones.
+- **Recreate all fresh** — close the already-created tasks on GitHub (they're unused), then re-run `/design-publish` after fixing whatever caused the failure — recreates all N tasks.
+
+Wait for the user to pick a path before continuing. Do NOT auto-clear the draft in this state.
 
 ---
 
