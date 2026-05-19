@@ -461,15 +461,13 @@ cmd_projects() {
   done
 }
 
-# _pending_proposals <dir> — print proposal .md files in <dir> still pending.
-# A proposal carrying a "## Status:" line was resolved by a prior /curate run
-# (curate Step 5 appends it); only un-statused files count as pending.
+# _pending_proposals <dir> — print proposal .md files in <dir>.
+# Every file in proposals/ is pending: /curate deletes a proposal once it is
+# resolved (curate Step 5), so the directory holds only unresolved work.
 _pending_proposals() {
   local dir="$1"
   [ -d "$dir" ] || return 0
-  find "$dir" -name '*.md' -not -name '.*' 2>/dev/null | while IFS= read -r f; do
-    grep -q '^## Status:' "$f" 2>/dev/null || printf '%s\n' "$f"
-  done
+  find "$dir" -name '*.md' -not -name '.*' 2>/dev/null
 }
 
 cmd_proposals() {

@@ -15,7 +15,7 @@ Read proposals from all deployed projects, group them, design options, and prese
 
 Read `projects.md` (in the cowmoo repo root) to get the list of registered projects. For each project path listed, scan `cowmoo/agent-files/pm/proposals/`, `cowmoo/agent-files/uxui/proposals/`, `cowmoo/agent-files/planner/proposals/`, and `cowmoo/agent-files/builder/proposals/` for proposal files.
 
-**Collect only pending proposals.** A proposal that carries a `## Status:` line was already resolved by a prior `/curate` run (Step 5 appends it) — skip it. A pending proposal has no `## Status:` line. `./moo proposals` applies the identical filter, so its count and this scan agree.
+**Every file in `proposals/` is a pending proposal.** `/curate` *deletes* a proposal once it is resolved (Step 5), so the directory holds only unresolved work — there is no status marker to filter on. `./moo proposals` counts the same set.
 
 Tip: run `./moo proposals` from the terminal first to see a quick summary.
 
@@ -60,14 +60,19 @@ Render the choice as an `AskUserQuestion` picker — `Apply A` `(Recommended)`, 
 
 - **Apply [option]**: Make the actual edit to the target file. Show the diff.
 - **Edit**: User refines the proposed change. Then apply.
-- **Skip**: Mark the proposal `skipped` — Step 5 records it as a `## Status: skipped` line.
+- **Skip**: The proposal is rejected — nothing is changed.
 - **Project only**: Write the change to the project's `cowmoo/agent-files/<agent>/.claude/rules/`. These rules are tracked in git (team-shared across the project's contributors), not per-user.
+
+Whichever choice — apply, project-only, or skip — Step 5 then **deletes** the proposal file. Every resolution consumes the proposal.
 
 ### 5. Clean up
 
-After processing each proposal, append a `## Status:` line to the proposal file recording how it was resolved — `## Status: applied`, `## Status: project-only`, or `## Status: skipped` — optionally followed by a one-line reason. Proposal files use `##`-header metadata (`## From:`, `## Target:`, `## Urgency:`), not YAML frontmatter, so the resolution is a `## Status:` line, not a frontmatter key.
+Once a proposal is resolved — applied, project-only, or skipped — **delete the proposal file** (`rm` it from the project's `proposals/` directory). `proposals/` is a queue of *unresolved* work, not an archive.
 
-This line is the resolved-marker that Step 1 and `./moo proposals` filter on: a proposal carrying a `## Status:` line is no longer counted as pending. The file stays in `proposals/` as the durable decision record — `@proposal-writer`'s duplicate check still sees it, so a resolved idea is not re-proposed by an agent.
+Why delete rather than archive:
+- **Applied** — the commit is the durable record; it names what changed and why. The proposal file was consumed scaffolding. If an agent later re-proposes the same thing, that re-surfacing is *signal* — the applied fix did not hold — not noise to suppress.
+- **Skipped** — a rejected proposal leaves no file. If an agent notices the same gap again and re-proposes it, the curator re-triages it (a recurring re-proposal is the agent saying the gap is real). `@proposal-writer`'s duplicate check still prevents two *pending* proposals of the same thing.
+- **Project-only** — the change landed in the project's `.claude/rules/`; that is the record.
 
 **Stale targets:** if a proposal's `Target:` field points to a file / skill / sub-agent / op that no longer exists in `herd/`, flag it explicitly in the group's options. Discover staleness by checking the filesystem, not by consulting a hardcoded list:
 
@@ -75,7 +80,7 @@ This line is the resolved-marker that Step 1 and `./moo proposals` filter on: a 
 - For sub-agent targets (`@<name>`): does `herd/<agent>/.claude/agents/<name>.md` exist?
 - For op / command targets: does the named `dev-tools.cjs` subcommand exist as a dispatcher `case` in some agent's `dev-tools.cjs`?
 
-When a target is stale, the user picks: remap to the current successor (if a natural one exists — show the user the relevant area of the current codebase and let them decide), mark as skipped with reason "target removed", or apply the change to the project-level override only. Do not hardcode historical renames here — proposals are typically recent; genuinely ancient proposals will surface as "target removed" and the user can triage them.
+When a target is stale, the user picks: remap to the current successor (if a natural one exists — show the user the relevant area of the current codebase and let them decide), skip it (resolved as a skip — the file is deleted like any resolution), or apply the change to the project-level override only. Do not hardcode historical renames here — proposals are typically recent; genuinely ancient proposals will surface as "target removed" and the user can triage them.
 
 ### 6. Summary
 
@@ -95,3 +100,4 @@ After the summary, render an `AskUserQuestion` hand-off picker. When shared herd
 - Always show the actual text change, not just a description
 - Always include a "project only" option
 - Read the target file before designing options
+- Resolved proposals are deleted, not archived — `proposals/` is a queue of unresolved work. Apply, project-only, and skip all delete the file.
