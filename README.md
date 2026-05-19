@@ -259,7 +259,7 @@ Planner /catchup               →  approves (close) or rejects (todo + comment)
 | `/review-bundle` · `/approve-design` · `/resolve-review` | Phase B: resolve a `uxui:review` task — evaluate a designer's bundle, run the approval transaction, or treat a no-bundle card |
 | `/ask [pm\|planner]` | Ask PM about spec gaps, or respond to a planner `for-uxui` finding |
 | `/notify planner` | Announce `cowmoo/design/` file changes when active tasks may consume them |
-| `/dispatch-corrections [designer\|pm\|planner]` | Batch non-blocking copy-grade corrections collected during review/design work into one consolidated issue per target |
+| `/dispatch-corrections [designer\|pm\|planner]` | Batch non-blocking copy corrections and design-led spec divergences collected during review/design work into one consolidated issue per target (the `pm` dispatch is the spec-alignment pass) |
 | `/catchup` · `/process-inbox` · `/process-message` | Inbox: `/catchup` gates (reconcile board + scan), `/process-inbox` presents & routes, `/process-message` handles one `for-uxui` agent message |
 | `/status` | Show UXUI project status |
 | `/propose [idea]` | Propose an agent system improvement |

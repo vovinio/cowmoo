@@ -3,7 +3,7 @@ name: design-publish
 description: Publish the design draft to GitHub as N uxui:todo tasks. Pure ship — preview, confirm, create.
 user-invocable: true
 disable-model-invocation: false
-allowed-tools: Read, Bash, Agent, AskUserQuestion
+allowed-tools: Read, Bash, AskUserQuestion
 ---
 
 # Design Publish

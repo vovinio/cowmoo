@@ -17,6 +17,8 @@ Run the approval transaction for a bundle the user has already reviewed and appr
 
 **Arguments:** `<issue> <domain> <screens>` — `<screens>` is the comma-separated list of screens the reviewed unit covers (one, or several for a coupled unit). If `/review-bundle` reported accepted ROLE_ADDITIONS, it also names the role names — those drive Step 1.
 
+`<unit-label>` is not a passed argument — derive it locally: parse it from the issue title pattern `[UXUI] <domain>: <unit-label>`, or, if the title is unavailable, use the single screen name when `<screens>` has one entry or a short cluster label over `<screens>` for a coupled unit. Bind it before Step 4 (its first use).
+
 ---
 
 ## Step 1: Commit new roles (if any were accepted)
@@ -79,7 +81,15 @@ Read `$PROJECT_DIR/cowmoo/design/domains/<domain>.md`. For **each** screen in `<
 **Bundle:** `cowmoo/design/bundles/<issue>/` (approved YYYY-MM-DD, ticket #<issue>)
 ```
 
-Make **all** the appends in a single Edit (or one Write of the whole file) — one atomic change, so a partial run never leaves some of the unit's screens attached and others not, and Step 2's resume detection stays binary.
+**Spec divergences (if `/review-bundle` passed any).** For each accepted designer-led spec divergence, also — in the same Edit — update that screen's definition in the domain file to reflect what the design now does (the layout, state, interaction, or element the designer decided), and add a marker line in the screen's section:
+
+```
+**Spec divergence:** <what the design does that the spec does not yet> — pending PM alignment (logged YYYY-MM-DD)
+```
+
+The divergence was already logged to `PENDING-CORRECTIONS.md` `For: PM` by `/review-bundle`; this step makes the domain file itself reflect the decision and flags it for downstream readers (builder, planner). See `.claude/rules/corrections.md`. If no divergences were passed, skip this — append only the `**Bundle:**` lines.
+
+Make **all** the changes — every `**Bundle:**` line, plus any spec-divergence definition updates and markers — in a single Edit (or one Write of the whole file) — one atomic change, so a partial run never leaves some of the unit's screens attached and others not, and Step 2's resume detection stays binary.
 
 If ANY screen heading in `<screens>` cannot be located (title drift: casing, hyphenation, a renamed screen), stop and ask the user to confirm the canonical screen headings. Do NOT attach a partial set, and do NOT append a Bundle line to a different screen — the ATTACH_DESIGN guard would commit a misattribution.
 
@@ -101,7 +111,7 @@ Include these sections (omit any that are genuinely empty for the bundle under r
 - **Roles established:** any NEW roles this bundle introduced (added to `roles.md` via Step 1). List them; if none, say "none new in this bundle."
 - **Roles used:** the roles referenced on this screen (from the domain-file "Roles Used" section).
 - **Patterns set up for downstream screens:** reusable decisions this bundle establishes for later work (e.g. "8px as default border-radius", "serif headers / sans body pairing").
-- **Deviations / open items:** anything the evaluator flagged as `CONCERN` or `OBSERVATION` that was accepted with rationale. Also record any copy delta `/review-bundle` logged to `PENDING-CORRECTIONS.md` during review — the stale copy, the corrected copy, and that it is queued for batched dispatch (the bundle was approved as-is per `.claude/rules/corrections.md`, since a copy delta is non-blocking).
+- **Deviations / open items:** anything the evaluator flagged as `CONCERN` or `OBSERVATION` that was accepted with rationale. Also record any copy delta `/review-bundle` logged to `PENDING-CORRECTIONS.md` during review — the stale copy, the corrected copy, and that it is queued for batched dispatch. And record any **designer-led spec divergence** accepted this review — what the design now does vs. what the spec says, and that it is logged `For: PM` for batched alignment (the bundle was approved as-is per `.claude/rules/corrections.md`, since both a copy delta and a sound divergence are non-blocking).
 
 Present the composed block as a durable-record preview, not a draft for chat-review:
 
@@ -169,7 +179,7 @@ Read its one-line stdout — `UPDATE_JOURNAL #<n>: ✓ commented. Verified.` mea
 node "$AGENT_DIR/tools/dev-tools.cjs" commit attach-design <domain> "design(<domain>): attach bundle + journal for <unit-label> (ticket #<issue>)"
 ```
 
-`commit` mode `attach-design` stages and commits exactly two paths — `cowmoo/design/domains/<domain>.md` (Step 3) and `cowmoo/design/VISUAL-JOURNAL.md` (Step 5a) — together in one commit; its content-verify rejects anything else. If only one of the two paths has changes it commits that one; an idempotent re-run is fine.
+`commit` mode `attach-design` stages and commits up to three paths — `cowmoo/design/domains/<domain>.md` (Step 3), `cowmoo/design/VISUAL-JOURNAL.md` (Step 5a), and `cowmoo/agent-files/uxui/PENDING-CORRECTIONS.md` (the corrections / spec-divergence entries `/review-bundle` logged for this review) — together in one commit; its content-verify rejects anything else. It commits whichever of the three paths have changes; an idempotent re-run is fine.
 
 Read the command's one-line stdout (it may emit a trailing `Note:` line):
 
@@ -210,9 +220,14 @@ The command runs comment → relabel → close in order, verifies each step, and
 
 ---
 
-## Step 8: Optional — notify planner
+## Step 8: Optional — notify planner / align specs with PM
 
-When a meaningful chunk of design work is complete (e.g., a coherent flow's screens are all `uxui:done`), the user may want to announce to planner. This is judgment — not automatic per-task. Render the choice as an `AskUserQuestion` picker — `Notify planner` (recommended when a meaningful chunk has landed — leads to running `/notify planner`, an existing skill, in a separate run) / `Wait for more screens` (hold off until more screens land). Each option's `description` carries the consequence; pick the recommended option based on whether a coherent chunk is complete.
+When a meaningful chunk of design work is complete (e.g., a coherent flow's screens are all `uxui:done`), two judgment-call follow-ups may apply — neither is automatic per task:
+
+- **Notify planner** — announce the `cowmoo/design/` changes so planner can update affected task PRDs (`/notify planner`, a separate run).
+- **Align specs with PM** — if `PENDING-CORRECTIONS.md` carries unchecked `For: PM` spec-divergence entries, the design has run ahead of the spec; dispatch them to PM with `/dispatch-corrections pm` (a separate run) so PM adopts the divergences into the specs. This is the alignment milestone — see `.claude/rules/corrections.md`.
+
+Render the choice as an `AskUserQuestion` picker, building the options from what actually applies this run — e.g. `Notify planner`, `Align specs with PM` (offer only when `For: PM` divergence entries are queued), `Wait for more screens`. Recommend based on whether a coherent chunk is complete and whether divergences have accumulated. Each option leads to a separate skill invocation.
 
 ---
 
@@ -224,10 +239,12 @@ When a meaningful chunk of design work is complete (e.g., a coherent flow's scre
 - Bundle attached to cowmoo/design/domains/<domain>.md
 - Journal entry written; summary comment posted
 - Issue flipped uxui:review → uxui:done and closed
+[- Spec divergences applied + marked: <list>, logged to PENDING-CORRECTIONS.md For: PM]
 [- Suggested /notify planner if a meaningful chunk landed]
+[- Suggested /dispatch-corrections pm if For: PM divergences are queued]
 ```
 
-Then render an `AskUserQuestion` hand-off picker for the next action — `Run /catchup` (Recommended — process any other pending items) first, any other live continuation (e.g. `Run /notify planner` when Step 8 indicated a meaningful chunk landed), and `Done for now` last. Build the option set from where the conversation stands.
+Then render an `AskUserQuestion` hand-off picker for the next action — `Run /catchup` (Recommended — process any other pending items) first, any other live continuation (e.g. `Run /notify planner` when Step 8 indicated a meaningful chunk landed, `Run /dispatch-corrections pm` when `For: PM` spec divergences are queued), and `Done for now` last. Build the option set from where the conversation stands.
 
 ---
 
@@ -235,12 +252,12 @@ Then render an `AskUserQuestion` hand-off picker for the next action — `Run /c
 
 - [ ] Step 1 — new roles committed + pushed (or skipped: none accepted)
 - [ ] Step 2 — `review-resume-state` run; sub-case reported to the user
-- [ ] Step 3 — domain file edited with the `**Bundle:**` line (or skipped per Step 2)
+- [ ] Step 3 — domain file edited with the `**Bundle:**` line, plus any accepted spec-divergence definition updates + `**Spec divergence:**` markers (or skipped per Step 2)
 - [ ] Step 4 — journal summary composed inline and approved by the user (or skipped per Step 2)
 - [ ] Step 5 — `journal-update` wrote the entry; `issue-transition` UPDATE_JOURNAL posted the summary comment (or skipped per Step 2, or skipped by 5b's idempotency pre-check)
 - [ ] Step 6 — `commit attach-design` committed domain file + journal; pushed (or skipped per Step 2)
 - [ ] Step 7 — `issue-transition` APPROVE_DESIGN ran; issue is `uxui:done` and closed
-- [ ] Step 8 — planner notification considered via picker (judgment call)
+- [ ] Step 8 — planner notification and PM spec-alignment dispatch considered via picker (judgment calls)
 - [ ] Report shown
 - [ ] Hand-off picker presented
 

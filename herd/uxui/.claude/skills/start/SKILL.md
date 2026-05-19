@@ -3,7 +3,7 @@ name: start
 description: Load specs, assess what UI work is needed, propose session focus. Entry point for every UXUI session.
 user-invocable: true
 disable-model-invocation: true
-allowed-tools: Read, Glob, Agent, Bash, AskUserQuestion
+allowed-tools: Read, Glob, Bash, AskUserQuestion
 ---
 
 # Start

@@ -481,8 +481,12 @@ function territoryCheck() {
 //             cowmoo/agent-files/uxui/). Inclusion-form.
 //   roles   — scoped commit of cowmoo/design/roles.md ONLY (strict — rejects
 //             even other UXUI-territory files). Inclusion-form.
-//   attach-design — a domain file (cowmoo/design/domains/<domain>.md) plus
-//             cowmoo/design/VISUAL-JOURNAL.md. Inclusion-form.
+//   attach-design — a domain file (cowmoo/design/domains/<domain>.md),
+//             cowmoo/design/VISUAL-JOURNAL.md, and
+//             cowmoo/agent-files/uxui/PENDING-CORRECTIONS.md (the
+//             corrections/divergence queue, committed alongside the approval
+//             so a divergence /review-bundle logged this review lands in the
+//             same transaction). Inclusion-form.
 
 // git(args) — run `git -C $PROJECT_DIR <args...>` with no shell (execFileSync
 // takes an args array, so pathspecs and messages need no quoting). Returns
@@ -671,8 +675,8 @@ function uxuiAttachProfile(domain) {
   return {
     op: 'ATTACH_DESIGN',
     form: 'inclusion',
-    pathspec: [`cowmoo/design/domains/${domain}.md`, 'cowmoo/design/VISUAL-JOURNAL.md'],
-    inTerritory: (p) => /^cowmoo\/design\/domains\/.+\.md$/.test(p) || p === 'cowmoo/design/VISUAL-JOURNAL.md',
+    pathspec: [`cowmoo/design/domains/${domain}.md`, 'cowmoo/design/VISUAL-JOURNAL.md', 'cowmoo/agent-files/uxui/PENDING-CORRECTIONS.md'],
+    inTerritory: (p) => /^cowmoo\/design\/domains\/.+\.md$/.test(p) || p === 'cowmoo/design/VISUAL-JOURNAL.md' || p === 'cowmoo/agent-files/uxui/PENDING-CORRECTIONS.md',
   };
 }
 

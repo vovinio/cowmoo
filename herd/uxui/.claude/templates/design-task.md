@@ -45,6 +45,8 @@ project so shared chrome stays consistent.
 - [ ] Copy matches the voice samples in the prompt
 - [ ] CTA targets and interactions match the spec
 
+**Made a product call?** If you decided something different from this brief — a layout, state, copy, or interaction you judge better — that is expected, not a problem. Note what you changed and why in your submission comment so UXUI can capture it for spec alignment.
+
 **When done:**
 1. In Claude Design, click **Share with Claude Code** to get a share URL
 2. Comment on this issue with the URL

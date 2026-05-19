@@ -69,7 +69,7 @@ Current state of message channels. Each channel has a sender skill and a recipie
 
 (UXUI's `/notify planner` announces changes to `cowmoo/design/` files that may affect active planner work.)
 
-(UXUI's `/dispatch-corrections` is a sender on the existing `for-pm` / `for-planner` channels — not a new channel. It batches non-blocking copy-grade corrections UXUI collected during review and design work into one consolidated issue per target; blocking findings still escalate immediately via `/ask`. It also dispatches a designer copy-corrections batch as a `uxui:todo` task. See UXUI's `.claude/rules/corrections.md`.)
+(UXUI's `/dispatch-corrections` is a sender on the existing `for-pm` / `for-planner` channels — not a new channel. It batches non-blocking copy-grade corrections AND design-led spec divergences UXUI collected during review and design work into one consolidated issue per target — the `for-pm` dispatch is the spec-alignment pass that hands PM every divergence to adopt into the specs; blocking findings still escalate immediately via `/ask`. It also dispatches a designer copy-corrections batch as a `uxui:todo` task. See UXUI's `.claude/rules/corrections.md`.)
 
 (The Designer → UXUI channel is the one external-human handoff. `/catchup` reconciles the board and scans; `/process-inbox` classifies and dispatches: a bundle goes to `/review-bundle` — on approval `/approve-design` flips the issue to `uxui:done` and closes it, on rejection it flips back to `uxui:todo`; a no-bundle card (cancelled, a question, mid-work) goes to `/resolve-review` and is resolved from its comments — closed without `uxui:done` if no longer needed, or sent back to `uxui:todo`.)
 

@@ -22,7 +22,7 @@ Read `.claude/rules/ui-vocabulary.md` — canonical state vocabulary (data compo
 
 The `/review-bundle` skill provides:
 - `<ticket>` — GitHub issue number of the `uxui:review` task
-- `<mode>` — `new` (a from-scratch brief) or `revise` (a changeset against an existing design)
+- `<mode>` — `new` (a from-scratch brief) or `revise` (a change request against an existing design)
 - `<domain>` — domain name (e.g. "auth")
 - `<screens>` — the screen(s) the task covers — one, or several for a coupled unit
 - `<bundle-path>` — absolute path to extracted bundle, e.g. `$PROJECT_DIR/cowmoo/design/bundles/42/`
@@ -35,7 +35,7 @@ The `/review-bundle` skill provides:
 gh issue view <ticket> --json title,body --jq '{title: .title, body: .body}'
 ```
 
-The brief has two sections. For a **`new`** task: **Instructions** + **Claude Design Prompt** (the from-scratch spec) — evaluate the bundle against the Prompt. For a **`revise`** task: **Instructions** + **Changeset** (the requested edits, each with a spec rationale) — evaluate whether the bundle applied each changeset row and whether the result matches that row's spec rationale; the unchanged parts of the design are not your concern.
+The brief has two sections. For a **`new`** task: **Instructions** + **Claude Design Prompt** (the from-scratch spec) — evaluate the bundle against the Prompt. For a **`revise`** task: **Instructions** + a **`## Claude Design Prompt`** change-request block (the requested edits as numbered prose changes under per-screen headings, each ending in a `*Spec:*` rationale) — evaluate whether the bundle applied each numbered change and whether the result matches that change's spec rationale; the unchanged parts of the design are not your concern.
 
 ### Step 2: Load referenced context
 
@@ -55,7 +55,7 @@ Read:
 
 ### Step 4: Classify findings
 
-Walk the brief against the bundle, **per screen** in `<screens>`. For a `new` task the brief is the Claude Design Prompt; for a `revise` task it is the Changeset — there a GAP is a changeset row the bundle did not apply, and a CONCERN is a change applied wrongly or against its spec rationale. Classify each observation into one of four buckets:
+Walk the brief against the bundle, **per screen** in `<screens>`. For a `new` task the brief is the Claude Design Prompt; for a `revise` task it is the `## Claude Design Prompt` change request — there a GAP is a numbered change the bundle did not apply, and a CONCERN is a change applied wrongly or against its spec rationale. Classify each observation into one of four buckets:
 
 **GAPS** — something the brief required but the bundle doesn't show:
 - Missing state (e.g. brief asked for `error`, bundle has only `idle`)
@@ -69,6 +69,8 @@ Walk the brief against the bundle, **per screen** in `<screens>`. For a `new` ta
 - Validation message missing or wrong per spec rules
 - Raw visual values used where a declared role should apply
 - Ignored constraint from the brief
+
+**Brief-deviation tagging.** A CONCERN that is specifically a *deviation from the task brief* — the bundle did something other than what the Instructions / Prompt / Changeset asked — may be either a designer **omission/error** or a deliberate designer **product decision**. You cannot tell which without the user, so do not pre-judge it: tag every such finding `[brief-deviation]` (as the first token on its CONCERNS line) so `/review-bundle` triage makes the omission-vs-divergence call. A CONCERN that conflicts with a **spec rule, a role, or a business rule** — not merely the brief — is not a brief-deviation; leave it untagged.
 
 **OBSERVATIONS** — notable but not blocking:
 - Deviations from the prompt that may be intentional
@@ -97,6 +99,7 @@ so the reviewer can see which screen each issue belongs to.
 
 ### CONCERNS
 - [specific conflict]: [brief/spec/role source] vs [what bundle shows]
+- [brief-deviation] [specific deviation from the brief]: [what the brief asked] vs [what bundle shows]
 - ...
 
 ### OBSERVATIONS
@@ -112,7 +115,7 @@ so the reviewer can see which screen each issue belongs to.
 - CONCERNS: <N>
 - OBSERVATIONS: <N>
 - ROLE_ADDITIONS: <N>
-- Recommendation: <APPROVE — no gaps, no concerns | RETURN — gaps or concerns require designer iteration>
+- Recommendation: <APPROVE — no gaps, no concerns | RETURN — gaps, or concerns that conflict with a spec rule / role / business rule, require designer iteration | APPROVE-PENDING-TRIAGE — no gaps and no spec/role/business-rule conflicts, but one or more `[brief-deviation]` concerns are present; `/review-bundle` triage decides divergence vs. omission>
 ```
 
 ## Rules

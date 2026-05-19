@@ -78,6 +78,8 @@ If a role you need doesn't exist in `cowmoo/design/roles.md`, add it there first
 
 **Bundle:** [Attached post-approval by `/approve-design`. Format: `cowmoo/design/bundles/<ticket>/` (approved YYYY-MM-DD, ticket #N). Absent until a Claude Design submission is approved for this screen. Multiple lines if the screen has been re-designed.]
 
+**Spec divergence:** [Present only when the design embodies a deliberate product decision that runs ahead of the current spec — see `.claude/rules/corrections.md`. Format: `<what the design does that the spec does not yet> — pending PM alignment (logged YYYY-MM-DD)`. Absent on screens that match the spec. Removed once PM adopts the divergence into the spec.]
+
 ---
 
 ## Flows
@@ -117,3 +119,4 @@ arcs belong in `cowmoo/design/journeys.md`, not here.]
 - **Cross-domain arcs belong in `cowmoo/design/journeys.md`** — domain flows stay within a single domain. When a user journey crosses domains, move it to journeys.
 - **Screens listed here must appear in `cowmoo/design/screen-index.md`** — every screen defined in a domain file has an entry in the master screen index. `/define` handles this sync.
 - **Bundle: lines are post-approval only** — never write a `**Bundle:**` line speculatively. Only `/approve-design` writes them, after a designer's submission has been reviewed and approved.
+- **Spec divergence: lines flag design ahead of spec** — when a screen embodies a deliberate designer (or UXUI UI-level) decision that runs ahead of the current spec, mark it with a `**Spec divergence:**` line so builder and planner know the design is the current truth there. `/approve-design` and `/resolve-review` add them; `/process-message` clears one when PM's spec update adopts the divergence. See `.claude/rules/corrections.md`.

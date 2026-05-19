@@ -25,7 +25,7 @@ Look back through the conversation. Was `/design-start` run, and did it lock a b
 
 ## Step 1: Read the template (once)
 
-Read both task templates — `.claude/templates/design-task.md` (the `new`-mode from-scratch body) and `.claude/templates/design-task-revise.md` (the `revise`-mode changeset body). Each unit's body is composed against the template for its mode.
+Read both task templates — `.claude/templates/design-task.md` (the `new`-mode from-scratch body) and `.claude/templates/design-task-revise.md` (the `revise`-mode change-request body). Each unit's body is composed against the template for its mode.
 
 ---
 
@@ -41,7 +41,7 @@ For the screens in the batch, read the inputs you'll inline into prompts:
 
 **Verify each batch screen has a definition.** For every screen name in the locked batch, confirm the screen appears under a `### ` heading in its domain file. If any screen has no definition (typo, never defined, dropped), stop and ask the user: "Screen `<name>` has no definition in `cowmoo/design/domains/<domain>.md`. Did you mean a different screen, or does it need Phase A definition first?" Do NOT proceed to compose a task body for an undefined screen — Claude Design would receive an empty screen section.
 
-**For a `revise` unit, also locate the existing design.** From `/design-start`'s existing-design map, find the bundle covering the unit's screens: read `cowmoo/design/bundles/<ticket>/meta.json` for the Claude Design share URL, and list `cowmoo/design/bundles/<ticket>/project/` to identify the target file(s) the changeset will name (e.g. `App.jsx`, `HomeTab.jsx`). The domain-file screen definition and the spec are still read for both modes — they drive *what* must change.
+**For a `revise` unit, also locate the existing design.** From `/design-start`'s existing-design map, find the bundle covering the unit's screens: read `cowmoo/design/bundles/<ticket>/meta.json` for the Claude Design share URL, and list `cowmoo/design/bundles/<ticket>/project/` to identify the target file(s) the change request will name (e.g. `App.jsx`, `HomeTab.jsx`). The domain-file screen definition and the spec are still read for both modes — they drive *what* must change.
 
 For visual continuity: the batch's "Inherits" notes from `/design-start` already summarize prior bundles' visual decisions. If you need richer context for inheriting (e.g. specific token names from a prior bundle), read the prior bundle's `chats/*.md` directly.
 
@@ -68,12 +68,16 @@ from OVERVIEW), then a per-screen block repeated for each screen in the unit
 `## Required states` · `## Role meanings` · `## Interactions`), then shared
 `## Visual direction already established` and `## Output expectation`.
 
-**`revise` unit → `design-task-revise.md`.** A changeset, NOT a from-scratch
+**`revise` unit → `design-task-revise.md`.** A change request, NOT a from-scratch
 brief. Instructions carry `**Existing design:**` (the bundle path + share URL
-from Step 2). Then one `### Screen: …` changeset table per screen — naming the
-target `file(s):`, each row `current → desired → why (spec)` — plus an "Add"
-list for any new screen/region coupled into the existing design. Never re-spell
-a screen from scratch; name only what changes, each paired with its spec reason.
+from Step 2). Then a `## Claude Design Prompt` verbatim-copy block — a
+`# Change request` heading, `## Why these changes`, the changes as numbered
+detailed prose paragraphs grouped under a per-screen `### <Screen>` heading
+(each naming its `file(s):`), each change ending in a `*Spec: …*` rationale
+line — then `## Add` for any new screen/region coupled in, `## What NOT to
+change`, and `## Output expectation`. Prose pasted as one block, never a table.
+Never re-spell a screen from scratch; name only what changes, each paired with
+its spec reason.
 
 **Critical rules — both modes:**
 - Inline everything. No "see X" pointers to project files. Claude Design has no access to anything.
@@ -91,7 +95,7 @@ Show the user named decisions per task — not full bodies. The composed prose s
 ### Unit 1 — [<mode>] <screen(s)>
 Pay attention to: <2–3 named risks>
   new:    States: <list> · Roles: <list> · Visual direction: <one-line>
-  revise: Changes: <n> rows · Existing design: <bundle / share URL> · Files: <list>
+  revise: Changes: <n> · Existing design: <bundle / share URL> · Files: <list>
 
 ### Unit 2 — [<mode>] <screen(s)>
 ...
@@ -134,7 +138,7 @@ Once all task bodies are composed (in conversation), write the draft to `$PROJEC
       "mode": "revise",
       "domain": "<domain>",
       "screens": ["<screen a>", "<screen b>"],
-      "body": "<the full composed changeset body>"
+      "body": "<the full composed change-request body>"
     }
   ]
 }
@@ -152,7 +156,7 @@ Re-read `design-draft.json`. Verify:
 - [ ] `tasks` has all N entries in agreed order
 - [ ] Each task has a non-empty `title`, `label`, `body`, `mode` (`new`/`revise`), `domain`, and `screens`
 - [ ] Each `body`'s `**Mode:**` / `**Domain:**` / `**Screens:**` lines agree with the task's fields
-- [ ] A `new` body has Instructions + Claude Design Prompt; a `revise` body has Instructions + Changeset — no content silently dropped or truncated
+- [ ] A `new` body has Instructions + Claude Design Prompt; a `revise` body has Instructions + a Claude Design Prompt change-request block — no content silently dropped or truncated
 
 If any check fails, fix and re-write. Don't proceed until self-verify passes.
 

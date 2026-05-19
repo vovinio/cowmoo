@@ -55,20 +55,26 @@ A bundle is not required to resolve a task — the comments may already carry th
 
 You have treated the comments (Step 2). Resolve the card in two parts.
 
-**3a — Design-file work, if the comments imply it.** If the decision changes `cowmoo/design/` files (a redirect noted in `screen-index.md` or a domain file, a journey update, a UI-definition fix), make those edits, self-verify (re-read what you wrote), then commit + push:
+**3a — Design-file work, if the comments imply it.** If the decision changes `cowmoo/design/` files (a redirect noted in `screen-index.md` or a domain file, a journey update, a UI-definition fix), make those edits and self-verify (re-read what you wrote).
+
+**If the edit reflects a designer-led spec divergence** — the comments record a deliberate product decision that runs ahead of the current spec — the *same* edit also adds a `**Spec divergence:**` marker to the screen, so one commit captures both the design change and the marker. Then log a `For: PM` spec-divergence entry to `PENDING-CORRECTIONS.md`, per `.claude/rules/corrections.md`; the divergence is reconciled with PM in a batch via `/dispatch-corrections pm`, not escalated now.
+
+Then commit + push:
 
 ```bash
 node "$AGENT_DIR/tools/dev-tools.cjs" commit general "design: <what changed> (ticket #<issue>)"
 node "$AGENT_DIR/tools/dev-tools.cjs" push
 ```
 
-Read each one-line stdout, keying on the `✓` / `✗` marker. A `PUSH: ✗` is non-fatal — the local commit is intact; surface the error and continue. `push` reports `PUSH: skipped — …` if the project has no `origin` remote. For a large multi-screen change, prefer running `/publish` separately. If the comments imply no `cowmoo/design/` change, skip 3a.
+Read each one-line stdout, keying on the `✓` / `✗` marker. A `PUSH: ✗` is non-fatal — the local commit is intact; surface the error and continue. `push` reports `PUSH: skipped — …` if the project has no `origin` remote. For a large multi-screen change, prefer running `/publish` separately.
+
+If the comments imply no `cowmoo/design/` change, skip 3a.
 
 **3b — Classify the card and apply the resolution.** Classify the card's terminal state via the **"Resolving a `uxui:review` card"** decision procedure in `.claude/rules/github-workflow.md` — the pivot is *who must act next*. Three of its rows are reachable from a no-bundle review task (the "design approved" row is `/review-bundle`'s; the "blocked" row is a `bundle-fetch` failure, which cannot occur here):
 
 - **Designer acts next → `uxui:todo`.** The card still needs design work — the comments are mid-work notes, or 3a fixed a definition but the screen still needs a designer.
 - **No design produced → close, no `uxui:done`.** The screen is no longer needed (superseded, redirected, dropped), or 3a's fix fully answered the task.
-- **PM acts next → close + escalate.** The comments contest the task's *spec premise* — a question only PM can answer.
+- **PM acts next → close + escalate.** The comments contest the task's *spec premise* in a way that **breaks the product** — a question only PM can answer, and the design cannot sensibly proceed without the answer. A *non-breaking* designer decision that merely runs ahead of the spec is **not** this row: treat it as a spec divergence (3a logged it `For: PM`) and resolve via designer-acts-next or no-design-produced as fits — escalate only the breaking case. See `.claude/rules/corrections.md`.
 
 Render the choice with `AskUserQuestion` — the user makes the call, never resolve a task unilaterally. Present each genuinely-live row as an option (recommended row first with `(Recommended)`, descriptions carrying each row's consequence). When only one row is live, the picker is still the confirmation gate — render it as `Proceed with <the row>` (Recommended) / `Choose a different resolution` (picking it opens a free-text follow-up).
 
@@ -116,7 +122,7 @@ Read the command's stdout — `<op> #<n>: ✓ …` means done; `✗ <reason>` na
 - <`/ask pm` suggested, if specs are affected>
 ```
 
-Then render an `AskUserQuestion` hand-off picker for the next action — `Run /catchup` (Recommended — process any other pending items) first, any other live continuation (e.g. `Run /ask pm` if the resolution surfaced spec changes), and `Done for now` last. Build the option set from where the conversation stands. **After the PM-acts-next resolution, `/ask pm` is the recommended first option instead of `/catchup`** — the escalation is the other half of that resolution, and the review task was closed expecting it.
+Then render an `AskUserQuestion` hand-off picker for the next action — `Run /catchup` (Recommended — process any other pending items) first, any other live continuation (e.g. `Run /ask pm` if the resolution surfaced spec changes, `Run /dispatch-corrections pm` if 3a logged a spec divergence), and `Done for now` last. Build the option set from where the conversation stands. **After the PM-acts-next resolution, `/ask pm` is the recommended first option instead of `/catchup`** — the escalation is the other half of that resolution, and the review task was closed expecting it.
 
 ---
 

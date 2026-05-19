@@ -58,6 +58,7 @@ From the issue:
 - `<domain>` — from the `**Domain:**` line in the issue body.
 - `<screens>` — from the `**Screens:**` line in the issue body (one screen, or several for a coupled unit).
 - `<designer>` — comment author who posted the URL.
+- `<unit-label>` — the unit's label, parsed from the issue title pattern `[UXUI] <domain>: <unit-label>` (the title is loaded in Step 1). It is the screen name for a one-screen unit, or the short cluster label for a multi-screen one.
 
 These canonical lines live in the task's Instructions section (written by `/design-draft` or `/dispatch-corrections`). **Fallback** — an older task with no such lines: parse `<domain>` and a single `<screen>` from the title pattern `[UXUI] <domain>: <screen>`, treat `<mode>` as `new`. If neither the lines nor the title resolve, ask the user for the mode, domain, and screens.
 
@@ -111,7 +112,7 @@ Spawn `@design-evaluator`:
   bundle-path=$PROJECT_DIR/cowmoo/design/bundles/<issue>/
 ```
 
-The sub-agent reads the brief, specs, domain UI def, roles, and the bundle. For a `new` task it compares the bundle against the from-scratch brief; for a `revise` task, against the changeset. Returns classified findings per screen: GAPS, CONCERNS, OBSERVATIONS, ROLE_ADDITIONS — plus a recommendation (APPROVE or RETURN).
+The sub-agent reads the brief, specs, domain UI def, roles, and the bundle. For a `new` task it compares the bundle against the from-scratch brief; for a `revise` task, against the change request. Returns classified findings per screen: GAPS, CONCERNS, OBSERVATIONS, ROLE_ADDITIONS — plus a recommendation (APPROVE or RETURN).
 
 ---
 
@@ -122,7 +123,7 @@ Present the evaluator's findings. Lead with the recommendation:
 ```
 ## Bundle review — #<issue> (<domain>: <unit-label>) · mode: <mode>
 
-**Evaluator recommendation:** APPROVE | RETURN
+**Evaluator recommendation:** APPROVE | APPROVE-PENDING-TRIAGE | RETURN
 
 ### GAPS (N)
 - ...
@@ -137,15 +138,20 @@ Present the evaluator's findings. Lead with the recommendation:
 - ...
 ```
 
-Discuss with the user. **Classify each finding — blocking or deferrable** (see `.claude/rules/corrections.md`). A finding that changes what the screen *does* or whether a builder can build it correctly — a missing state, a layout or role change, a contradiction — is **blocking**. A finding that is purely copy-grade — microcopy, a label, wording that drifted from a spec — is **deferrable**: the bundle's HTML is the build reference, but a copy delta does not stop the screen from being correct, so it is logged to `PENDING-CORRECTIONS.md` rather than forcing a bundle return. Do not inflate a copy nit into a blocker.
+Discuss with the user, and **classify each finding by the three dispositions in `.claude/rules/corrections.md`:**
 
-The user makes the final call. The routes:
+- **Gap / omission** — the designer *missed* something the brief required: a missing required state, a broken interaction, a dropped element. **Blocking** — it returns to the designer. Most evaluator GAPS are this.
+- **Designer-led spec divergence** — the designer *deliberately* did something different from the brief, and it is a sound product/UX call. This is **not** a reject: the bundle is approved, the divergence is logged to `PENDING-CORRECTIONS.md` `For: PM` as a spec-divergence entry, and `/approve-design` updates the affected `cowmoo/design/` screen definition + adds the `**Spec divergence:**` marker. `@design-evaluator` tags every finding that deviates from the brief (vs. a spec/role/business-rule conflict) `[brief-deviation]` — those are the divergence-vs-gap candidates; an `APPROVE-PENDING-TRIAGE` recommendation means the evaluator found only brief-deviations and no genuine gaps or spec/role conflicts. For each `[brief-deviation]` finding, confirm with the user whether it is a *deliberate, sound* decision (→ treat as a divergence) or an omission/error (→ treat as a gap).
+- **Deferrable copy** — purely copy-grade wording. Logged to `PENDING-CORRECTIONS.md` (`For: designer` for copy in the bundle's HTML, `For: PM` for a copy mismatch against a spec); does not force a return.
+- **Breaking divergence** — a deliberate change that *breaks the product* (breaks other screens, contradicts a hard business rule). **Blocking** — return to the designer, or escalate via `/ask pm` if the spec premise itself is in question.
 
-- **Approve** — no findings, or only deferrable copy deltas. Log each deferrable delta to `PENDING-CORRECTIONS.md` first — to `For: designer` for copy in the bundle's HTML (key the entry to the affected screen's `<domain> / <screen>` — one of the unit's screens — per the entry format in `.claude/rules/corrections.md`), or `For: PM` for a copy mismatch against a spec — then proceed to Step 6. The bundle is approved as-is; `/dispatch-corrections` batches the logged deltas later.
+Do not inflate a copy nit into a divergence, or a sound divergence into a blocker — and do not flow with an *omission* as if it were a decision. The user makes the final call. The routes:
+
+- **Approve** — no blocking gaps. Before proceeding, log every deferrable copy delta and every designer-led spec divergence to `PENDING-CORRECTIONS.md` (copy → `For: designer` for copy in the bundle's HTML, keyed to the affected screen's `<domain> / <screen>`, or `For: PM` for a copy mismatch against a spec; divergence → a `For: PM` spec-divergence entry, keyed `<domain> / <screen>`, per the entry format in `.claude/rules/corrections.md`). **Before appending each entry, scan the unchecked (`- [ ]`) entries in the target section — skip the append if one already matches on both the `<domain> / <screen>` key AND the full delta content** (the `current → corrected` pair for a copy delta; the `design now: … · spec …` statement for a divergence); an already-dispatched (`- [x]`) entry does not suppress a re-log. This keeps a `/review-bundle` resume re-run from duplicate-logging — it mirrors `/approve-design` Step 5b's idempotency pre-check. Then proceed to Step 6. `/dispatch-corrections` batches the logged items later.
 - **Approve with role additions** — accept ROLE_ADDITIONS, then approve (Step 6 passes the role names to `/approve-design`).
-- **Return for revision** — any blocking finding. The bundle goes back to the designer (Step 7).
+- **Return for revision** — any blocking gap or breaking divergence. The bundle goes back to the designer (Step 7).
 
-Render the choice with the `AskUserQuestion` tool — recommended route first. When deferrable copy deltas were logged on an approve route, tell `/approve-design` so its journal entry records them.
+Render the choice with the `AskUserQuestion` tool — recommended route first. When deferrable copy deltas or spec divergences were logged on an approve route, tell `/approve-design` — it records the copy deltas in the journal, and for each divergence it updates the screen definition and adds the `**Spec divergence:**` marker (Step 3).
 
 ---
 
@@ -160,6 +166,8 @@ If the user approves, this skill is done — the approval transaction (roles com
 `/approve-design` runs in this same conversation, so it inherits the `@design-evaluator` findings and your triage decisions — it needs that context to compose the journal summary. Do NOT attach the bundle, edit the domain file, or close the issue here; `/approve-design` owns all of that.
 
 If ROLE_ADDITIONS were accepted, tell `/approve-design` which role names — it commits `roles.md` as its first step.
+
+If designer-led spec divergences were accepted, tell `/approve-design` — for each, which screen diverged, what the design now does vs. what the spec says, and that it is logged in `PENDING-CORRECTIONS.md`. `/approve-design` Step 3 updates the screen definition to match and adds the `**Spec divergence:**` marker.
 
 ---
 
