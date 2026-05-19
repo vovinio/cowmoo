@@ -1,7 +1,7 @@
 ---
 name: approve-design
 description: The approval transaction for a reviewed Claude Design bundle — commit roles, attach the bundle to the domain file, write the visual journal, commit, and close the uxui:review issue as uxui:done. Re-invocable to resume a partial run.
-argument-hint: <issue-number> <domain> <screen>
+argument-hint: <issue-number> <domain> <screens>
 user-invocable: true
 disable-model-invocation: false
 allowed-tools: Read, Bash, Edit, Write, AskUserQuestion
@@ -13,9 +13,9 @@ Run the approval transaction for a bundle the user has already reviewed and appr
 
 **This skill is normally invoked by `/review-bundle`** right after the user approves — it runs in that same conversation, so it inherits the `@design-evaluator` findings and the triage decisions, which Step 4 needs to compose the journal summary.
 
-**It is also re-invocable directly** — `/approve-design <issue> <domain> <screen>` — to resume a run that failed partway through the commit sequence. Step 2 detects how far the prior run got and skips the completed steps.
+**It is also re-invocable directly** — `/approve-design <issue> <domain> <screens>` — to resume a run that failed partway through the commit sequence. Step 2 detects how far the prior run got and skips the completed steps.
 
-**Arguments:** `<issue> <domain> <screen>`. If `/review-bundle` reported accepted ROLE_ADDITIONS, it also names the role names — those drive Step 1.
+**Arguments:** `<issue> <domain> <screens>` — `<screens>` is the comma-separated list of screens the reviewed unit covers (one, or several for a coupled unit). If `/review-bundle` reported accepted ROLE_ADDITIONS, it also names the role names — those drive Step 1.
 
 ---
 
@@ -54,14 +54,16 @@ It prints exactly one line:
 
 - **`RESUME: none`** — no `**Bundle:**` line for this ticket in the domain file. Normal first run. Proceed to Step 3.
 - **`RESUME: found line=<n> heading="<heading>" porcelain=clean`** — a Bundle line for this ticket is already committed.
-  - If `<heading>` matches the `<screen>` argument → the prior run committed the attachment + journal; only APPROVE_DESIGN is left. **Skip Steps 3, 4, 5, 6 — go straight to Step 7.**
-  - If `<heading>` does NOT match `<screen>` → **misattribution** (handle below).
+  - If `<heading>` is one of the unit's `<screens>` → the prior run committed the attachment + journal; only APPROVE_DESIGN is left. **Skip Steps 3, 4, 5, 6 — go straight to Step 7.**
+  - If `<heading>` is not any of `<screens>` → **misattribution** (handle below).
 - **`RESUME: found line=<n> heading="<heading>" porcelain=dirty`** — a Bundle line for this ticket exists but the domain file has uncommitted changes (the prior run's Edit landed, the commit didn't).
-  - If `<heading>` matches `<screen>` → **Skip Step 3 (the Edit is done). Proceed to Steps 4, 5, 6, 7.** Step 4 needs the review context — see its note.
-  - If `<heading>` does NOT match `<screen>` → **misattribution** (handle below).
+  - If `<heading>` is one of `<screens>` → **Skip Step 3 (the Edit is done). Proceed to Steps 4, 5, 6, 7.** Step 4 needs the review context — see its note.
+  - If `<heading>` is not any of `<screens>` → **misattribution** (handle below).
 - **`RESUME: error — <reason>`** — surface the reason and stop; resolve it before retrying.
 
-**Misattribution** — the Bundle line sits under a different screen heading than the one being approved. Do NOT auto-fix. Render the choice with `AskUserQuestion`: (a) move the line under the correct `### <screen>` heading and proceed, (b) leave it as-is and proceed (the line is for a different screen — proceed only if that is correct), (c) stop and investigate manually.
+Step 3 attaches all of the unit's `**Bundle:**` lines in one atomic Edit, so `review-resume-state` finding *any* one line means the whole attachment landed — the resume stays binary (none / found).
+
+**Misattribution** — the Bundle line sits under a screen heading that is not part of this unit. Do NOT auto-fix. Render the choice with `AskUserQuestion`: (a) move the line(s) under the correct `### <screen>` headings and proceed, (b) leave as-is and proceed (the line is for a different screen — proceed only if that is correct), (c) stop and investigate manually.
 
 Tell the user explicitly which sub-case Step 2 detected before continuing.
 
@@ -71,13 +73,15 @@ Tell the user explicitly which sub-case Step 2 detected before continuing.
 
 (Skip if Step 2 detected a prior attachment.)
 
-Read `$PROJECT_DIR/cowmoo/design/domains/<domain>.md`, find the `### <Screen Name>` heading that matches `<screen>`, and append the `**Bundle:**` line at the END of that screen's section — just before the next `### ` heading (or end of file). This is resilient to screens that lack an "Interactions" subsection. Format:
+Read `$PROJECT_DIR/cowmoo/design/domains/<domain>.md`. For **each** screen in `<screens>`, find its `### <Screen Name>` heading and append a `**Bundle:**` line at the END of that screen's section — just before the next `### ` heading (or end of file; resilient to screens that lack an "Interactions" subsection). All the lines point at the same bundle directory. Format:
 
 ```
 **Bundle:** `cowmoo/design/bundles/<issue>/` (approved YYYY-MM-DD, ticket #<issue>)
 ```
 
-If the screen heading cannot be located (title drift: casing, hyphenation, or the screen was renamed), stop and ask the user to confirm the canonical screen heading. Do NOT append the Bundle line to a different screen — the ATTACH_DESIGN guard would commit a misattribution.
+Make **all** the appends in a single Edit (or one Write of the whole file) — one atomic change, so a partial run never leaves some of the unit's screens attached and others not, and Step 2's resume detection stays binary.
+
+If ANY screen heading in `<screens>` cannot be located (title drift: casing, hyphenation, a renamed screen), stop and ask the user to confirm the canonical screen headings. Do NOT attach a partial set, and do NOT append a Bundle line to a different screen — the ATTACH_DESIGN guard would commit a misattribution.
 
 ---
 
@@ -102,7 +106,7 @@ Include these sections (omit any that are genuinely empty for the bundle under r
 Present the composed block as a durable-record preview, not a draft for chat-review:
 
 ```
-## Journal entry preview — #<issue> (<domain>/<screen>)
+## Journal entry preview — #<issue> (<domain>/<unit-label>)
 
 This goes to VISUAL-JOURNAL.md AND posts as a comment on the GH issue:
 
@@ -121,7 +125,7 @@ Then render the approval gate as an `AskUserQuestion` picker — `Finalize` (Rec
 
 ```json
 [
-  { "op": "UPDATE_JOURNAL", "ticket": <issue>, "domain": "<domain>", "screen": "<screen>", "date": "<YYYY-MM-DD>", "summary": "<the 15-20 line summary prose>" }
+  { "op": "UPDATE_JOURNAL", "ticket": <issue>, "domain": "<domain>", "screen": "<unit-label>", "date": "<YYYY-MM-DD>", "summary": "<the 15-20 line summary prose>" }
 ]
 ```
 
@@ -159,10 +163,10 @@ Read its one-line stdout — `UPDATE_JOURNAL #<n>: ✓ commented. Verified.` mea
 
 ## Step 6: Commit the attachment + journal
 
-(Skip if Step 2 routed straight to Step 7.) Build the commit message `design(<domain>): attach bundle + journal for <screen> (ticket #<issue>)`, then run:
+(Skip if Step 2 routed straight to Step 7.) Build the commit message `design(<domain>): attach bundle + journal for <unit-label> (ticket #<issue>)`, then run:
 
 ```bash
-node "$AGENT_DIR/tools/dev-tools.cjs" commit attach-design <domain> "design(<domain>): attach bundle + journal for <screen> (ticket #<issue>)"
+node "$AGENT_DIR/tools/dev-tools.cjs" commit attach-design <domain> "design(<domain>): attach bundle + journal for <unit-label> (ticket #<issue>)"
 ```
 
 `commit` mode `attach-design` stages and commits exactly two paths — `cowmoo/design/domains/<domain>.md` (Step 3) and `cowmoo/design/VISUAL-JOURNAL.md` (Step 5a) — together in one commit; its content-verify rejects anything else. If only one of the two paths has changes it commits that one; an idempotent re-run is fine.
@@ -202,7 +206,7 @@ node "$AGENT_DIR/tools/dev-tools.cjs" issue-transition --from cowmoo/agent-files
 
 The command runs comment → relabel → close in order, verifies each step, and syncs the board — flipping `uxui:review` → `uxui:done`, posting the approval comment, and closing the issue. Read its stdout — `APPROVE_DESIGN #<ticket>: ✓ …` means done; `APPROVE_DESIGN #<ticket>: ✗ <reason>` names what already succeeded. Do NOT retry on `✗`.
 
-**Partial-commit recovery:** If Step 6 succeeded (domain file + journal committed; summary comment posted) but APPROVE_DESIGN fails (label flip or close errors out), the design artifacts are correct but the GitHub issue is still `uxui:review`. Re-run `/approve-design <issue> <domain> <screen>` — Step 2 will report `RESUME: found … porcelain=clean`, route straight here, and retry the close without re-fetching or re-evaluating the bundle. (Or manually relabel to `uxui:done` and close on GitHub.)
+**Partial-commit recovery:** If Step 6 succeeded (domain file + journal committed; summary comment posted) but APPROVE_DESIGN fails (label flip or close errors out), the design artifacts are correct but the GitHub issue is still `uxui:review`. Re-run `/approve-design <issue> <domain> <screens>` — Step 2 will report `RESUME: found … porcelain=clean`, route straight here, and retry the close without re-fetching or re-evaluating the bundle. (Or manually relabel to `uxui:done` and close on GitHub.)
 
 ---
 
@@ -247,7 +251,7 @@ Then render an `AskUserQuestion` hand-off picker for the next action — `Run /c
 - **The user already approved.** This skill runs the transaction; it does not re-litigate the approve/reject decision — that happened in `/review-bundle`.
 - **Re-invocation is safe.** Step 2's `review-resume-state` makes a resume idempotent — it skips whatever the prior run committed, and Step 5b's idempotency pre-check skips the summary comment if a prior run already posted it. Never run the commit sequence blind.
 - **Never close with an un-attached bundle.** The Step 6 guard exists for this — APPROVE_DESIGN must not close an issue whose bundle was never recorded in the domain file.
-- **Domain file edits stay scoped.** The Edit adds one `**Bundle:**` line below the screen's section. Don't restructure the file.
+- **Domain file edits stay scoped.** The Edit adds a `**Bundle:**` line below each covered screen's section — nothing else. Don't restructure the file.
 - **One bundle per task.** If a screen is re-designed (rejected → resubmitted → re-reviewed → approved), the prior `**Bundle:**` line stays as history; the new one appends below it. The most recent line is the current canonical bundle. The bundle directory `cowmoo/design/bundles/<ticket>/` is per-ticket — a re-fetch overwrites it; prior bundles are preserved only via git history.
 - **Journal summary is the durable record.** The 15–20 line summary from Step 4, persisted by `journal-update`, is the canonical record of what was approved. It lives latest-only in `cowmoo/design/VISUAL-JOURNAL.md` (replace-in-place on re-approval) AND as a comment on the GH issue (posted once per approval — Step 5b's pre-check keeps a resume from double-posting; never edited in place). `/design-start` reads the journal for visual-direction synthesis. Compose it with care.
 - **Notifying planner is a judgment call, not automatic.**

@@ -65,14 +65,16 @@ UXUI has two distinct phases. Each has its own entry point. Phase A is about def
 
 ### Phase B — Hand off to designer (Claude Design)
 
+A Phase B task is a **unit** — one screen, or several coupled screens — with a **mode**: `new` (from-scratch design) or `revise` (a changeset against an existing design). The task title is `[UXUI] <domain>: <unit-label>`, where `<unit-label>` is the screen name for a one-screen unit or a short cluster label for a multi-screen one.
+
 Iterative, small-batch flow with three phases of thinking:
 
 ```
-/design-start  → synthesize state, propose 1-3 next tasks (no writes)
+/design-start  → synthesize, triage spec-vs-design drift, propose 1-3 units (no writes)
    ↓
-/design-draft  → compose task bodies inline + validate + write draft
+/design-draft  → compose each unit's body (new from-scratch / revise changeset) + validate
    ↓
-/design-publish → preview + ship N independent uxui:todo tasks to GitHub
+/design-publish → preview + ship the uxui:todo unit tasks to GitHub
                                 ↓
             (designer works in claude.ai/design, submits)
                                 ↓
@@ -88,9 +90,9 @@ Iterative, small-batch flow with three phases of thinking:
               escalate contested spec premise to PM & close
 ```
 
-1. `/design-start` — Agent-led synthesis: reads specs + design defs + closed `uxui:done` tasks + bundle dirs to learn what's been approved and what visual direction has emerged. Proposes 1-3 next tasks with reasoning (why these together, why now, what they inherit, what they establish). Conversational; nothing written.
-2. `/design-draft` — Composes each task body inline (main agent, full conversation context); validates via `@design-task-checker`; refines until clean; writes `design-draft.json`. Rerunnable.
-3. `/design-publish` — Pure ship: preview + confirm + create N independent `uxui:todo` tasks via the `issue-create` subcommand.
+1. `/design-start` — Agent-led synthesis: reads specs + design defs + closed `uxui:done` tasks + scans `cowmoo/design/bundles/*/project/` for what already has a design. Triages spec-vs-design drift — `new` task / `revise` change-task / def-edit — and proposes 1-3 next *units* (one screen, or several coupled screens) with reasoning. Conversational; nothing written.
+2. `/design-draft` — Composes each unit's body inline per its mode — a `new` from-scratch brief, or a `revise` changeset against the existing design; validates via `@design-task-checker`; writes `design-draft.json`. Rerunnable.
+3. `/design-publish` — Pure ship: preview + confirm + create the `uxui:todo` unit tasks via the `issue-create` subcommand.
 4. Designer picks up a `uxui:todo`, iterates in `claude.ai/design`, exports share URL, comments on issue, relabels `uxui:review`.
 5. `/catchup` (lean gate) reconciles the board, scans the inbox, classifies each `uxui:review` card; if there is work it hands off to `/process-inbox`, which presents the inbox and dispatches each item to its resolution skill.
 6. `/review-bundle` (bundle path) — fetches the bundle (`bundle-fetch`), runs `@design-evaluator`, triages with you. On reject: feedback comment, flipped back to `uxui:todo`. On approve: hands off to `/approve-design`.
@@ -172,7 +174,7 @@ You define the product's UI structure: design intent, navigation, user journeys,
 | `cowmoo/design/VISUAL-JOURNAL.md` | Running record of approved design bundles — one ~15-line entry per ticket capturing character, layout, state handling, roles, patterns, deviations. **Latest-only**: re-approvals replace the prior entry in place. Read by `/design-start` as the pre-digested source for "visual direction already established." | Written by `/approve-design` (the `journal-update` subcommand), committed together with the domain file |
 | `cowmoo/design/bundles/<ticket>/` | Extracted Claude Design exports — README, project/*.html, chats/*.md, meta.json. One folder per `uxui:todo` ticket. Read by `@design-evaluator` at review time; designer/human reference otherwise. NOT read by `/design-start` (that reads `VISUAL-JOURNAL.md`). | Written + committed by `/review-bundle` (the `bundle-fetch` subcommand) |
 | `cowmoo/agent-files/uxui/WORKING-NOTES.md` | Discussion capture, UI decisions in progress | Consumed by /define |
-| `cowmoo/agent-files/uxui/design-draft.json` | Phase B draft — JSON: `batch` context + a `tasks` array of `{title, label, body}` objects, before publish. Rewritten by `/design-draft`, consumed by `/design-publish`, optionally cleared after publish. | Created by /design-draft |
+| `cowmoo/agent-files/uxui/design-draft.json` | Phase B draft — JSON: `batch` context + a `tasks` array of `{title, label, mode, domain, screens, body}` objects (`mode` is `new` or `revise`), before publish. Rewritten by `/design-draft`, consumed by `/design-publish`, optionally cleared after publish. | Created by /design-draft |
 | `cowmoo/agent-files/uxui/PENDING-CORRECTIONS.md` | Queue of non-blocking copy-grade corrections collected during review and design work, grouped by target (designer / PM / planner). Each entry is a small delta too minor for an immediate cross-agent round-trip. See `.claude/rules/corrections.md`. | Appended by review/design skills; dispatched + checked off by `/dispatch-corrections` |
 
 Domain files reference roles from `cowmoo/design/roles.md` by name — never raw values. Concrete token values are resolved downstream.

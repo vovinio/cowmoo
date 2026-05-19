@@ -56,21 +56,19 @@ Collect every unchecked entry for the chosen target into ONE issue. The body lis
 
 The title carries the `[UXUI] ` identity prefix. Present the composed issue — title + full body — as a preview, then go to Step 4.
 
-### designer — one design task per screen
+### designer — `revise` change-task(s) against the existing design
 
-Each `For: designer` entry is a copy correction to an **already-approved screen**, and names its screen as `<domain> / <screen>` (see `.claude/rules/corrections.md`). The designer fixes copy by re-rendering the screen in Claude Design and submitting a new bundle — which re-enters the bundle-review pipeline. That pipeline is built around single-screen, properly-shaped design tasks, so the dispatch produces one such task per screen, not one batch issue.
+Each `For: designer` entry is a copy correction to a screen that **already has a design** — keyed `<domain> / <screen>` (see `.claude/rules/corrections.md`). A correction is a changeset against the existing design, so the dispatch composes a **`revise` task** (`.claude/templates/design-task-revise.md`) — never a from-scratch brief. The queued copy deltas *are* the changeset rows.
 
-1. **Group** the unchecked `For: designer` entries by their `<domain> / <screen>`. Each distinct screen becomes one `uxui:todo` task carrying all of that screen's queued copy deltas.
+1. **Find each screen's existing design.** For every unchecked `For: designer` entry, read the screen's `### <screen>` section in `cowmoo/design/domains/<domain>.md` and take the most recent `**Bundle:**` line — it points at `cowmoo/design/bundles/<ticket>/`, whose `meta.json` carries the Claude Design share URL. If a screen has no `**Bundle:**` line on record, surface it and **skip** — a correction presupposes an existing design; that screen needs a `new` task through `/design-start` instead. Note skips in the Step 7 report.
 
-2. **Verify each screen has a definition.** For every `<domain> / <screen>`, confirm a `### <screen>` heading exists in `cowmoo/design/domains/<domain>.md`. If a queued screen has no definition (renamed, dropped, or a typo in the entry), surface it to the user and **skip that screen** — do not compose a task for an undefined screen, and leave its queue entries unchecked. Note the skip in the Step 7 report.
+2. **Group into `revise` tasks.** Group the entries by the existing design (the bundle) they belong to — corrections to screens sharing one Claude Design project go in **one** `revise` task. Typically this is a single task: a project's screens usually live in one imported design.
 
-3. **Duplicate-title guard.** Run `gh issue list --label "uxui:todo" --state open --json number,title --limit 100`. If an open `uxui:todo` already exists with the same `[UXUI] <domain>: <screen>` title, that screen is already in the designer's queue — surface it and skip that screen's correction task (fold the correction into the existing task by hand, or dispatch later). Don't create a duplicate.
+3. **Duplicate-title guard.** Run `gh issue list --label "uxui:todo" --state open --json number,title --limit 100`. If an open `uxui:todo` already covers these screens, surface it and skip — fold the correction into the existing task by hand, or dispatch later. Don't create a duplicate.
 
-4. **Compose one task body per remaining screen.** Read `.claude/templates/design-task.md` once for the structure, then for each screen read `cowmoo/design/OVERVIEW.md`, `cowmoo/design/roles.md`, the screen's `cowmoo/design/domains/<domain>.md` definition, and the relevant `cowmoo/specs/domains/<domain>.md` rules. Compose the body following the template — `Instructions` + a fully self-contained `## Claude Design Prompt` (inline everything; no `cowmoo/...` file pointers; roles by name, never raw values). Two corrections-specific points:
-   - The screen's **corrected** copy is what gets inlined (the `## Screen definition` / copy content carries the corrected wording — not the stale wording the bundle currently shows).
-   - Add an Instructions "Pay attention to" bullet stating this is a **copy-correction re-render of an already-approved screen**, and naming which copy changed (`<current>` → `<corrected>`), so the designer re-renders rather than redesigns.
+4. **Compose one `revise` body per group**, following `design-task-revise.md`: Instructions (`**Mode:** revise`, `**Domain:**`, `**Screens:**`, `**Existing design:**` = the bundle path + share URL from step 1), then one `### Screen: …` changeset table per screen. Each queue entry becomes one changeset row — `current` = the entry's current copy, `desired` = the corrected copy, `Why (spec)` = the entry's "Why" line. A changeset, not a from-scratch brief.
 
-5. **Title** each task `[UXUI] <domain>: <screen>` — this exact shape is what `/review-bundle` parses to recover the domain and screen.
+5. **Title** each task `[UXUI] <domain>: <unit-label>` — a short label naming the corrected screen(s).
 
 ---
 
@@ -78,7 +76,7 @@ Each `For: designer` entry is a copy correction to an **already-approved screen*
 
 Render the confirmation gate as an `AskUserQuestion` picker — `Dispatch` `(Recommended)` (create the issue(s)) / `Edit` (refine — names what to change, opens a free-text follow-up, then re-present this picker) / `Cancel` (stop; the queue is left untouched). Do not proceed without an explicit `Dispatch` selection.
 
-For the **designer** target, the preview lists each per-screen task — title + a few named decisions per task (which copy changed, states, roles), not full bodies (the full bodies live in your context and land in the handoff file). For **PM / planner**, the preview is the single composed issue.
+For the **designer** target, the preview lists each `revise` task — title + a changeset summary (screens covered, change-row count), not full bodies (the full bodies live in your context and land in the handoff file). For **PM / planner**, the preview is the single composed issue.
 
 ---
 
@@ -94,12 +92,11 @@ The `issue-create` command reads its body and title from a JSON handoff file. **
 ]
 ```
 
-**designer** — an N-element array, one entry per screen:
+**designer** — an array with one entry per `revise` task (usually one):
 
 ```json
 [
-  { "op": "CREATE_DESIGN_TASK", "title": "[UXUI] <domain>: <screen 1>", "label": "uxui:todo", "body": "<composed task body>" },
-  { "op": "CREATE_DESIGN_TASK", "title": "[UXUI] <domain>: <screen 2>", "label": "uxui:todo", "body": "<composed task body>" }
+  { "op": "CREATE_DESIGN_TASK", "title": "[UXUI] <domain>: <unit-label>", "label": "uxui:todo", "body": "<composed revise body>" }
 ]
 ```
 
@@ -121,7 +118,7 @@ For each entry that was successfully dispatched (`✓`), Edit `PENDING-CORRECTIO
   - Dispatched: #<issue> (YYYY-MM-DD)
 ```
 
-For the **designer** target, check off all of a screen's queued entries when that screen's task was created. If Step 5 stopped mid-batch, check off **only** the screens whose tasks were created — the rest stay `- [ ]` for a later run.
+For the **designer** target, when a `revise` task is created, check off every queue entry it covered. If Step 5 stopped mid-batch, check off **only** the entries of `revise` tasks that were created — the rest stay `- [ ]` for a later run.
 
 Checked entries stay in the file as the audit trail — never delete them. Re-read the file after the Edit to confirm every dispatched entry is now `- [x]`.
 
@@ -134,7 +131,7 @@ Checked entries stay in the file as the audit trail — never delete them. Re-re
 
 **Issue(s):** <#n — title> (one line per issue created)
 **Corrections shipped:** <N> (now checked off in PENDING-CORRECTIONS.md)
-**Skipped screens:** <screen — reason: no definition / duplicate title> (designer only, if any)
+**Skipped screens:** <screen — reason: no existing design on record / duplicate> (designer only, if any)
 **Still queued:** <counts for the other sections, or "none">
 ```
 
@@ -146,7 +143,7 @@ Then render an `AskUserQuestion` hand-off picker — `Dispatch <other target>` w
 
 Two side-effecting steps — `issue-create` (Step 5) and the check-off Edit (Step 6).
 
-- **`issue-create` failed (`✗`, no issue number)** — nothing was dispatched for that index; the queue is untouched for it. For PM / planner that means nothing shipped — fix the cause and re-run. For the designer, earlier indices may have created tasks; check those off (Step 6), leave the failed and not-yet-run screens unchecked, fix the cause, and re-run — only the still-unchecked screens dispatch again.
+- **`issue-create` failed (`✗`, no issue number)** — nothing was dispatched for that index; the queue is untouched for it. For PM / planner that means nothing shipped — fix the cause and re-run. For the designer, earlier indices may have created `revise` tasks; check those off (Step 6), leave the failed and not-yet-run tasks' entries unchecked, fix the cause, and re-run — only the still-unchecked corrections dispatch again.
 - **`issue-create` succeeded but the check-off Edit failed** — the issue(s) exist, but the entries still read `- [ ]`. **Re-running `/dispatch-corrections` now would dispatch them again as duplicate issues.** Surface the created issue number(s) to the user and stop. The user marks the dispatched entries `- [x]` (with the `Dispatched: #<n>` line) by hand before any re-run — the check-off is the only thing that tells a later run those entries are already shipped.
 
 ---
@@ -155,7 +152,7 @@ Two side-effecting steps — `issue-create` (Step 5) and the check-off Edit (Ste
 
 - [ ] Queue loaded; unchecked entries found (empty → reported and stopped)
 - [ ] Target chosen (argument or picker)
-- [ ] PM / planner: one consolidated issue composed, observational — OR designer: entries grouped by screen, each screen verified to have a definition, one task body composed per screen following `design-task.md`
+- [ ] PM / planner: one consolidated issue composed, observational — OR designer: entries grouped by existing design, one `revise` change-task composed per group following `design-task-revise.md`
 - [ ] HARD GATE — user confirmed via picker
 - [ ] Issue(s) created via `issue-create`, each verified `✓`
 - [ ] Dispatched entries checked off in `PENDING-CORRECTIONS.md`
@@ -166,9 +163,9 @@ Two side-effecting steps — `issue-create` (Step 5) and the check-off Edit (Ste
 ## Rules
 
 - **One target per invocation.** Designer, PM, or planner — one run. Run again for another.
-- **PM / planner ship one consolidated issue; the designer fans out one task per screen.** The "never one issue per delta" principle still holds — PM / planner batch every delta into one message, and a designer task batches all of one screen's deltas — but the designer dispatch is deliberately one issue *per screen*, because each must be a single-screen design task the review pipeline can process.
-- **Designer tasks are properly-shaped design tasks.** Title `[UXUI] <domain>: <screen>`; body the canonical `Instructions` + self-contained `## Claude Design Prompt` from `.claude/templates/design-task.md`, with the corrected copy inlined. A bare delta list is not enough — `/review-bundle` parses the title and `@design-evaluator` compares the submitted bundle against the Prompt section.
-- **Never dispatch a task for an undefined screen.** A queued `<domain> / <screen>` with no `### <screen>` heading in its domain file is skipped and surfaced — composing a brief for it would hand Claude Design an empty screen.
+- **PM / planner ship one consolidated issue; the designer ships `revise` change-task(s).** Every delta is batched — PM / planner into one message, the designer's corrections into one `revise` task per existing design (its copy deltas become the changeset). Never one issue per delta.
+- **A designer correction is a `revise` task, not a rebuild.** The body follows `.claude/templates/design-task-revise.md` — it references the existing design and lists the copy deltas as a changeset. Never compose a from-scratch `## Claude Design Prompt` for a correction; that would tell the designer to rebuild an already-approved screen.
+- **Never dispatch a correction for a screen with no existing design.** A queued `<domain> / <screen>` whose domain-file section carries no `**Bundle:**` line has no existing design to revise — skip it and surface it; that screen needs a `new` task via `/design-start`.
 - **Preview before creating** — the HARD GATE is mandatory; never create an issue without an explicit `Dispatch`.
 - **Observational, not prescriptive** — for PM and planner, state what is wrong, not what they should do (the recipient owns the fix).
 - **Check off, never delete** — a dispatched entry becomes `- [x]` with a `Dispatched:` line; the file doubles as an audit trail.

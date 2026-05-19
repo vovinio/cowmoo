@@ -22,8 +22,9 @@ Read `.claude/rules/ui-vocabulary.md` — canonical state vocabulary (data compo
 
 The `/review-bundle` skill provides:
 - `<ticket>` — GitHub issue number of the `uxui:review` task
+- `<mode>` — `new` (a from-scratch brief) or `revise` (a changeset against an existing design)
 - `<domain>` — domain name (e.g. "auth")
-- `<screen>` — screen name (e.g. "login")
+- `<screens>` — the screen(s) the task covers — one, or several for a coupled unit
 - `<bundle-path>` — absolute path to extracted bundle, e.g. `$PROJECT_DIR/cowmoo/design/bundles/42/`
 
 ## Process
@@ -34,12 +35,12 @@ The `/review-bundle` skill provides:
 gh issue view <ticket> --json title,body --jq '{title: .title, body: .body}'
 ```
 
-The brief has two sections: **Instructions** (for the human) and **Claude Design Prompt** (what was asked for). Your evaluation compares the bundle against the Prompt section.
+The brief has two sections. For a **`new`** task: **Instructions** + **Claude Design Prompt** (the from-scratch spec) — evaluate the bundle against the Prompt. For a **`revise`** task: **Instructions** + **Changeset** (the requested edits, each with a spec rationale) — evaluate whether the bundle applied each changeset row and whether the result matches that row's spec rationale; the unchanged parts of the design are not your concern.
 
 ### Step 2: Load referenced context
 
 Read:
-- `$PROJECT_DIR/cowmoo/design/domains/<domain>.md` — the screen definition UXUI wrote
+- `$PROJECT_DIR/cowmoo/design/domains/<domain>.md` — the screen definitions for the unit's `<screens>`
 - `$PROJECT_DIR/cowmoo/design/roles.md` — role vocabulary
 - `$PROJECT_DIR/cowmoo/design/OVERVIEW.md` — design intent, tone
 - `$PROJECT_DIR/cowmoo/specs/domains/<domain>.md` (if present) — business rules
@@ -49,12 +50,12 @@ Read:
 Read:
 - `<bundle-path>/README.md` — Claude Design's handoff README
 - `<bundle-path>/meta.json` — fetch metadata (url, fetched_at, designer)
-- `<bundle-path>/project/*.html` — the design file(s). Read in full.
+- `<bundle-path>/project/*` — the design files (`.html`, `.jsx`, `.tsx`, `.css` — Claude Design exports plain HTML or React). Read them in full.
 - `<bundle-path>/chats/*.md` (if present) — iteration history with the user
 
 ### Step 4: Classify findings
 
-Walk the brief's requirements against the bundle. Classify each observation into one of four buckets:
+Walk the brief against the bundle, **per screen** in `<screens>`. For a `new` task the brief is the Claude Design Prompt; for a `revise` task it is the Changeset — there a GAP is a changeset row the bundle did not apply, and a CONCERN is a change applied wrongly or against its spec rationale. Classify each observation into one of four buckets:
 
 **GAPS** — something the brief required but the bundle doesn't show:
 - Missing state (e.g. brief asked for `error`, bundle has only `idle`)
@@ -81,15 +82,18 @@ Walk the brief's requirements against the bundle. Classify each observation into
 ## Return Format
 
 ```
-## Design Evaluation — Ticket #<ticket> (<domain>: <screen>)
+## Design Evaluation — Ticket #<ticket> (<domain>: <screens>) · mode: <mode>
 
 **Bundle:** <bundle-path>
-**Files reviewed:** <list of HTML files read>
+**Files reviewed:** <list of design files read>
 **Chat history:** <yes with N iterations | no>
 
 ### GAPS
-- [specific missing item]: [where in the brief it was required]
+- [screen]: [specific missing item] — [where the brief / changeset required it]
 - ...
+
+When the unit covers several screens, prefix each finding with its screen name
+so the reviewer can see which screen each issue belongs to.
 
 ### CONCERNS
 - [specific conflict]: [brief/spec/role source] vs [what bundle shows]

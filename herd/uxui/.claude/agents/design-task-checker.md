@@ -1,6 +1,6 @@
 ---
 name: design-task-checker
-description: Validate a design-draft.json file before publish — each task self-contained, all required states inlined, no file references in prompts, voice samples present. Returns classified findings.
+description: Validate a design-draft.json file before publish — each task body well-formed for its mode (`new` from-scratch brief, or `revise` changeset against an existing design), self-contained, no stray file references. Returns classified findings.
 tools: Read, Glob, Grep
 model: sonnet
 maxTurns: 10
@@ -18,7 +18,7 @@ Pre-publish validation of `design-draft.json`. Verifies each task body is ready 
 
 Read `.claude/rules/ui-vocabulary.md` — canonical state vocabulary and role-naming convention. Validation checks reference both.
 
-Read `.claude/templates/design-task.md` — the structure each composed task body must follow.
+Read `.claude/templates/design-task.md` (the `new`-mode from-scratch body) and `.claude/templates/design-task-revise.md` (the `revise`-mode changeset body) — a task body must match the template for its mode.
 
 ## Process
 
@@ -26,7 +26,7 @@ Read `.claude/templates/design-task.md` — the structure each composed task bod
 
 Read `$PROJECT_DIR/cowmoo/agent-files/uxui/design-draft.json` and parse it as JSON. The draft is a single object:
 - `batch` — `{ why, inherits, setsUp }` (informational framing, not a published artifact)
-- `tasks` — an array of `{ title, label, body }` objects. Each `body` becomes a `uxui:todo` issue body.
+- `tasks` — an array of `{ title, label, body, mode, domain, screens }` objects. `mode` is `new` or `revise`; `screens` is the list of screen names the task covers. Each `body` becomes a `uxui:todo` issue body.
 
 If the file is missing or does not parse as JSON, report that as the single finding and stop — there is nothing to validate.
 
@@ -41,40 +41,47 @@ These are informational — not part of any published artifact — but their pre
 
 ### Step 3: Validate each task body
 
-For every entry in the `tasks` array, check its `body`:
+Each task carries a `mode` — `new` or `revise` — and the body's Instructions
+section restates it as a `**Mode:**` line. Validate against the template for
+that mode. Mismatched `mode` field vs `**Mode:**` line is itself a finding.
 
-**Structure compliance:**
-- Has both **Instructions** and **Claude Design Prompt** sections
-- Instructions section uses bullets, not paragraphs of prose
-- Acceptance checks present (3-5 bullets)
-- Submission steps present (URL → comment → relabel)
+**All modes — structure + canonical lines:**
+- Instructions section present, bullets not prose.
+- `**Mode:**`, `**Domain:**`, `**Screens:**` lines present, and consistent with
+  the task's `mode` / `domain` / `screens` fields.
+- Acceptance bullets present; submission steps present (URL → comment → relabel).
+- No raw visual values anywhere — flag raw hex codes, pixel values, font
+  weights, or `rgb()`/`rgba()`; roles are referenced by name.
 
-**Prompt self-containment (the critical check):**
-- No project file paths in the prompt section (no `cowmoo/...`, no `src/...`, no `.md` references)
-- No "see X" or "refer to Y" pointers
-- Spec content is inlined, not referenced
-- Role meanings are inlined for each role used (semantic purpose stated, not just role name)
-- Voice samples are concrete sentences, not adjectives ("dense and editorial" alone is not enough; needs example sentences)
+**`new` mode — the from-scratch `## Claude Design Prompt`.** A multi-screen `new`
+unit repeats the per-screen block; check each screen's block:
+- **Self-containment** (the critical check) — no project file paths
+  (`cowmoo/...`, `src/...`, `.md`), no "see X" / "refer to Y" pointers; spec
+  content inlined; role meanings inlined per role used; voice samples are
+  concrete sentences, not adjectives.
+- **Required-states coverage** — a Required States section per screen; canonical
+  vocabulary from `ui-vocabulary.md`; each state's meaning inlined for that
+  screen; form screens show all 5 form states, data screens all 5 data states,
+  when applicable.
+- **Visual direction** — section present; "None yet" for the first unit, else a
+  short inlined summary.
+- **Output expectation** — framework-agnostic; viewport specified.
 
-**Required-states coverage:**
-- Required States section present
-- Each state listed uses canonical vocabulary from `ui-vocabulary.md`
-- Each state has its meaning inlined for THIS screen (not just a state name)
-- Form screens show all 5 form states (idle, dirty, submitting, success, error) when applicable
-- Data screens show all 5 data states (empty, loading, error, populated, partial) when applicable
-
-**Roles vs values:**
-- Roles referenced by name only — flag any raw hex codes, pixel values, font weights, or `rgb()`/`rgba()` in the prompt
-- Roles used in the screen are listed with semantic purpose
-
-**Visual direction:**
-- "Visual direction already established" section present
-- For first screen of product: explicitly says "None yet"
-- For later screens: inlines short summary of prior visual decisions (not just URL-only)
-
-**Output expectation:**
-- Framework-agnostic mention present
-- Viewport specified
+**`revise` mode — the changeset.** A `revise` body is a changeset against an
+existing design; it must NOT be a from-scratch brief:
+- `**Existing design:**` line present — carries BOTH a bundle path and a share URL.
+- One `### Screen: …` changeset table per screen in `screens`, each naming its
+  `file(s):`.
+- Every changeset row has a non-empty "Why (spec)" rationale — a row without one
+  is not reviewable.
+- The body does **not** carry a from-scratch brief — a full `## Required states`
+  list or a complete `## Screen definition` re-spec is a finding: it re-invites
+  the rebuild a `revise` task exists to avoid.
+- Self-containment still applies — the changeset states current/desired
+  concretely, no "see cowmoo/…" pointers.
+- **Do NOT flag a `revise` task for "missing required states."** A changeset
+  names only what changes; states it doesn't touch are correctly absent, not a
+  gap. Flagging them is a false reject.
 
 ### Step 4: Cross-task checks
 
@@ -124,6 +131,7 @@ For every entry in the `tasks` array, check its `body`:
 ## Rules
 
 - **Read only.** Never edit `design-draft.json`. Findings only — the calling skill (`/design-draft`) triages with the user.
+- **Validate per mode.** A `new` task carries a from-scratch brief; a `revise` task carries a changeset. Check each against its mode's template. Never apply `new`-mode state-coverage checks to a `revise` task — a changeset legitimately omits unchanged states.
 - **Cite by task and snippet.** When flagging a violation, name the task as `task[<index>] "<title>"` and quote the offending text from its `body`. The body is a JSON string field — physical file line numbers don't map to body content, so cite the task index and a verbatim snippet instead.
 - **Be specific.** "Vague" is not a finding; `task[1]: "see auth.md"` is.
 - **Don't judge content quality.** "The screen def could be richer" isn't your job — verify structure and self-containment, not depth.

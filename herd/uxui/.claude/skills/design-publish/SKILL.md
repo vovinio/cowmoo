@@ -8,7 +8,7 @@ allowed-tools: Read, Bash, Agent, AskUserQuestion
 
 # Design Publish
 
-Take the draft prepared by `/design-draft` and create the actual GitHub issues — N independent `uxui:todo` tasks (one per screen in the batch).
+Take the draft prepared by `/design-draft` and create the actual GitHub issues — one `uxui:todo` task per design unit in the batch (a unit is one screen, or several coupled screens; each task is `new` or `revise` mode — `/design-draft` set that).
 
 This skill is the commit step. By the time you type `/design-publish`, the draft is composed AND validated. This skill just previews and ships.
 

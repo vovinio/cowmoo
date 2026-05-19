@@ -16,7 +16,7 @@ This skill is **rerunnable**. Each run rewrites the draft from the current conve
 
 ## Prerequisite
 
-Look back through the conversation. Was `/design-start` run, and did it lock a batch (1-3 screens with reasoning)?
+Look back through the conversation. Was `/design-start` run, and did it lock a batch — 1-3 design **units**, each with a **mode** (`new` or `revise`) and, for a multi-screen unit, a coupling rationale?
 
 - **No batch agreed** → "No batch has been agreed yet. Run `/design-start` first to synthesize state and propose what to design next." Stop.
 - **Batch agreed** → proceed to Step 1.
@@ -25,7 +25,7 @@ Look back through the conversation. Was `/design-start` run, and did it lock a b
 
 ## Step 1: Read the template (once)
 
-Read `.claude/templates/design-task.md` for the body structure (Instructions + Claude Design Prompt sections, with required sub-sections inside the Prompt).
+Read both task templates — `.claude/templates/design-task.md` (the `new`-mode from-scratch body) and `.claude/templates/design-task-revise.md` (the `revise`-mode changeset body). Each unit's body is composed against the template for its mode.
 
 ---
 
@@ -41,6 +41,8 @@ For the screens in the batch, read the inputs you'll inline into prompts:
 
 **Verify each batch screen has a definition.** For every screen name in the locked batch, confirm the screen appears under a `### ` heading in its domain file. If any screen has no definition (typo, never defined, dropped), stop and ask the user: "Screen `<name>` has no definition in `cowmoo/design/domains/<domain>.md`. Did you mean a different screen, or does it need Phase A definition first?" Do NOT proceed to compose a task body for an undefined screen — Claude Design would receive an empty screen section.
 
+**For a `revise` unit, also locate the existing design.** From `/design-start`'s existing-design map, find the bundle covering the unit's screens: read `cowmoo/design/bundles/<ticket>/meta.json` for the Claude Design share URL, and list `cowmoo/design/bundles/<ticket>/project/` to identify the target file(s) the changeset will name (e.g. `App.jsx`, `HomeTab.jsx`). The domain-file screen definition and the spec are still read for both modes — they drive *what* must change.
+
 For visual continuity: the batch's "Inherits" notes from `/design-start` already summarize prior bundles' visual decisions. If you need richer context for inheriting (e.g. specific token names from a prior bundle), read the prior bundle's `chats/*.md` directly.
 
 ---
@@ -52,28 +54,28 @@ Compose every task body in the locked batch in one pass, then present the batch 
 ### 3a. Quick batch-wide check
 Ask once, upfront: any specific emphasis for any screen in this batch beyond what `/design-start` covered? Single list, not per-screen (default: none).
 
-### 3b. Compose each body silently
-For each screen, compose the body following the `design-task.md` template. The body has two sections:
+### 3b. Compose each unit's body silently — by mode
 
-**Instructions section** (short, scannable bullets for the human):
-- Brief invocation — paste prompt below into `claude.ai/design`
-- 2-4 "Pay attention to" bullets specific to this screen's risk areas (states with edge-case copy, accessibility considerations, brand voice precision)
-- Acceptance checks (3-5 yes/no items derived from required states + spec validations)
-- Submission steps (share URL → comment → relabel `uxui:review`)
-- Optional: note about session continuity
+For each unit, compose the body against the template for its **mode**. Both
+modes open with an Instructions section carrying the canonical `**Mode:**`,
+`**Domain:**`, `**Screens:**` lines, 2-4 "Pay attention to" bullets, acceptance
+checks, and submission steps (share URL → comment → relabel `uxui:review`).
 
-**Claude Design Prompt section** (dense, self-contained, copy-paste verbatim into CD — no project file references):
-1. `# [Screen Name]` — one-sentence purpose
-2. `## Product context` — inline tone words, references, anti-references, voice samples (from OVERVIEW)
-3. `## Business context` — inline relevant entities, rules, validations, terminology (from spec, only what this screen needs)
-4. `## Screen definition` — Purpose, Entry points, Type, Layout, Components, Copy (from domain file)
-5. `## Required states` — only states applicable to this screen, with each state's meaning inlined per `ui-vocabulary.md`
-6. `## Role meanings` — only roles this screen uses, each with semantic purpose inlined from `roles.md`
-7. `## Interactions` — from the screen definition
-8. `## Visual direction already established` — concrete visual decisions inherited from prior approved bundles (or "None yet — this batch establishes initial direction" for first batch)
-9. `## Output expectation` — framework-agnostic HTML/CSS, viewport, mobile notes if applicable
+**`new` unit → `design-task.md`.** The from-scratch Claude Design Prompt: shared
+`## Product context` once (tone, references, anti-references, voice samples —
+from OVERVIEW), then a per-screen block repeated for each screen in the unit
+(`# Screen: …` purpose · `## Business context` · `## Screen definition` ·
+`## Required states` · `## Role meanings` · `## Interactions`), then shared
+`## Visual direction already established` and `## Output expectation`.
 
-**Critical rules for the Prompt section:**
+**`revise` unit → `design-task-revise.md`.** A changeset, NOT a from-scratch
+brief. Instructions carry `**Existing design:**` (the bundle path + share URL
+from Step 2). Then one `### Screen: …` changeset table per screen — naming the
+target `file(s):`, each row `current → desired → why (spec)` — plus an "Add"
+list for any new screen/region coupled into the existing design. Never re-spell
+a screen from scratch; name only what changes, each paired with its spec reason.
+
+**Critical rules — both modes:**
 - Inline everything. No "see X" pointers to project files. Claude Design has no access to anything.
 - Roles by name only. Never inline raw values (no hex, no pixels).
 - Voice samples are concrete sentences, not adjectives.
@@ -84,15 +86,14 @@ For each screen, compose the body following the `design-task.md` template. The b
 Show the user named decisions per task — not full bodies. The composed prose stays in your context and lands in `design-draft.json` at Step 4.
 
 ```
-## Batch preview — <N> tasks ready for draft
+## Batch preview — <N> units ready for draft
 
-### Task 1 — <Screen 1 name>
+### Unit 1 — [<mode>] <screen(s)>
 Pay attention to: <2–3 named risks>
-States: <state list>
-Roles: <role list>
-Visual direction: <one-line — inherited specifics or "initial direction">
+  new:    States: <list> · Roles: <list> · Visual direction: <one-line>
+  revise: Changes: <n> rows · Existing design: <bundle / share URL> · Files: <list>
 
-### Task 2 — <Screen 2 name>
+### Unit 2 — [<mode>] <screen(s)>
 ...
 ```
 
@@ -120,20 +121,26 @@ Once all task bodies are composed (in conversation), write the draft to `$PROJEC
   },
   "tasks": [
     {
-      "title": "[UXUI] <domain>: <screen 1>",
+      "title": "[UXUI] <domain>: <unit-label>",
       "label": "uxui:todo",
-      "body": "<the full composed task body — Instructions + Claude Design Prompt — as one string>"
+      "mode": "new",
+      "domain": "<domain>",
+      "screens": ["<screen>"],
+      "body": "<the full composed from-scratch body — as one string>"
     },
     {
-      "title": "[UXUI] <domain>: <screen 2>",
+      "title": "[UXUI] <domain>: <unit-label>",
       "label": "uxui:todo",
-      "body": "<the full composed task body>"
+      "mode": "revise",
+      "domain": "<domain>",
+      "screens": ["<screen a>", "<screen b>"],
+      "body": "<the full composed changeset body>"
     }
   ]
 }
 ```
 
-Write it with the `Write` tool — it handles JSON string encoding, so each `body` carries its real newlines and markdown verbatim. Tasks appear in the agreed batch order; every task gets `"label": "uxui:todo"`.
+Write it with the `Write` tool — it handles JSON string encoding, so each `body` carries its real newlines and markdown verbatim. Tasks appear in the agreed batch order; every task gets `"label": "uxui:todo"`, a `mode` (`new`/`revise`), its `domain`, and its `screens` list. `<unit-label>` is the screen name for a one-screen unit, or a short cluster label for a multi-screen unit; the `body`'s `**Mode:**`/`**Domain:**`/`**Screens:**` lines must agree with these fields.
 
 ---
 
@@ -143,8 +150,9 @@ Re-read `design-draft.json`. Verify:
 - [ ] The file parses as valid JSON
 - [ ] `batch` has `why`, `inherits`, and `setsUp`
 - [ ] `tasks` has all N entries in agreed order
-- [ ] Each task has a non-empty `title`, `label`, and `body`
-- [ ] Each `body` has both Instructions and Claude Design Prompt sections, with no content silently dropped or truncated
+- [ ] Each task has a non-empty `title`, `label`, `body`, `mode` (`new`/`revise`), `domain`, and `screens`
+- [ ] Each `body`'s `**Mode:**` / `**Domain:**` / `**Screens:**` lines agree with the task's fields
+- [ ] A `new` body has Instructions + Claude Design Prompt; a `revise` body has Instructions + Changeset — no content silently dropped or truncated
 
 If any check fails, fix and re-write. Don't proceed until self-verify passes.
 
@@ -181,10 +189,10 @@ Rationale: the human is already in the loop approving each inline fix. A second 
 Show a summary:
 
 ```
-## Draft compiled — <N> tasks
+## Draft compiled — <N> units
 
-1. [UXUI] <domain>: <screen 1>
-2. [UXUI] <domain>: <screen 2>
+1. [<mode>] [UXUI] <domain>: <unit-label>
+2. [<mode>] [UXUI] <domain>: <unit-label>
 ...
 
 Validated: PUBLISH READY (no findings).

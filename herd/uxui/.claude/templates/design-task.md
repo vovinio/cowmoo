@@ -1,12 +1,24 @@
-# Design Task Template
+# Design Task Template — `new` mode
 
-Body structure for `uxui:todo` issues created via `/design-publish`. One issue per screen.
+Body structure for a **`new`-mode** `uxui:todo` issue: a from-scratch design
+task. One issue per design **unit** — one screen, or several **coupled** screens
+designed together in one Claude Design project.
+
+To revise a screen that **already has a design**, use `design-task-revise.md`
+instead — never hand a from-scratch brief for a screen that already exists.
 
 The body has two sections:
-1. **Instructions** — short, scannable bullets for the human designer. Tells them what to do with the prompt and how to submit results.
-2. **Claude Design Prompt** — long, dense, fully self-contained. The human copies this verbatim into `claude.ai/design`. Claude Design has no access to project files — every piece of context it needs must be inlined here.
+1. **Instructions** — short, scannable bullets for the human designer: the
+   task's mode/domain/screens, what to do with the prompt, how to submit.
+2. **Claude Design Prompt** — long, dense, fully self-contained; copied verbatim
+   into `claude.ai/design`. Claude Design has no access to project files —
+   every piece of context it needs is inlined. For a multi-screen unit the
+   per-screen block repeats; the shared sections (Product context, Visual
+   direction, Output) are written once.
 
-The skill `/design-draft` composes this body and stores it as the `body` field of a task object in `design-draft.json`. The skill `/design-publish` — via the `issue-create` subcommand — creates the GitHub issue.
+`/design-draft` composes this body and stores it as the `body` field of a task
+object in `design-draft.json`. `/design-publish` — via `issue-create` — creates
+the GitHub issue.
 
 ---
 
@@ -15,12 +27,18 @@ The skill `/design-draft` composes this body and stores it as the `body` field o
 ```markdown
 ## Instructions
 
-Work this task by pasting the **Claude Design Prompt** below into [claude.ai/design](https://claude.ai/design) and iterating with the user until satisfied.
+**Mode:** new
+**Domain:** [domain]
+**Screens:** [screen]      ← comma-separated for a multi-screen unit
+
+Work this task by pasting the **Claude Design Prompt** below into
+[claude.ai/design](https://claude.ai/design) and iterating with the user until
+satisfied. For a multi-screen unit, design every screen in **one** Claude Design
+project so shared chrome stays consistent.
 
 **Pay attention to:**
-- [bullet specific to this screen — e.g. "the empty state copy must match the spec's onboarding tone"]
+- [bullet specific to this unit — e.g. "the empty state copy must match the spec's onboarding tone"]
 - [bullet — e.g. "submit button uses the primary-action role; cancel uses text-muted"]
-- [bullet — e.g. "form validation runs on blur, not on submit"]
 
 **Acceptance:**
 - [ ] All required states represented visually (see Required States in the prompt)
@@ -32,8 +50,6 @@ Work this task by pasting the **Claude Design Prompt** below into [claude.ai/des
 2. Comment on this issue with the URL
 3. Relabel from `uxui:todo` → `uxui:review`
 
-> Optional: if continuing from a prior screen's Claude Design session, you can skip the **Product Context** section below — Claude Design already has it from the earlier conversation. Paste only the Screen sections.
-
 ---
 
 ## Claude Design Prompt
@@ -42,11 +58,9 @@ Copy everything from here to the end of the issue body, verbatim, into Claude De
 
 ---
 
-# [Screen Name]
+# Product context
 
-[One-sentence purpose statement.]
-
-## Product context
+[Shared once for the whole unit.]
 
 **Tone:** [inline tone words from OVERVIEW design intent — e.g. "dense utilitarian, warm neutrals, scannable for fast review"]
 
@@ -58,9 +72,19 @@ Copy everything from here to the end of the issue body, verbatim, into Claude De
 - [example sentence in the product's voice]
 - [example sentence]
 
+---
+
+[Per-screen block — repeat once per screen in the unit. A single-screen unit
+has exactly one block.]
+
+# Screen: [Screen Name]
+
+[One-sentence purpose statement.]
+
 ## Business context
 
-[Inline the relevant entities, business rules, validations, and terminology from the spec — directly, not as a reference. Anything Claude Design needs to know about WHAT this screen represents in the product.]
+[Inline the relevant entities, business rules, validations, and terminology from
+the spec — directly, not as a reference. What this screen represents in the product.]
 
 ## Screen definition
 
@@ -73,7 +97,6 @@ Copy everything from here to the end of the issue body, verbatim, into Claude De
 
 **Components:**
 - [Component]: [behavior, data, interactions]
-- [Component]: ...
 
 **Copy:**
 - [Specific strings expected — labels, button text, helper copy. Inline literal text.]
@@ -83,38 +106,55 @@ Copy everything from here to the end of the issue body, verbatim, into Claude De
 [Only the states that apply to THIS screen, with their meaning inlined. From the canonical state vocabulary.]
 
 - **[state]:** [what it means here, what the user sees]
-- **[state]:** ...
 
 ## Role meanings (semantic purpose only — Claude Design picks the visual values)
 
-[Only the roles this screen uses, each with its semantic purpose inlined. Claude Design picks concrete tokens; we just declare the meaning.]
+[Only the roles this screen uses, each with its semantic purpose inlined.]
 
 - `[role-name]`: [what it's for on this screen]
-- `[role-name]`: ...
 
 ## Interactions
 
 - **[Action]:** [trigger] → [behavior] → [next state or screen]
-- **[Action]:** ...
 
-## Visual direction already established
+[End of per-screen block.]
 
-[If this is screen 2+ in the domain or product, inline a short description of visual decisions from prior approved bundles — palette character, typography character, spacing density. If this is the first screen of the product, write "None yet — this screen establishes initial direction."]
+---
 
-[Optional: include a recent prior bundle's share URL as a reference. Note that share URLs may have expired.]
+# Visual direction already established
 
-## Output expectation
+[Shared once. If this unit is screen 2+ in the domain or product, inline a short
+description of visual decisions from prior approved bundles — palette character,
+typography character, spacing density. If this is the first screen of the
+product, write "None yet — this unit establishes initial direction."]
 
-Framework-agnostic HTML/CSS prototype. Show the screen at the primary viewport for this product (per OVERVIEW Design Intent — e.g. desktop 1440px for a data-dense SaaS tool, mobile 390px for a consumer mobile-first app). Note secondary viewports the spec requires (mobile responsive, tablet, etc.).
+[Optional: a recent prior bundle's share URL as a reference. Share URLs may expire.]
+
+# Output expectation
+
+[Shared once.] Framework-agnostic HTML/CSS prototype. Show each screen at the
+primary viewport for this product (per OVERVIEW Design Intent — e.g. desktop
+1440px for a data-dense SaaS tool, mobile 390px for a consumer mobile-first app).
+Note secondary viewports the spec requires.
 ```
 
 ---
 
 ## Rules
 
-- **Self-contained.** The Prompt section must reference no project files — every piece of context Claude Design needs is inlined. "See cowmoo/specs/auth.md" is wrong; the relevant content from that spec must be pasted in.
-- **One screen per task.** Multi-screen prompts make iteration scope unclear. If a batch covers 3 screens, that's 3 independent `uxui:todo` tasks.
-- **Roles by name only.** Never inline raw values (no hex codes, no pixel sizes). The Prompt names roles; Claude Design proposes concrete values.
-- **Voice samples, not voice description.** "Friendly but professional" is vague. Two sample sentences in the product's voice are concrete.
-- **Visual direction is incremental.** First screen establishes direction. Subsequent screens reference what was approved before — keeps cross-screen alignment.
-- **Instructions stay short.** The human scans them; they don't read a wall of prose. Bullet points only.
+- **Self-contained.** The Prompt section references no project files — every
+  piece of context Claude Design needs is inlined. "See cowmoo/specs/auth.md" is
+  wrong; paste the relevant content.
+- **One task per unit.** A unit is one screen, or several coupled screens. A
+  multi-screen unit repeats the per-screen block; never split a coupled unit
+  into separate tasks (it forces N Claude Design projects that must agree on
+  shared chrome).
+- **`new` mode only.** This template is for screens with no existing design. A
+  screen that already has a design is a `revise` task — `design-task-revise.md`.
+- **Roles by name only.** Never inline raw values (no hex, no pixels). The
+  Prompt names roles; Claude Design proposes concrete values.
+- **Voice samples, not voice description.** Two sample sentences in the
+  product's voice, not "friendly but professional."
+- **Visual direction is incremental.** The first unit establishes direction;
+  later units reference what was approved before.
+- **Instructions stay short.** Bullets only — the human scans them.

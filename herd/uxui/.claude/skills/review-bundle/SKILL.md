@@ -50,15 +50,16 @@ Stop. Do not proceed — `/resolve-review` is the right path for a no-bundle car
 
 ---
 
-## Step 2: Extract URL and identify domain/screen
+## Step 2: Extract URL and identify the unit
 
 From the issue:
-- `<url>` — the share URL from the **last** comment whose body contains a Claude Design share URL (`https://api.anthropic.com/v1/design/h/` or `https://claude.ai/design/`). Scan all comments; if multiple comments contain share URLs (e.g. after an expired-URL re-share), the most recent wins.
-- `<domain>` — extracted from issue title (titles follow `[UXUI] <domain>: <screen>`)
-- `<screen>` — extracted from issue title
-- `<designer>` — comment author who posted the URL
+- `<url>` — the share URL from the **last** comment whose body contains a Claude Design share URL (`https://api.anthropic.com/v1/design/h/` or `https://claude.ai/design/`). Scan all comments; the most recent wins.
+- `<mode>` — from the `**Mode:**` line in the issue body (`new` or `revise`).
+- `<domain>` — from the `**Domain:**` line in the issue body.
+- `<screens>` — from the `**Screens:**` line in the issue body (one screen, or several for a coupled unit).
+- `<designer>` — comment author who posted the URL.
 
-If the title doesn't match the expected pattern, ask the user to provide domain and screen explicitly.
+These canonical lines live in the task's Instructions section (written by `/design-draft` or `/dispatch-corrections`). **Fallback** — an older task with no such lines: parse `<domain>` and a single `<screen>` from the title pattern `[UXUI] <domain>: <screen>`, treat `<mode>` as `new`. If neither the lines nor the title resolve, ask the user for the mode, domain, and screens.
 
 ---
 
@@ -67,7 +68,7 @@ If the title doesn't match the expected pattern, ask the user to provide domain 
 Run the `bundle-fetch` command directly — quote the URL (share URLs contain `?` and `&` that the shell would otherwise interpret); pass `-` for `<designer>` if the handle is unknown:
 
 ```bash
-node "$AGENT_DIR/tools/dev-tools.cjs" bundle-fetch <issue> <domain> <screen> <designer> "<url>"
+node "$AGENT_DIR/tools/dev-tools.cjs" bundle-fetch <issue> <domain> <unit-label> <designer> "<url>"
 ```
 
 The command downloads the tarball (60s timeout), extracts it into `cowmoo/design/bundles/<issue>/` (`--strip-components=1`), writes `meta.json`, and `git add` + `git commit`s. It prints exactly one line and sets an exit code: `OK ticket=N files=M commit=<hash> path=<relpath>` on success, or a `FAIL <kind> — …` line otherwise (`url-unreachable`, `url-timeout`, `extraction-failed`, `extraction-empty`, `git-add`, `git-commit`, `meta-write`, `no-project-dir`).
@@ -104,12 +105,13 @@ Spawn `@design-evaluator`:
 ```
 @design-evaluator
   ticket=<issue>
+  mode=<mode>
   domain=<domain>
-  screen=<screen>
+  screens=<screens — comma-separated>
   bundle-path=$PROJECT_DIR/cowmoo/design/bundles/<issue>/
 ```
 
-The sub-agent reads the brief, specs, domain UI def, roles, and the bundle. Returns classified findings: GAPS, CONCERNS, OBSERVATIONS, ROLE_ADDITIONS — plus a recommendation (APPROVE or RETURN).
+The sub-agent reads the brief, specs, domain UI def, roles, and the bundle. For a `new` task it compares the bundle against the from-scratch brief; for a `revise` task, against the changeset. Returns classified findings per screen: GAPS, CONCERNS, OBSERVATIONS, ROLE_ADDITIONS — plus a recommendation (APPROVE or RETURN).
 
 ---
 
@@ -118,7 +120,7 @@ The sub-agent reads the brief, specs, domain UI def, roles, and the bundle. Retu
 Present the evaluator's findings. Lead with the recommendation:
 
 ```
-## Bundle review — #<issue> (<domain>: <screen>)
+## Bundle review — #<issue> (<domain>: <unit-label>) · mode: <mode>
 
 **Evaluator recommendation:** APPROVE | RETURN
 
@@ -139,7 +141,7 @@ Discuss with the user. **Classify each finding — blocking or deferrable** (see
 
 The user makes the final call. The routes:
 
-- **Approve** — no findings, or only deferrable copy deltas. Log each deferrable delta to `PENDING-CORRECTIONS.md` first — to `For: designer` for copy in the bundle's HTML (key the entry to this card's `<domain> / <screen>` from Step 2, per the entry format in `.claude/rules/corrections.md`), or `For: PM` for a copy mismatch against a spec — then proceed to Step 6. The bundle is approved as-is; `/dispatch-corrections` batches the logged deltas later.
+- **Approve** — no findings, or only deferrable copy deltas. Log each deferrable delta to `PENDING-CORRECTIONS.md` first — to `For: designer` for copy in the bundle's HTML (key the entry to the affected screen's `<domain> / <screen>` — one of the unit's screens — per the entry format in `.claude/rules/corrections.md`), or `For: PM` for a copy mismatch against a spec — then proceed to Step 6. The bundle is approved as-is; `/dispatch-corrections` batches the logged deltas later.
 - **Approve with role additions** — accept ROLE_ADDITIONS, then approve (Step 6 passes the role names to `/approve-design`).
 - **Return for revision** — any blocking finding. The bundle goes back to the designer (Step 7).
 
@@ -149,10 +151,10 @@ Render the choice with the `AskUserQuestion` tool — recommended route first. W
 
 ## Step 6: Approve → hand off to /approve-design
 
-If the user approves, this skill is done — the approval transaction (roles commit, domain-file attach, journal, commit, close) lives in `/approve-design`. **Invoke it now**, passing the issue, domain, and screen, plus any accepted ROLE_ADDITIONS:
+If the user approves, this skill is done — the approval transaction (roles commit, domain-file attach, journal, commit, close) lives in `/approve-design`. **Invoke it now**, passing the issue, domain, and the unit's screens, plus any accepted ROLE_ADDITIONS:
 
 ```
-/approve-design <issue> <domain> <screen>
+/approve-design <issue> <domain> <screens — comma-separated>
 ```
 
 `/approve-design` runs in this same conversation, so it inherits the `@design-evaluator` findings and your triage decisions — it needs that context to compose the journal summary. Do NOT attach the bundle, edit the domain file, or close the issue here; `/approve-design` owns all of that.
